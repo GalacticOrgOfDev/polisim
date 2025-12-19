@@ -9,6 +9,7 @@ Usage:
 
 import json
 import sys
+import numpy as np
 from typing import Any, Dict, List, Optional
 from dataclasses import asdict
 from core.config import ConfigManager
@@ -20,17 +21,37 @@ from core.economic_engine import (
     SensitivityAnalyzer,
     ScenarioComparator,
 )
+from core.social_security import (
+    SocialSecurityModel,
+    DemographicAssumptions,
+    BenefitFormula,
+    TrustFundAssumptions,
+    SocialSecurityReforms,
+)
+from core.revenue_modeling import (
+    FederalRevenueModel,
+    IndividualIncomeTaxAssumptions,
+    PayrollTaxAssumptions,
+    CorporateIncomeTaxAssumptions,
+    TaxReforms,
+)
 from utils.logging_config import setup_logging
 
 
 class PolisimMCPServer:
-    """MCP Server wrapper for POLISIM economic simulation engine."""
+    """MCP Server wrapper for POLISIM economic simulation engine.
+    
+    Supports healthcare (Phase 1), social security and revenue modeling (Phase 2),
+    and combined fiscal analysis.
+    """
 
     def __init__(self):
         """Initialize the MCP server and load configuration."""
         self.logger = setup_logging("mcp_server")
         self.config = ConfigManager()
-        self.logger.info("POLISIM MCP Server initialized")
+        self.ss_model = SocialSecurityModel()
+        self.revenue_model = FederalRevenueModel()
+        self.logger.info("POLISIM MCP Server initialized with Phase 1 + Phase 2 modules")
 
     def list_tools(self) -> List[Dict[str, Any]]:
         """Return list of available tools for AI agents."""
@@ -130,6 +151,84 @@ class PolisimMCPServer:
                             "description": "Config section (e.g., 'economic', 'simulation')",
                         }
                     },
+                },
+            },
+            {
+                "name": "project_social_security",
+                "description": "Project Social Security trust funds (OASI/DI) with Monte Carlo uncertainty",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "years": {
+                            "type": "integer",
+                            "description": "Number of years to project (default: 30)",
+                        },
+                        "iterations": {
+                            "type": "integer",
+                            "description": "Monte Carlo iterations (default: 10000)",
+                        },
+                    },
+                },
+            },
+            {
+                "name": "social_security_reform",
+                "description": "Model impact of Social Security policy reforms",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "reform_type": {
+                            "type": "string",
+                            "description": "Reform type: 'raise_tax', 'raise_fra', 'reduce_benefits', or 'combined'",
+                        },
+                        "years": {
+                            "type": "integer",
+                            "description": "Projection years (default: 30)",
+                        },
+                    },
+                    "required": ["reform_type"],
+                },
+            },
+            {
+                "name": "project_federal_revenues",
+                "description": "Project federal revenues across all sources (income tax, payroll, corporate, etc.)",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "years": {
+                            "type": "integer",
+                            "description": "Number of years to project (default: 10)",
+                        },
+                        "iterations": {
+                            "type": "integer",
+                            "description": "Monte Carlo iterations (default: 10000)",
+                        },
+                        "gdp_growth": {
+                            "type": "number",
+                            "description": "Assumed annual GDP growth rate (default: 0.025)",
+                        },
+                        "wage_growth": {
+                            "type": "number",
+                            "description": "Assumed annual wage growth rate (default: 0.03)",
+                        },
+                    },
+                },
+            },
+            {
+                "name": "tax_reform_analysis",
+                "description": "Analyze impact of federal tax policy reforms",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "reform_type": {
+                            "type": "string",
+                            "description": "Reform type: 'top_rate', 'corporate_rate', 'payroll_tax', or 'remove_cap'",
+                        },
+                        "magnitude": {
+                            "type": "number",
+                            "description": "Reform magnitude (e.g., 0.05 for 5% increase, 0.28 for new rate)",
+                        },
+                    },
+                    "required": ["reform_type"],
                 },
             },
         ]
@@ -337,6 +436,249 @@ class PolisimMCPServer:
             self.logger.error(f"Failed to retrieve parameters: {str(e)}")
             return {"status": "error", "message": str(e)}
 
+    def project_social_security(
+        self, years: int = 30, iterations: int = 10000
+    ) -> Dict[str, Any]:
+        """
+        Project Social Security trust funds with Monte Carlo uncertainty.
+
+        Args:
+            years: Number of years to project
+            iterations: Number of Monte Carlo iterations
+
+        Returns:
+            Trust fund projections and solvency analysis
+        """
+        try:
+            self.logger.info(f"Projecting Social Security for {years} years ({iterations} iterations)")
+
+            projections = self.ss_model.project_trust_funds(years=years, iterations=iterations)
+            solvency = self.ss_model.estimate_solvency_dates(projections)
+
+            summary = {
+                "years_projected": years,
+                "iterations": iterations,
+                "oasi_depletion_year": float(solvency.get("OASI_depletion_year", np.nan)),
+                "di_solvency_through": float(solvency.get("DI_solvency_through_year", np.nan)),
+                "oasi_depletion_p10": float(solvency.get("OASI_depletion_p10", np.nan)),
+                "oasi_depletion_p90": float(solvency.get("OASI_depletion_p90", np.nan)),
+            }
+
+            # Convert projections to serializable format
+            results_data = {k: v.tolist() if hasattr(v, 'tolist') else float(v) 
+                          for k, v in projections.iloc[-1].items()}
+
+            self.logger.info("Social Security projection complete")
+            return {
+                "status": "success",
+                "summary": summary,
+                "latest_year": results_data,
+            }
+
+        except Exception as e:
+            self.logger.error(f"Social Security projection failed: {str(e)}")
+            return {"status": "error", "message": str(e)}
+
+    def social_security_reform(
+        self, reform_type: str, years: int = 30
+    ) -> Dict[str, Any]:
+        """
+        Model impact of Social Security policy reforms.
+
+        Args:
+            reform_type: Type of reform ('raise_tax', 'raise_fra', 'reduce_benefits', 'combined')
+            years: Number of years to project
+
+        Returns:
+            Reform impact analysis
+        """
+        try:
+            self.logger.info(f"Analyzing Social Security reform: {reform_type}")
+
+            reforms_map = {
+                "raise_tax": SocialSecurityReforms.raise_payroll_tax_rate,
+                "raise_fra": SocialSecurityReforms.raise_full_retirement_age,
+                "reduce_benefits": SocialSecurityReforms.reduce_benefits,
+                "combined": SocialSecurityReforms.combined_reform,
+            }
+
+            if reform_type not in reforms_map:
+                return {
+                    "status": "error",
+                    "message": f"Unknown reform type: {reform_type}. Must be one of {list(reforms_map.keys())}",
+                }
+
+            reform_func = reforms_map[reform_type]
+            if reform_type == "combined":
+                reforms = reform_func()
+            elif reform_type == "reduce_benefits":
+                reforms = reform_func(reduction_percent=0.15)
+            elif reform_type == "raise_fra":
+                reforms = reform_func(new_fra=70)
+            else:  # raise_tax
+                reforms = reform_func(new_rate=0.145)
+
+            # Project with reform
+            baseline = self.ss_model.project_trust_funds(years=years, iterations=5000)
+            baseline_solvency = self.ss_model.estimate_solvency_dates(baseline)
+            baseline_depletion = baseline_solvency.get("OASI_depletion_year")
+            
+            reformed = self.ss_model.apply_policy_reform(reforms["reforms"], baseline)
+            reformed_solvency = self.ss_model.estimate_solvency_dates(reformed)
+            reformed_depletion = reformed_solvency.get("OASI_depletion_year")
+
+            # Handle NaN values
+            baseline_depl_val = float(baseline_depletion) if not np.isnan(baseline_depletion) else -1
+            reformed_depl_val = float(reformed_depletion) if not np.isnan(reformed_depletion) else -1
+
+            self.logger.info(f"Reform analysis complete for {reform_type}")
+            return {
+                "status": "success",
+                "reform_type": reform_type,
+                "reform_details": reforms["description"],
+                "baseline_depletion": baseline_depl_val,
+                "reformed_depletion": reformed_depl_val,
+                "years_extended": float(reformed_depl_val - baseline_depl_val) if (baseline_depl_val > 0 and reformed_depl_val > 0) else 0,
+            }
+
+        except Exception as e:
+            self.logger.error(f"Social Security reform analysis failed: {str(e)}")
+            return {"status": "error", "message": str(e)}
+
+    def project_federal_revenues(
+        self,
+        years: int = 10,
+        iterations: int = 10000,
+        gdp_growth: float = 0.025,
+        wage_growth: float = 0.03,
+    ) -> Dict[str, Any]:
+        """
+        Project federal revenues across all sources.
+
+        Args:
+            years: Number of years to project
+            iterations: Number of Monte Carlo iterations
+            gdp_growth: Annual GDP growth rate
+            wage_growth: Annual wage growth rate
+
+        Returns:
+            Revenue projections by source
+        """
+        try:
+            self.logger.info(
+                f"Projecting federal revenues for {years} years "
+                f"(GDP: {gdp_growth:.1%}, Wages: {wage_growth:.1%})"
+            )
+
+            # Convert scalars to arrays for the model
+            gdp_growth_array = np.full(years, gdp_growth)
+            wage_growth_array = np.full(years, wage_growth)
+
+            revenues = self.revenue_model.project_all_revenues(
+                years=years,
+                gdp_growth=gdp_growth_array,
+                wage_growth=wage_growth_array,
+                iterations=iterations,
+            )
+
+            # Summary statistics by grouping mean across iterations
+            latest_data = revenues[revenues['year'] == revenues['year'].max()]
+            
+            summary = {
+                "year": int(latest_data['year'].iloc[0]),
+                "total_revenue": float(latest_data["total_revenues"].mean()),
+                "individual_income_tax": float(latest_data["individual_income_tax"].mean()),
+                "payroll_taxes": float((latest_data["social_security_tax"].mean() + latest_data["medicare_tax"].mean())),
+                "corporate_income_tax": float(latest_data["corporate_income_tax"].mean()),
+                "excise_taxes": float(latest_data["excise_taxes"].mean()),
+                "other_revenues": float(latest_data["other_revenues"].mean()),
+            }
+
+            # 10-year growth
+            first_year_total = revenues[revenues['year'] == revenues['year'].min()]["total_revenues"].mean()
+            last_year_total = revenues[revenues['year'] == revenues['year'].max()]["total_revenues"].mean()
+            growth_rate = (last_year_total / first_year_total) ** (1 / years) - 1
+
+            self.logger.info("Federal revenue projection complete")
+            return {
+                "status": "success",
+                "projection_years": years,
+                "iterations": iterations,
+                "assumptions": {
+                    "gdp_growth_annual": gdp_growth,
+                    "wage_growth_annual": wage_growth,
+                },
+                "latest_year_summary": summary,
+                "ten_year_growth_rate": float(growth_rate),
+            }
+
+        except Exception as e:
+            self.logger.error(f"Federal revenue projection failed: {str(e)}")
+            return {"status": "error", "message": str(e)}
+
+    def tax_reform_analysis(
+        self, reform_type: str, magnitude: float = 0.05
+    ) -> Dict[str, Any]:
+        """
+        Analyze impact of federal tax policy reforms.
+
+        Args:
+            reform_type: Type of reform ('top_rate', 'corporate_rate', 'payroll_tax', 'remove_cap')
+            magnitude: Reform magnitude (rate increase or new rate)
+
+        Returns:
+            Tax reform impact analysis
+        """
+        try:
+            self.logger.info(f"Analyzing tax reform: {reform_type} (magnitude: {magnitude})")
+
+            reforms_map = {
+                "top_rate": TaxReforms.increase_individual_income_tax_rate,
+                "corporate_rate": TaxReforms.increase_corporate_income_tax_rate,
+                "payroll_tax": TaxReforms.increase_payroll_tax_rate,
+                "remove_cap": TaxReforms.remove_social_security_wage_cap,
+            }
+
+            if reform_type not in reforms_map:
+                return {
+                    "status": "error",
+                    "message": f"Unknown reform type: {reform_type}. Must be one of {list(reforms_map.keys())}",
+                }
+
+            reform_func = reforms_map[reform_type]
+            if reform_type == "remove_cap":
+                reforms = reform_func()
+            else:
+                reforms = reform_func(new_rate=magnitude)
+
+            # Project revenues with reform - use arrays
+            gdp_growth_array = np.full(10, 0.025)
+            wage_growth_array = np.full(10, 0.03)
+
+            baseline = self.revenue_model.project_all_revenues(
+                years=10, gdp_growth=gdp_growth_array, wage_growth=wage_growth_array, iterations=5000
+            )
+            reformed = self.revenue_model.apply_tax_reform(reforms["reforms"], baseline)
+
+            baseline_total = baseline["total_revenues"].sum()
+            reformed_total = reformed["total_revenues"].sum()
+            revenue_impact = reformed_total - baseline_total
+
+            self.logger.info(f"Tax reform analysis complete for {reform_type}")
+            return {
+                "status": "success",
+                "reform_type": reform_type,
+                "reform_details": reforms["description"],
+                "baseline_10yr_revenue": float(baseline_total),
+                "reformed_10yr_revenue": float(reformed_total),
+                "revenue_impact": float(revenue_impact),
+                "percent_change": float(revenue_impact / baseline_total * 100),
+            }
+
+        except Exception as e:
+            self.logger.error(f"Tax reform analysis failed: {str(e)}")
+            return {"status": "error", "message": str(e)}
+
     def call_tool(self, tool_name: str, tool_input: Dict[str, Any]) -> Dict[str, Any]:
         """
         Call a tool by name with input parameters.
@@ -360,6 +702,14 @@ class PolisimMCPServer:
             return self.get_policy_catalog(**tool_input)
         elif tool_name == "get_config_parameters":
             return self.get_config_parameters(**tool_input)
+        elif tool_name == "project_social_security":
+            return self.project_social_security(**tool_input)
+        elif tool_name == "social_security_reform":
+            return self.social_security_reform(**tool_input)
+        elif tool_name == "project_federal_revenues":
+            return self.project_federal_revenues(**tool_input)
+        elif tool_name == "tax_reform_analysis":
+            return self.tax_reform_analysis(**tool_input)
         else:
             return {"status": "error", "message": f"Unknown tool: {tool_name}"}
 
