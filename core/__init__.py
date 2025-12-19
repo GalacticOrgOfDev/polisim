@@ -1,7 +1,9 @@
 """Core economic and simulation modules.
 
 This module provides the main API for polisim:
-- Healthcare policy models and comparisons
+- Healthcare policy models and comparisons (Phase 1)
+- Social Security projections (Phase 2)
+- Federal revenue modeling (Phase 2)
 - Economic simulation and Monte Carlo engine
 - Metrics and analysis tools
 - Scenario management
@@ -9,6 +11,8 @@ This module provides the main API for polisim:
 Usage:
     from core import get_policy_by_type, PolicyType
     from core.economic_engine import MonteCarloEngine, PolicyScenario
+    from core.social_security import SocialSecurityModel
+    from core.revenue_modeling import FederalRevenueModel
     
     # Load policy
     policy = get_policy_by_type(PolicyType.USGHA)
@@ -43,6 +47,23 @@ from core.economic_engine import (
     SpendingCategory,
     SensitivityAnalyzer,
     ScenarioComparator,
+)
+
+# Phase 2: Social Security & Revenue modules
+from core.social_security import (
+    SocialSecurityModel,
+    DemographicAssumptions,
+    BenefitFormula,
+    TrustFundAssumptions,
+    SocialSecurityReforms,
+)
+
+from core.revenue_modeling import (
+    FederalRevenueModel,
+    IndividualIncomeTaxAssumptions,
+    PayrollTaxAssumptions,
+    CorporateIncomeTaxAssumptions,
+    TaxReforms,
 )
 
 # Configure module-level logging

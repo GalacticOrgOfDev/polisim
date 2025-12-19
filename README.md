@@ -1,19 +1,57 @@
-# polisim
+# POLISIM: CBO 2.0
 
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Tests Passing](https://img.shields.io/badge/tests-passing-brightgreen.svg)](tests/)
 [![Government Grade](https://img.shields.io/badge/grade-government%20ready-lightblue.svg)](#)
+[![CBO 2.0](https://img.shields.io/badge/vision-CBO%202.0-green.svg)](CBO_2_0_VISION.md)
 
-**A government-grade policy simulator for economic projections with Monte Carlo modeling.**
+**Open-source, transparent, stochastic U.S. federal fiscal projection system.**
 
-## 🎯 The Value Proposition
+## 🎯 Mission: CBO 2.0
 
-Expose the true cost of policy gatekeeping through **verified economic projections**. 
+Transform federal fiscal policy from a closed-source black box into an open, auditable, democratic tool.
 
-> Run real economic simulations that reveal hidden inefficiencies, waste, and opportunities in current policy frameworks. Compare your proposal against baseline systems, alternative policies, and international benchmarks—all with transparent Monte Carlo distributions.
+**POLISIM is evolving into [CBO 2.0](CBO_2_0_VISION.md):**
 
-**Example:** The United States Galactic Health Act (USGHA) proposal reduces healthcare spending from **18% to 9% of GDP** while achieving 99% coverage and eliminating medical bankruptcies—fully modeled and validated against real-world baselines.
+- **Transparent:** Every assumption documented, configurable, sourced to official data
+- **Stochastic:** Full Monte Carlo (100K+ iterations), not just point estimates
+- **Credible:** Validated against CBO/SSA baselines within ±2-5%
+- **Democratic:** Open source (MIT), accessible to researchers, policymakers, citizens
+- **Extensible:** Modular architecture, community-driven development
+
+### Current Scope (Phase 1 ✅)
+Healthcare policy modeling with Monte Carlo uncertainty quantification
+
+### Roadmap (Phases 2-5)
+| Phase | Timeline | Coverage |
+|-------|----------|----------|
+| ✅ Phase 1 | Q1-Q2 2025 | Healthcare |
+| 📋 Phase 2 | Q2-Q3 2025 | + Social Security + Revenue |
+| 📋 Phase 3 | Q3-Q4 2025 | + Medicare/Medicaid + Mandatory/Discretionary + Macro |
+| 📋 Phase 4 | Q4 2025-Q1 2026 | + Web UI + Data Integration + Reports |
+| 📋 Phase 5 | Q1-Q2 2026 | Validation + Community + Public Launch |
+
+[**Full CBO 2.0 Roadmap →**](CBO_2_0_ROADMAP.md)
+
+---
+
+## 💡 Why POLISIM?
+
+**The Problem:** Federal fiscal decisions rely on CBO's closed-source model. Citizens, researchers, and policymakers can't independently verify assumptions or explore alternatives.
+
+**The Solution:** An open-source fiscal projection system that makes policy costs transparent and democratizes fiscal analysis.
+
+**Example:** Compare healthcare policies with full uncertainty quantification
+```
+Current approach (CBO): Spending = 12% of GDP (deterministic point estimate)
+CBO 2.0 approach: Spending = 12% [10.5%-13.8%] with 90% confidence
+                  → Understand the risks, not just the baseline
+```
+
+---
+
+## 🚀 Quick Start
 
 ---
 
@@ -48,6 +86,40 @@ python run_visualize.py
 - `reports/` directory with HTML charts (revenue, spending, debt scenarios)
 - Excel files with Monte Carlo distributions and sensitivity analysis
 - Console output with key metrics (cost savings, coverage improvements, timeline)
+
+---
+
+## 🤖 AI Integration (MCP Server)
+
+**Use POLISIM as a tool in AI agents and LLMs!**
+
+POLISIM is available as an **MCP (Model Context Protocol) Server**, enabling AI systems to run simulations, compare policies, and analyze scenarios programmatically.
+
+### Quick Start
+
+```bash
+# Start the MCP server
+python mcp_server.py
+
+# In Claude Desktop, add to config:
+# See MCP_INTEGRATION.md for full setup
+```
+
+### Available Tools for AI
+
+- **run_simulation** - Execute Monte Carlo analysis with any policy
+- **compare_scenarios** - Compare two policies side-by-side
+- **sensitivity_analysis** - Analyze parameter impact on outcomes
+- **get_policy_catalog** - List available policies
+- **get_config_parameters** - Access configuration
+
+### Example: Ask Claude
+
+> "Run a 30-year Monte Carlo simulation of the United States Galactic Health Act with 50,000 iterations and show me the 95% confidence interval for debt in 2050"
+
+Claude will automatically call POLISIM tools, analyze results, and provide insights.
+
+**[Full MCP Integration Guide →](MCP_INTEGRATION.md)**
 
 ---
 
