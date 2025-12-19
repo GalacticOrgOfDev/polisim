@@ -1,0 +1,46 @@
+{
+  "policy_title": "United States Galactic Health Act (extracted)",
+  "source": "policies/parameters.json",
+  "coverage": {
+    "zero_out_of_pocket": true,
+    "opt_out_voucher_system": true
+  },
+  "targets": {
+    "health_spending_percent_gdp": 7.0,
+    "target_within_years": 20
+  },
+  "fiscal": {
+    "fiscal_surplus_percent_gdp": 1.5,
+    "fiscal_surplus_target_year": 2040
+  },
+  "goals": {
+    "eliminate_medical_bankruptcy": true,
+    "establish_galactic_department_of_health": true,
+    "accelerate_biomedical_innovation": true
+  },
+  "years_mentioned": [
+    2025,
+    2027,
+    2028,
+    2029,
+    2030,
+    2032,
+    2033,
+    2035,
+    2036,
+    2040,
+    2045,
+    2047,
+    2050,
+    2057
+  ],
+  "excerpts": {
+    "eliminate medical bankruptcy": " establish a universal zero-out-of-pocket healthcare system for all citizens and legal permanent residents, permanently eliminate medical bankruptcy, reduce national health expenditures to an average below 7 percent of gross domestic product within twenty years, accelerate the largest biomedical and longevity innovation boom in history, and generate ﬁscal surpluses equivalent to 1–2 percent of gross domestic product ",
+    "funding mechanisms": "ent of the Galactic Department of Health and universal coverage. Sec. 5. Opt-out provisions and voucher system. Sec. 6. Funding mechanisms and transition. Sec. 7. Private insurance transition and supplemental options. Sec. 8. Pricing reforms for pharmaceuticals and medical devices. Sec. 9. Health Innovation Fund, Longevity Moonshot Fund, and incentives. Sec. 10. Provider payment reforms and workforce incentives. Sec."
+  },
+  "simulation_settings": {
+    "start_year": 2025,
+    "end_year": 2057,
+    "annual_budget_adjustment_rate_pct": 0.5
+  }
+}
