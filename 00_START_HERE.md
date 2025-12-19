@@ -6,6 +6,33 @@
 
 ---
 
+## ⚡ Quick Start (30 seconds)
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Run healthcare simulation
+python run_health_sim.py
+
+# Generate economic projections
+python Economic_projector.py
+
+# Create comparison reports
+python run_report.py
+
+# View visualizations
+python run_visualize.py
+```
+
+**Expected Output:**
+- `reports/` directory with interactive HTML charts
+- Excel files with Monte Carlo simulations (100K+ iterations)
+- Terminal output with cost savings, coverage improvements, timeline predictions
+- CSV comparisons of USGHA vs. baseline and alternative policies
+
+---
+
 ## 🎯 What You Asked For
 
 > *"lets do each one step by step. we want to be able to not only simulate my proposal, but also compare it to other policies, other nations, vs UN attempts, etc. we are going all in to get this simulator government ready."*

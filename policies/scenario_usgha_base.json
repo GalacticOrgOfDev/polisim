@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "name": "USGHA Base Scenario",
+  "description": "United States Galactic Health Act with baseline economic assumptions",
+  "policy": "USGHA",
+  "location": {
+    "country": "United States",
+    "region": null
+  },
+  "economic_parameters": {
+    "base_gdp_trillion": 29.0,
+    "gdp_growth_rate": 0.025,
+    "inflation_rate": 0.03,
+    "national_debt_trillion": 35.0,
+    "interest_rate": 0.04,
+    "simulation_years": 10,
+    "simulation_iterations": 100000
+  },
+  "monte_carlo": {
+    "seed": null,
+    "use_uncertainty": true,
+    "uncertainty_parameters": {
+      "gdp_growth_rate": {
+        "mean": 0.025,
+        "std_dev": 0.01
+      },
+      "inflation_rate": {
+        "mean": 0.03,
+        "std_dev": 0.015
+      },
+      "interest_rate": {
+        "mean": 0.04,
+        "std_dev": 0.02
+      }
+    }
+  },
+  "output": {
+    "format": "excel",
+    "include_percentiles": true,
+    "percentile_levels": [10, 25, 50, 75, 90],
+    "include_sensitivity_analysis": false,
+    "output_directory": "reports"
+  },
+  "metadata": {
+    "created_date": "2025-12-19",
+    "version": "1.0",
+    "author": "polisim-team",
+    "purpose": "Baseline USGHA projection with standard economic assumptions"
+  }
+}

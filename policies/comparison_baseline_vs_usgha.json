@@ -1,0 +1,57 @@
+{
+  "name": "Baseline vs USGHA Comparison",
+  "description": "Compare Current US System (baseline) against USGHA proposal",
+  "comparison_mode": true,
+  "scenarios": [
+    {
+      "name": "Current US System (Baseline)",
+      "policy": "CURRENT_US",
+      "economic_parameters": {
+        "base_gdp_trillion": 29.0,
+        "gdp_growth_rate": 0.025,
+        "inflation_rate": 0.03,
+        "national_debt_trillion": 35.0,
+        "interest_rate": 0.04,
+        "simulation_years": 10
+      }
+    },
+    {
+      "name": "United States Galactic Health Act",
+      "policy": "USGHA",
+      "economic_parameters": {
+        "base_gdp_trillion": 29.0,
+        "gdp_growth_rate": 0.025,
+        "inflation_rate": 0.03,
+        "national_debt_trillion": 35.0,
+        "interest_rate": 0.04,
+        "simulation_years": 10
+      }
+    }
+  ],
+  "comparison_config": {
+    "metrics": [
+      "total_spending",
+      "per_capita_cost",
+      "coverage_percentage",
+      "debt_trajectory",
+      "fiscal_impact",
+      "life_expectancy"
+    ],
+    "dimensions": [
+      "economic",
+      "healthcare_outcomes",
+      "fiscal_sustainability"
+    ]
+  },
+  "output": {
+    "format": "excel",
+    "include_charts": true,
+    "include_cbo_summary": true,
+    "output_directory": "reports/comparisons"
+  },
+  "metadata": {
+    "created_date": "2025-12-19",
+    "version": "1.0",
+    "purpose": "Executive summary: How USGHA performs vs current system"
+  }
+}

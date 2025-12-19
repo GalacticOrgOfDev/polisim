@@ -1,0 +1,152 @@
+# Economic Configuration - Master Parameter File
+# 
+# This file defines default economic parameters for all simulations.
+# Values here can be overridden by:
+# 1. Policy-specific parameters in core/healthcare.py
+# 2. Scenario files in policies/*.json
+# 3. Command-line arguments (via argparse)
+
+# ============================================================================
+# ECONOMIC BASELINE (2025 US Context)
+# ============================================================================
+economic:
+  # GDP and growth
+  base_gdp_trillion: 29.0                    # US GDP in trillions ($29T in 2025)
+  gdp_growth_rate: 0.025                     # Annual growth rate: 2.5%
+  inflation_rate: 0.03                       # Annual inflation: 3%
+  
+  # Debt and fiscal
+  national_debt_trillion: 35.0               # National debt in trillions ($35T)
+  interest_rate: 0.04                        # Avg interest on debt: 4%
+  debt_to_gdp_target: 0.60                   # Policy target ratio (60% = sustainable)
+  
+  # Simulation control
+  simulation_years: 10                       # Standard 10-year projection
+  simulation_iterations: 100000              # Monte Carlo iterations
+  stop_on_debt_explosion: true               # Stop if debt/GDP > 1000%
+  debt_drag_factor: 0.1                      # Fiscal drag: -0.1% GDP growth per 10% debt/GDP increase
+
+# ============================================================================
+# REVENUE BASELINE
+# ============================================================================
+revenue:
+  # Current US system baseline (2025)
+  federal_income_tax_pct_gdp: 9.0            # 9% of GDP
+  corporate_income_tax_pct_gdp: 1.5          # 1.5% of GDP
+  payroll_taxes_pct_gdp: 5.5                 # 5.5% of GDP (Social Security, Medicare)
+  excise_taxes_pct_gdp: 0.5                  # 0.5% of GDP (gasoline, alcohol, etc.)
+  other_revenue_pct_gdp: 2.0                 # 2.0% of GDP (customs, fees, etc.)
+  
+  total_revenue_pct_gdp: 18.5                # Total: ~18.5% of GDP (current)
+
+# ============================================================================
+# SPENDING BASELINE
+# ============================================================================
+spending:
+  # Mandatory spending (entitlements)
+  healthcare_pct_gdp: 5.5                    # Medicare, Medicaid
+  social_security_pct_gdp: 5.0               # Social Security
+  other_mandatory_pct_gdp: 1.0               # Veterans benefits, UI, etc.
+  
+  # Discretionary spending
+  defense_pct_gdp: 3.5                       # Defense and military
+  non_defense_pct_gdp: 2.5                   # Education, infrastructure, admin, etc.
+  
+  # Interest on debt
+  interest_pct_gdp: 0.8                      # Interest payments (grows with debt)
+  
+  total_spending_pct_gdp: 18.3               # Total: ~18.3% of GDP (current)
+  
+  # Note: Revenue < Spending means annual deficits, growing debt
+
+# ============================================================================
+# HEALTHCARE-SPECIFIC PARAMETERS (for healthcare policy models)
+# ============================================================================
+healthcare:
+  # Current system
+  current_coverage_pct: 92                   # 92% coverage rate
+  current_healthcare_gdp_pct: 18.0           # 18% of GDP on healthcare
+  current_admin_overhead_pct: 16.0           # 16% admin overhead (current US)
+  current_medical_bankruptcies_per_year: 800000  # ~800k annual
+  current_life_expectancy_years: 77          # US life expectancy
+  
+  # Potential improvements (USGHA)
+  usgha_coverage_pct: 99                     # 99% coverage
+  usgha_healthcare_gdp_pct: 9.0              # 9% of GDP target
+  usgha_admin_overhead_pct: 3.0              # 3% admin overhead (streamlined)
+  usgha_medical_bankruptcies_per_year: 0    # Zero medical bankruptcies
+  usgha_life_expectancy_years: 82            # Improved life expectancy
+  
+  # USGHA fiscal parameters
+  usgha_innovation_fund_billion: 50          # $50B innovation fund (scales to $400B+)
+  usgha_provider_incentive_multiplier: 2.5   # 2.5x base salary for high performers
+  usgha_drug_pricing_strategy: "tiered"      # 3-tier drug pricing (generic, brand, specialty)
+  usgha_fiscal_safeguard_gdp_pct: 13         # Hard ceiling at 13% GDP (safety)
+  
+  # Monte Carlo parameters for healthcare outcomes
+  coverage_uncertainty_pct: 2                # ±2% uncertainty on coverage projections
+  cost_growth_uncertainty_pct: 3             # ±3% uncertainty on cost growth
+
+# ============================================================================
+# SCENARIO CONFIGURATION
+# ============================================================================
+scenarios:
+  # Run configurations
+  batch_mode: false                          # Run interactively vs batch
+  export_format: "excel"                     # "excel" or "csv" for results
+  create_visualizations: true                # Generate charts
+  
+  # Comparison groups
+  comparison_baseline: "Current US System"   # What to compare against
+  comparison_peers:
+    - "Medicare-for-All"
+    - "UK NHS"
+    - "Canada Single-Payer"
+    - "Germany Bismarck Model"
+
+# ============================================================================
+# UNCERTAINTY & SENSITIVITY ANALYSIS
+# ============================================================================
+uncertainty:
+  # Parameter ranges for sensitivity analysis
+  gdp_growth_range: [0.0, 0.04]              # 0-4% growth scenarios
+  inflation_range: [0.01, 0.06]              # 1-6% inflation scenarios
+  interest_rate_range: [0.02, 0.08]          # 2-8% interest scenarios
+  
+  # Monte Carlo seed (for reproducibility)
+  random_seed: null                          # null = random, or set to integer for reproducible runs
+
+# ============================================================================
+# REPORTING & OUTPUT
+# ============================================================================
+reporting:
+  # CBO-style summary format
+  include_cbo_summary: true                  # Include CBO-format output
+  include_sensitivity_analysis: true         # Include tornado charts
+  include_percentiles: true                  # Show 10th, 50th, 90th percentiles
+  percentile_levels: [10, 25, 50, 75, 90]   # Which percentiles to compute
+  
+  # Output location
+  output_directory: "reports"                # Where to save results
+  keep_intermediate_files: false             # Keep temp files or cleanup
+  
+  # Chart styling
+  chart_format: "html"                       # "html", "pdf", or "png"
+  chart_colors:
+    baseline: "#0066CC"                      # Blue
+    policy: "#00AA00"                        # Green
+    difference: "#CC0000"                    # Red
+
+# ============================================================================
+# VALIDATION & CONSTRAINTS
+# ============================================================================
+validation:
+  # Allowed ranges for key parameters
+  min_gdp_growth_rate: -0.15                 # Minimum -15% recession
+  max_gdp_growth_rate: 0.10                  # Maximum 10% growth
+  max_inflation_rate: 0.50                   # Maximum 50% inflation (warn above 30%)
+  max_debt_to_gdp: 10.0                      # Maximum 1000% debt/GDP before warning
+  
+  # Excel tolerance for baseline matching
+  baseline_match_tolerance_pct: 2.0          # Simulations should match Excel within ±2%
+

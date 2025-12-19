@@ -2202,7 +2202,9 @@ class EconomicProjectorApp:
             right=0.9      # Right margin
         )
 
-        self.canvas.draw()
+        # Redraw the figure if canvas is available (typically used for interactive display)
+        if self.matplotlib_canvas:
+            self.matplotlib_canvas.draw()
 
     def refresh_series_checkboxes(self):
         """Populate the series visibility panel from current/proposed DataFrames"""
