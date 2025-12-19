@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "polisim": {
+      "command": "python",
+      "args": [
+        "${PROJECT_ROOT}/mcp_server.py"
+      ],
+      "cwd": "${PROJECT_ROOT}",
+      "env": {
+        "PYTHONPATH": "${PROJECT_ROOT}:$PYTHONPATH"
+      },
+      "description": "POLISIM Economic Simulation - AI-accessible Monte Carlo economic policy analysis engine"
+    }
+  }
+}

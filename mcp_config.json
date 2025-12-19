@@ -1,0 +1,38 @@
+{
+  "mcpServers": {
+    "polisim": {
+      "command": "python",
+      "args": [
+        "mcp_server.py"
+      ],
+      "description": "POLISIM Economic Simulation Engine - Monte Carlo economic policy analysis",
+      "tools": [
+        {
+          "name": "run_simulation",
+          "description": "Execute Monte Carlo simulation with economic policy parameters",
+          "category": "simulation"
+        },
+        {
+          "name": "compare_scenarios",
+          "description": "Compare two policy scenarios with detailed metrics",
+          "category": "analysis"
+        },
+        {
+          "name": "sensitivity_analysis",
+          "description": "Analyze parameter sensitivity and their impact on outcomes",
+          "category": "analysis"
+        },
+        {
+          "name": "get_policy_catalog",
+          "description": "Retrieve available policy scenarios",
+          "category": "data"
+        },
+        {
+          "name": "get_config_parameters",
+          "description": "Access configuration parameters",
+          "category": "data"
+        }
+      ]
+    }
+  }
+}
