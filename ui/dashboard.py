@@ -1167,8 +1167,29 @@ def page_policy_upload():
     """)
     
     from core.pdf_policy_parser import PolicyPDFProcessor
-    from core.policy_builder import PolicyLibrary
+    from core.policy_builder import PolicyLibrary, PolicyType
     import tempfile
+    
+    # Policy type selector
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        st.markdown("### What type of policy are you uploading?")
+    with col2:
+        policy_type = st.selectbox(
+            "Policy Type",
+            options=[pt.value for pt in PolicyType],
+            format_func=lambda x: {
+                "healthcare": "🏥 Healthcare",
+                "tax_reform": "💰 Tax Reform",
+                "spending_reform": "📊 Spending Reform",
+                "combined": "🔗 Combined Policy",
+                "custom": "⚙️ Custom",
+            }.get(x, x),
+            help="Select the policy category to help the extraction process identify relevant parameters",
+            label_visibility="collapsed"
+        )
+    
+    st.info(f"**Extraction will focus on:** {policy_type.upper()} policy parameters")
     
     # File uploader
     uploaded_file = st.file_uploader(
@@ -1196,15 +1217,17 @@ def page_policy_upload():
                     # First extract text from PDF
                     extracted_text = processor.extract_text_from_pdf(Path(tmp_path))
                     
-                    # Then analyze the extracted text
+                    # Then analyze the extracted text with policy type context
                     extraction = processor.analyze_policy_text(
                         text=extracted_text,
-                        policy_title=uploaded_file.name.replace(".pdf", "")
+                        policy_title=uploaded_file.name.replace(".pdf", ""),
+                        policy_type=policy_type
                     )
                     
                     # Store extraction in session state
                     st.session_state.policy_extraction = extraction
                     st.session_state.uploaded_filename = uploaded_file.name
+                    st.session_state.selected_policy_type = policy_type
                     
                 except Exception as e:
                     st.error(f"Error extracting policy: {str(e)}")
@@ -1238,6 +1261,9 @@ def page_policy_upload():
             st.divider()
             st.subheader("Create Policy from Extraction")
             
+            # Show the policy type that was selected
+            st.info(f"📌 **Policy Type:** {st.session_state.get('selected_policy_type', policy_type).upper()}")
+            
             policy_name = st.text_input(
                 "Policy Name:",
                 value=st.session_state.get('uploaded_filename', uploaded_file.name).replace(".pdf", "")
@@ -1246,7 +1272,12 @@ def page_policy_upload():
             if st.button("➕ Create Policy"):
                 try:
                     processor = PolicyPDFProcessor()
-                    policy = processor.create_policy_from_extraction(extraction, policy_name)
+                    selected_type = st.session_state.get('selected_policy_type', policy_type)
+                    policy = processor.create_policy_from_extraction(
+                        extraction, 
+                        policy_name,
+                        policy_type=selected_type
+                    )
                     
                     library = PolicyLibrary()
                     if library.add_policy(policy):
@@ -1257,6 +1288,7 @@ def page_policy_upload():
                         # Clear session state
                         st.session_state.policy_extraction = None
                         st.session_state.uploaded_filename = None
+                        st.session_state.selected_policy_type = None
                         
                         # Force Streamlit to refresh
                         st.cache_data.clear()

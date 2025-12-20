@@ -253,8 +253,15 @@ class PolicyPDFProcessor:
         except Exception as e:
             return f"[Error extracting PDF: {str(e)}]"
     
-    def analyze_policy_text(self, text: str, policy_title: str = "") -> PolicyExtraction:
-        """Analyze policy text and extract parameters."""
+    def analyze_policy_text(self, text: str, policy_title: str = "", policy_type: str = None) -> PolicyExtraction:
+        """Analyze policy text and extract parameters.
+        
+        Args:
+            text: The policy text to analyze
+            policy_title: Title of the policy
+            policy_type: Type of policy (healthcare, tax_reform, spending_reform, combined, custom)
+                        If provided, extraction will focus on matching parameters for this type
+        """
         from datetime import datetime
         
         # Extract fiscal numbers
@@ -266,25 +273,46 @@ class PolicyPDFProcessor:
         # Extract sections
         sections = PolicyKeywordMatcher.extract_policy_sections(text)
         
-        # Determine policy category and match keywords
-        healthcare_matches = PolicyKeywordMatcher.match_keywords(text, "healthcare")
-        tax_matches = PolicyKeywordMatcher.match_keywords(text, "tax")
-        spending_matches = PolicyKeywordMatcher.match_keywords(text, "spending")
-        
-        # Determine primary category
-        max_healthcare = max(healthcare_matches.values()) if healthcare_matches else 0
-        max_tax = max(tax_matches.values()) if tax_matches else 0
-        max_spending = max(spending_matches.values()) if spending_matches else 0
-        
-        if max_healthcare >= max_tax and max_healthcare >= max_spending:
-            category = "healthcare"
-            matches = healthcare_matches
-        elif max_tax >= max_spending:
-            category = "tax"
-            matches = tax_matches
+        # Determine policy category based on policy_type hint or auto-detect from content
+        if policy_type:
+            # Use the provided policy type to guide extraction
+            category = policy_type.lower() if isinstance(policy_type, str) else policy_type.value
+            # Map custom types to keyword match categories
+            if category == "healthcare":
+                matches = PolicyKeywordMatcher.match_keywords(text, "healthcare")
+            elif category in ["tax_reform", "tax"]:
+                matches = PolicyKeywordMatcher.match_keywords(text, "tax")
+            elif category in ["spending_reform", "spending"]:
+                matches = PolicyKeywordMatcher.match_keywords(text, "spending")
+            elif category in ["combined", "custom"]:
+                # For combined/custom, check all categories
+                healthcare_matches = PolicyKeywordMatcher.match_keywords(text, "healthcare")
+                tax_matches = PolicyKeywordMatcher.match_keywords(text, "tax")
+                spending_matches = PolicyKeywordMatcher.match_keywords(text, "spending")
+                # Merge all matches
+                matches = {**healthcare_matches, **tax_matches, **spending_matches}
+            else:
+                matches = {}
         else:
-            category = "spending"
-            matches = spending_matches
+            # Auto-detect category from content
+            healthcare_matches = PolicyKeywordMatcher.match_keywords(text, "healthcare")
+            tax_matches = PolicyKeywordMatcher.match_keywords(text, "tax")
+            spending_matches = PolicyKeywordMatcher.match_keywords(text, "spending")
+            
+            # Determine primary category
+            max_healthcare = max(healthcare_matches.values()) if healthcare_matches else 0
+            max_tax = max(tax_matches.values()) if tax_matches else 0
+            max_spending = max(spending_matches.values()) if spending_matches else 0
+            
+            if max_healthcare >= max_tax and max_healthcare >= max_spending:
+                category = "healthcare"
+                matches = healthcare_matches
+            elif max_tax >= max_spending:
+                category = "tax"
+                matches = tax_matches
+            else:
+                category = "spending"
+                matches = spending_matches
         
         # Calculate confidence score based on:
         # - Number of identified sections (0-0.3)
@@ -321,25 +349,41 @@ class PolicyPDFProcessor:
     def create_policy_from_extraction(
         self,
         extraction: PolicyExtraction,
-        policy_name: str
+        policy_name: str,
+        policy_type: str = None
     ) -> "CustomPolicy":
-        """Create CustomPolicy from extraction results."""
+        """Create CustomPolicy from extraction results.
+        
+        Args:
+            extraction: PolicyExtraction object from analyze_policy_text
+            policy_name: Name for the new policy
+            policy_type: Override policy type (healthcare, tax_reform, spending_reform, combined, custom)
+        """
         from core.policy_builder import CustomPolicy, PolicyType
         
         # Map category to policy type
         category_to_type = {
             "healthcare": PolicyType.HEALTHCARE,
+            "tax_reform": PolicyType.TAX_REFORM,
             "tax": PolicyType.TAX_REFORM,
+            "spending_reform": PolicyType.SPENDING_REFORM,
             "spending": PolicyType.SPENDING_REFORM,
+            "combined": PolicyType.COMBINED,
+            "custom": PolicyType.CUSTOM,
         }
         
-        category = extraction.identified_parameters.get("category", "healthcare")
-        policy_type = category_to_type.get(category, PolicyType.CUSTOM)
+        # Use provided policy_type if given, otherwise infer from extraction
+        if policy_type:
+            category = policy_type.lower() if isinstance(policy_type, str) else policy_type.value
+            mapped_type = category_to_type.get(category, PolicyType.CUSTOM)
+        else:
+            category = extraction.identified_parameters.get("category", "healthcare")
+            mapped_type = category_to_type.get(category, PolicyType.CUSTOM)
         
         policy = CustomPolicy(
             name=policy_name,
             description=f"Extracted from: {extraction.title}",
-            policy_type=policy_type,
+            policy_type=mapped_type,
             author="PDF Upload",
         )
         
