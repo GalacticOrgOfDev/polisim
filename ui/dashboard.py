@@ -112,12 +112,22 @@ def page_healthcare():
     Compare healthcare policies using Monte Carlo stochastic simulation with full uncertainty quantification.
     """)
     
+    # Load custom policies from library
+    from core.policy_builder import PolicyLibrary, PolicyType
+    library = PolicyLibrary()
+    custom_healthcare_policies = library.list_policies_by_type(PolicyType.HEALTHCARE)
+    
+    # Combine built-in and custom policies
+    policy_options = ["usgha", "current_us"]
+    if custom_healthcare_policies:
+        policy_options.extend(custom_healthcare_policies)
+    
     col1, col2 = st.columns(2)
     with col1:
         healthcare_policy = st.selectbox(
             "Select policy:",
-            ["usgha", "current_us"],
-            help="USGHA = US Galactic Health Act proposal"
+            policy_options,
+            help="Choose from built-in or custom healthcare policies"
         )
     with col2:
         years = st.slider("Projection years:", 5, 30, 22, key="healthcare_years")
@@ -126,7 +136,14 @@ def page_healthcare():
         try:
             from core.simulation import simulate_healthcare_years
             
-            policy = get_policy_by_type(PolicyType.USGHA if healthcare_policy == "usgha" else PolicyType.CURRENT_US)
+            # Load policy from library if it's custom, otherwise use built-in
+            if healthcare_policy in custom_healthcare_policies:
+                policy = library.get_policy(healthcare_policy)
+                if policy is None:
+                    st.error(f"Could not load policy '{healthcare_policy}'")
+                    return
+            else:
+                policy = get_policy_by_type(PolicyType.USGHA if healthcare_policy == "usgha" else PolicyType.CURRENT_US)
             
             with st.spinner("Running healthcare simulations..."):
                 results = simulate_healthcare_years(
@@ -706,32 +723,103 @@ def page_policy_comparison():
     Compare multiple policies or scenarios side-by-side to evaluate their fiscal impact.
     """)
     
+    # Load custom policies from library
+    from core.policy_builder import PolicyLibrary, PolicyType
+    library = PolicyLibrary()
+    all_custom_policies = library.list_policies()
+    
     col1, col2 = st.columns(2)
     with col1:
-        num_policies = st.slider("Number of policies to compare:", 2, 3, 2, key="num_policies")
+        num_policies = st.slider("Number of policies to compare:", 2, 5, 2, key="num_policies")
         years = st.slider("Projection years:", 10, 75, 30, key="compare_years")
     with col2:
-        metric_to_compare = st.selectbox(
-            "Compare by metric:",
-            ["10-year deficit", "Average annual deficit", "Interest spending", "Total spending"]
+        comparison_mode = st.radio(
+            "Comparison type:",
+            ["Scenarios", "Custom Policies", "Mixed"],
+            key="comparison_mode"
         )
         iterations = st.slider("Monte Carlo iterations:", 1000, 50000, 10000, step=1000, key="compare_iter")
     
     # Policy/scenario selectors
     policies = {}
-    for i in range(num_policies):
-        st.subheader(f"Policy {i+1}")
+    
+    if comparison_mode == "Scenarios":
+        # Original scenario-based comparison
+        for i in range(num_policies):
+            st.subheader(f"Policy {i+1}")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                rev_scenario = st.selectbox(f"Revenue Scenario {i+1}:", ["baseline", "recession_2026", "strong_growth"], key=f"rev_scenario_{i}")
+            with col2:
+                discret_scenario = st.selectbox(f"Discretionary {i+1}:", ["baseline", "growth", "reduction"], key=f"discret_scenario_{i}")
+            
+            policies[f"Policy {i+1}"] = {
+                "type": "scenario",
+                "revenue_scenario": rev_scenario,
+                "discretionary_scenario": discret_scenario,
+            }
+    
+    elif comparison_mode == "Custom Policies":
+        # Select from custom policy library
+        if not all_custom_policies:
+            st.warning("No custom policies found. Create policies in 'Custom Policy Builder' or 'Policy Upload' first.")
+            return
         
-        col1, col2 = st.columns(2)
-        with col1:
-            rev_scenario = st.selectbox(f"Revenue Scenario {i+1}:", ["baseline", "recession_2026", "strong_growth"], key=f"rev_scenario_{i}")
-        with col2:
-            discret_scenario = st.selectbox(f"Discretionary {i+1}:", ["baseline", "growth", "reduction"], key=f"discret_scenario_{i}")
-        
-        policies[f"Policy {i+1}"] = {
-            "revenue_scenario": rev_scenario,
-            "discretionary_scenario": discret_scenario,
-        }
+        for i in range(num_policies):
+            st.subheader(f"Policy {i+1}")
+            policy_name = st.selectbox(
+                f"Select policy {i+1}:",
+                all_custom_policies,
+                key=f"custom_policy_{i}"
+            )
+            policies[f"Policy {i+1}"] = {
+                "type": "custom",
+                "policy_name": policy_name,
+            }
+    
+    else:  # Mixed
+        for i in range(num_policies):
+            st.subheader(f"Policy {i+1}")
+            
+            policy_type = st.radio(
+                f"Type for Policy {i+1}:",
+                ["Scenario", "Custom Policy"],
+                key=f"policy_type_{i}",
+                horizontal=True
+            )
+            
+            if policy_type == "Scenario":
+                col1, col2 = st.columns(2)
+                with col1:
+                    rev_scenario = st.selectbox(f"Revenue Scenario {i+1}:", ["baseline", "recession_2026", "strong_growth"], key=f"rev_scenario_{i}")
+                with col2:
+                    discret_scenario = st.selectbox(f"Discretionary {i+1}:", ["baseline", "growth", "reduction"], key=f"discret_scenario_{i}")
+                
+                policies[f"Policy {i+1}"] = {
+                    "type": "scenario",
+                    "revenue_scenario": rev_scenario,
+                    "discretionary_scenario": discret_scenario,
+                }
+            else:
+                if all_custom_policies:
+                    policy_name = st.selectbox(
+                        f"Select custom policy {i+1}:",
+                        all_custom_policies,
+                        key=f"custom_policy_{i}"
+                    )
+                    policies[f"Policy {i+1}"] = {
+                        "type": "custom",
+                        "policy_name": policy_name,
+                    }
+                else:
+                    st.warning(f"No custom policies available for Policy {i+1}")
+                    return
+    
+    metric_to_compare = st.selectbox(
+        "Compare by metric:",
+        ["10-year deficit", "Average annual deficit", "Interest spending", "Total spending"]
+    )
     
     if st.button("Compare Policies"):
         model = CombinedFiscalOutlookModel()
@@ -741,12 +829,24 @@ def page_policy_comparison():
             
             try:
                 for policy_name, config in policies.items():
-                    summary = model.get_fiscal_summary(
-                        years=years,
-                        iterations=iterations,
-                        revenue_scenario=config["revenue_scenario"],
-                        discretionary_scenario=config["discretionary_scenario"]
-                    )
+                    if config["type"] == "scenario":
+                        summary = model.get_fiscal_summary(
+                            years=years,
+                            iterations=iterations,
+                            revenue_scenario=config["revenue_scenario"],
+                            discretionary_scenario=config["discretionary_scenario"]
+                        )
+                    else:  # custom policy
+                        # For custom policies, use basic fiscal summary
+                        summary = model.get_fiscal_summary(
+                            years=years,
+                            iterations=iterations,
+                            revenue_scenario="baseline",
+                            discretionary_scenario="baseline"
+                        )
+                        # In a full implementation, you would apply custom policy parameters
+                        st.info(f"Note: Custom policy '{config['policy_name']}' is being compared using baseline scenarios. Full integration requires policy simulation engine.")
+                    
                     comparison_data[policy_name] = summary
                 
                 # Create comparison table
