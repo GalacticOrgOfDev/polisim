@@ -151,6 +151,13 @@ def page_healthcare():
                 if policy is None:
                     st.error(f"Could not load policy '{healthcare_policy}'")
                     return
+                
+                # CustomPolicy objects from PDF extraction need to be converted to work with simulation
+                # For now, use a built-in policy as the simulation engine expects HealthcarePolicyModel
+                st.warning("⚠️ Custom policies from PDF uploads are stored but cannot yet be simulated directly.")
+                st.info("Custom policies can be managed in the 'Custom Policy Builder' page and compared in 'Policy Comparison' page.")
+                st.info("For simulations, use the built-in policies (USGHA or Current US) as a baseline.")
+                return
             else:
                 policy = get_policy_by_type(PolicyType.USGHA if healthcare_policy == "usgha" else PolicyType.CURRENT_US)
             
@@ -1195,51 +1202,70 @@ def page_policy_upload():
                         policy_title=uploaded_file.name.replace(".pdf", "")
                     )
                     
-                    # Display extraction results
-                    st.subheader("✓ Extraction Results")
+                    # Store extraction in session state
+                    st.session_state.policy_extraction = extraction
+                    st.session_state.uploaded_filename = uploaded_file.name
                     
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
-                        st.metric("Confidence Score", f"{extraction.confidence_score:.1%}")
-                    with col2:
-                        st.metric("Sections Found", extraction.identified_parameters["num_sections"])
-                    with col3:
-                        st.metric("Fiscal Figures", len(extraction.fiscal_impact_estimates))
-                    
-                    # Detailed results
-                    with st.expander("📊 Extracted Parameters"):
-                        st.json(extraction.identified_parameters)
-                    
-                    with st.expander("💰 Fiscal Impact Estimates"):
-                        for desc, amount in extraction.fiscal_impact_estimates.items():
-                            st.write(f"- **{desc}**: ${amount:,.0f}B")
-                    
-                    # Create policy from extraction
-                    st.divider()
-                    st.subheader("Create Policy from Extraction")
-                    
-                    policy_name = st.text_input(
-                        "Policy Name:",
-                        value=uploaded_file.name.replace(".pdf", "")
-                    )
-                    
-                    if st.button("➕ Create Policy"):
-                        processor = PolicyPDFProcessor()
-                        policy = processor.create_policy_from_extraction(extraction, policy_name)
-                        
-                        library = PolicyLibrary()
-                        if library.add_policy(policy):
-                            st.success(f"✓ Policy '{policy_name}' created and saved!")
-                            st.info(f"Policy has {len(policy.parameters)} parameters. Edit them in Custom Policy Builder.")
-                            st.info("Navigate to 'Healthcare' or 'Policy Comparison' page to use this policy.")
-                            # Force Streamlit to refresh by clearing cache and rerunning
-                            st.cache_data.clear()
-                            st.rerun()
-                        else:
-                            st.error(f"Policy '{policy_name}' already exists.")
-                
                 except Exception as e:
                     st.error(f"Error extracting policy: {str(e)}")
+                    st.info(f"Full error: {type(e).__name__}: {e}")
+                    return
+        
+        # Display extraction results if we have them
+        if hasattr(st.session_state, 'policy_extraction') and st.session_state.policy_extraction:
+            extraction = st.session_state.policy_extraction
+            
+            # Display extraction results
+            st.subheader("✓ Extraction Results")
+            
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Confidence Score", f"{extraction.confidence_score:.1%}")
+            with col2:
+                st.metric("Sections Found", extraction.identified_parameters["num_sections"])
+            with col3:
+                st.metric("Fiscal Figures", len(extraction.fiscal_impact_estimates))
+            
+            # Detailed results
+            with st.expander("📊 Extracted Parameters"):
+                st.json(extraction.identified_parameters)
+            
+            with st.expander("💰 Fiscal Impact Estimates"):
+                for desc, amount in extraction.fiscal_impact_estimates.items():
+                    st.write(f"- **{desc}**: ${amount:,.0f}B")
+            
+            # Create policy from extraction
+            st.divider()
+            st.subheader("Create Policy from Extraction")
+            
+            policy_name = st.text_input(
+                "Policy Name:",
+                value=st.session_state.get('uploaded_filename', uploaded_file.name).replace(".pdf", "")
+            )
+            
+            if st.button("➕ Create Policy"):
+                try:
+                    processor = PolicyPDFProcessor()
+                    policy = processor.create_policy_from_extraction(extraction, policy_name)
+                    
+                    library = PolicyLibrary()
+                    if library.add_policy(policy):
+                        st.success(f"✓ Policy '{policy_name}' created and saved!")
+                        st.info(f"Policy has {len(policy.parameters)} parameters. Edit them in Custom Policy Builder.")
+                        st.info("Navigate to 'Healthcare' or 'Policy Comparison' page to use this policy.")
+                        
+                        # Clear session state
+                        st.session_state.policy_extraction = None
+                        st.session_state.uploaded_filename = None
+                        
+                        # Force Streamlit to refresh
+                        st.cache_data.clear()
+                        st.rerun()
+                    else:
+                        st.error(f"Policy '{policy_name}' already exists.")
+                except Exception as e:
+                    st.error(f"Error creating policy: {str(e)}")
+                    st.info(f"Full error: {type(e).__name__}: {e}")
     
     # Example policies
     st.divider()

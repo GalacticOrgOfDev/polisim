@@ -1,0 +1,45 @@
+{
+  "name": "Final Test Healthcare Policy",
+  "description": "Extracted from: Final Test Healthcare Policy",
+  "policy_type": "healthcare",
+  "created_date": "2025-12-20T16:42:10.152257",
+  "author": "PDF Upload",
+  "parameters": {
+    "550_billion_": {
+      "name": "550_billion_",
+      "description": "$550 billion ",
+      "value": 550.0,
+      "min_value": 275.0,
+      "max_value": 825.0,
+      "unit": "$B",
+      "category": "healthcare"
+    },
+    "75_billion_": {
+      "name": "75_billion_",
+      "description": "$75 billion ",
+      "value": 75.0,
+      "min_value": 37.5,
+      "max_value": 112.5,
+      "unit": "$B",
+      "category": "healthcare"
+    },
+    "100%": {
+      "name": "100%",
+      "description": "100%",
+      "value": 100.0,
+      "min_value": 50.0,
+      "max_value": 150.0,
+      "unit": "$B",
+      "category": "healthcare"
+    },
+    "8%": {
+      "name": "8%",
+      "description": "8%",
+      "value": 8.0,
+      "min_value": 4.0,
+      "max_value": 12.0,
+      "unit": "$B",
+      "category": "healthcare"
+    }
+  }
+}
