@@ -74,6 +74,21 @@ from core.medicare_medicaid import (
     MedicaidAssumptions,
 )
 
+# Phase 3.2: Discretionary & Interest & Combined modules
+from core.discretionary_spending import (
+    DiscretionarySpendingModel,
+    DiscretionaryAssumptions,
+)
+
+from core.interest_spending import (
+    InterestOnDebtModel,
+    DebtAssumptions,
+)
+
+from core.combined_outlook import (
+    CombinedFiscalOutlookModel,
+)
+
 # Configure module-level logging
 _logger = logging.getLogger(__name__)
 _logger.addHandler(logging.NullHandler())
@@ -121,5 +136,12 @@ __all__ = [
     'MedicaidModel',
     'MedicareAssumptions',
     'MedicaidAssumptions',
+    
+    # Phase 3.2: Discretionary & Interest & Combined
+    'DiscretionarySpendingModel',
+    'DiscretionaryAssumptions',
+    'InterestOnDebtModel',
+    'DebtAssumptions',
+    'CombinedFiscalOutlookModel',
 ]
 
