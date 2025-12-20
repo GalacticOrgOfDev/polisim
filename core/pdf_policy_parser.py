@@ -107,17 +107,18 @@ class PolicyKeywordMatcher:
         """Extract dollar amounts and percentages from text."""
         results = {}
         
-        # Pattern for billions/trillions
-        large_num_pattern = r'(\$?\d+(?:\.\d+)?)\s*(?:billion|billion\s*dollars?|B|trillion|trillion\s*dollars?|T)'
+        # Pattern for billions/trillions - improved capturing groups
+        large_num_pattern = r'(\$?\d+(?:\.\d+)?)\s*(billion|billion\s*dollars?|B|trillion|trillion\s*dollars?|T)(?:\s|$|[^\w])'
         for match in re.finditer(large_num_pattern, text, re.IGNORECASE):
             amount_str = match.group(1).replace('$', '')
-            unit = match.group(2).lower()[0]  # B or T
+            unit_str = match.group(2).lower()  # Get the full unit string
+            unit = unit_str[0]  # Get first character (B or T)
             try:
                 amount = float(amount_str)
-                if 't' in unit:
+                if unit == 't':
                     amount *= 1000  # Convert to billions
                 results[match.group(0)] = amount
-            except ValueError:
+            except (ValueError, IndexError):
                 continue
         
         # Pattern for percentages
