@@ -1707,6 +1707,208 @@ def page_monte_carlo_scenarios():
         st.write("- **Perfect Storm:** Combined worst-case scenario")
 
 
+def page_report_generation():
+    """Report generation page."""
+    st.title("Report Generation")
+    st.write("Generate comprehensive PDF and Excel reports from policy analysis.")
+    
+    # Report type selection
+    report_type = st.radio(
+        "Select Report Type:",
+        ["Policy Summary", "Full Analysis", "Comparative Analysis"]
+    )
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("Report Details")
+        
+        report_title = st.text_input(
+            "Report Title",
+            value="Fiscal Policy Analysis Report"
+        )
+        
+        report_author = st.text_input(
+            "Author",
+            value="PoliSim Analysis Team"
+        )
+        
+        report_description = st.text_area(
+            "Description",
+            value="Comprehensive analysis of fiscal policy scenarios and impacts."
+        )
+    
+    with col2:
+        st.subheader("Export Options")
+        
+        export_pdf = st.checkbox("Export as PDF", value=True)
+        export_excel = st.checkbox("Export as Excel", value=True)
+        export_json = st.checkbox("Export as JSON", value=False)
+        
+        st.write("**Report Sections:**")
+        include_projections = st.checkbox("10-Year Projections", value=True)
+        include_sensitivity = st.checkbox("Sensitivity Analysis", value=True)
+        include_scenarios = st.checkbox("Scenario Comparison", value=True)
+        include_monte_carlo = st.checkbox("Monte Carlo Results", value=True)
+        include_recommendations = st.checkbox("Recommendations", value=True)
+    
+    if st.button("Generate Report", type="primary"):
+        try:
+            from core.report_generator import ComprehensiveReportBuilder, ReportMetadata
+            
+            # Create metadata
+            metadata = ReportMetadata(
+                title=report_title,
+                author=report_author,
+                description=report_description,
+            )
+            
+            # Create builder
+            builder = ComprehensiveReportBuilder(metadata)
+            
+            # Add executive summary based on report type
+            if report_type == "Policy Summary":
+                summary_text = (
+                    "This report summarizes the key findings of a fiscal policy analysis. "
+                    "The analysis includes revenue impacts, spending changes, and deficit effects "
+                    "across a 10-year projection horizon."
+                )
+            elif report_type == "Full Analysis":
+                summary_text = (
+                    "This comprehensive report presents a detailed analysis of fiscal policy scenarios. "
+                    "It includes baseline projections, sensitivity analyses, Monte Carlo simulations, "
+                    "and policy recommendations based on multiple fiscal goals."
+                )
+            else:
+                summary_text = (
+                    "This report compares multiple policy scenarios to identify optimal approaches "
+                    "for achieving fiscal objectives. Results include comparative metrics, ranking, "
+                    "and scenario-specific recommendations."
+                )
+            
+            builder.add_executive_summary(summary_text)
+            
+            # Add sample policy overview
+            builder.add_policy_overview(
+                policy_name="Sample Policy Scenario",
+                revenue_impact=50.0,
+                spending_impact=-30.0,
+                deficit_impact=-80.0,
+            )
+            
+            # Add projections if selected
+            if include_projections:
+                projection_data = {
+                    "Year": list(range(2025, 2035)),
+                    "Revenue (B)": [6000 + i*50 for i in range(10)],
+                    "Spending (B)": [6900 - i*20 for i in range(10)],
+                    "Deficit (B)": [900 - i*70 for i in range(10)],
+                }
+                projections_df = pd.DataFrame(projection_data)
+                builder.add_fiscal_projections(projections_df)
+            
+            # Add sensitivity if selected
+            if include_sensitivity:
+                sensitivity_data = {
+                    "Parameter": ["Revenue Growth", "Spending Change", "GDP Growth", "Interest Rate"],
+                    "Impact on Deficit": [-150, 200, -80, 120],
+                    "Elasticity": [-0.25, 0.35, -0.15, 0.20],
+                }
+                sensitivity_df = pd.DataFrame(sensitivity_data)
+                builder.add_sensitivity_analysis(sensitivity_df)
+            
+            # Add scenarios if selected
+            if include_scenarios:
+                scenarios_data = {
+                    "Scenario": ["Status Quo", "Tax Reform", "Spending Cut", "Balanced"],
+                    "10-Year Deficit (B)": [9200, 8500, 8200, 7800],
+                    "Avg Annual (B)": [920, 850, 820, 780],
+                    "Final Year Deficit (B)": [650, 450, 300, 200],
+                }
+                scenarios_df = pd.DataFrame(scenarios_data)
+                builder.add_scenario_comparison(scenarios_df)
+            
+            # Add Monte Carlo if selected
+            if include_monte_carlo:
+                mc_data = {
+                    "Metric": ["Mean Deficit", "Median Deficit", "Std Dev", "P10", "P90"],
+                    "Value (B)": [850, 825, 120, 600, 1100],
+                    "Probability": [100, 100, 100, 100, 100],
+                }
+                mc_df = pd.DataFrame(mc_data)
+                builder.add_monte_carlo_results(mc_df)
+            
+            # Add recommendations if selected
+            if include_recommendations:
+                recommendations_text = (
+                    "<b>1. Revenue Enhancement:</b> Consider targeted tax reforms to increase federal revenue. "
+                    "A 5% increase in revenue would reduce the 10-year deficit by approximately $300B.<br/><br/>"
+                    "<b>2. Spending Efficiency:</b> Implement spending controls in discretionary categories. "
+                    "A 3% reduction in growth would save approximately $200B over 10 years.<br/><br/>"
+                    "<b>3. Balanced Approach:</b> Combine modest revenue increases with targeted spending reforms "
+                    "for the most sustainable fiscal path.<br/><br/>"
+                    "<b>4. Risk Management:</b> Monitor Monte Carlo results for adverse scenarios and maintain "
+                    "policy flexibility for economic changes."
+                )
+                builder.add_recommendations(recommendations_text)
+            
+            # Generate reports
+            report_dir = Path("reports/generated")
+            report_dir.mkdir(parents=True, exist_ok=True)
+            
+            timestamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
+            
+            generated_files = []
+            
+            # PDF export
+            if export_pdf:
+                try:
+                    pdf_path = report_dir / f"report_{timestamp}.pdf"
+                    builder.generate_pdf(str(pdf_path))
+                    generated_files.append(("PDF", pdf_path))
+                    st.success(f"PDF report generated: {pdf_path.name}")
+                except Exception as e:
+                    st.warning(f"PDF generation requires reportlab: pip install reportlab")
+            
+            # Excel export
+            if export_excel:
+                try:
+                    excel_path = report_dir / f"report_{timestamp}.xlsx"
+                    builder.generate_excel(str(excel_path))
+                    generated_files.append(("Excel", excel_path))
+                    st.success(f"Excel report generated: {excel_path.name}")
+                except Exception as e:
+                    st.warning(f"Excel generation requires openpyxl: pip install openpyxl")
+            
+            # JSON export
+            if export_json:
+                try:
+                    json_path = report_dir / f"report_{timestamp}.json"
+                    builder.generate_json(str(json_path))
+                    generated_files.append(("JSON", json_path))
+                    st.success(f"JSON report generated: {json_path.name}")
+                except Exception as e:
+                    st.error(f"JSON generation failed: {e}")
+            
+            # Display download links
+            if generated_files:
+                st.subheader("Generated Reports")
+                for file_type, file_path in generated_files:
+                    if file_path.exists():
+                        with open(file_path, "rb") as f:
+                            st.download_button(
+                                label=f"Download {file_type} Report",
+                                data=f.read(),
+                                file_name=file_path.name,
+                                mime="application/octet-stream"
+                            )
+        
+        except Exception as e:
+            st.error(f"Error generating report: {e}")
+            st.write(f"Make sure you have reportlab and openpyxl installed:")
+            st.code("pip install reportlab openpyxl")
+
+
 def main():
     """Main Streamlit app."""
     if not HAS_STREAMLIT:
@@ -1738,6 +1940,7 @@ def main():
             "Impact Calculator",
             "Advanced Scenarios",
             "---",
+            "Report Generation",
             "Custom Policy Builder",
             "Real Data Dashboard",
             "Policy Upload"
@@ -1768,6 +1971,8 @@ def main():
         page_impact_calculator()
     elif page == "Advanced Scenarios":
         page_monte_carlo_scenarios()
+    elif page == "Report Generation":
+        page_report_generation()
     elif page == "Custom Policy Builder":
         page_custom_policy_builder()
     elif page == "Real Data Dashboard":

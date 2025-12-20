@@ -133,6 +133,15 @@ from core.monte_carlo_scenarios import (
     MonteCarloResult,
 )
 
+# Phase 4b: Report Generation
+from core.report_generator import (
+    PDFReportGenerator,
+    ExcelReportGenerator,
+    ComprehensiveReportBuilder,
+    ReportSection,
+    ReportMetadata,
+)
+
 # Configure module-level logging
 _logger = logging.getLogger(__name__)
 _logger.addHandler(logging.NullHandler())
@@ -218,5 +227,12 @@ __all__ = [
     'PolicySensitivityAnalyzer',
     'StressTestAnalyzer',
     'MonteCarloResult',
+    
+    # Phase 4b: Report Generation
+    'PDFReportGenerator',
+    'ExcelReportGenerator',
+    'ComprehensiveReportBuilder',
+    'ReportSection',
+    'ReportMetadata',
 ]
 
