@@ -32,7 +32,7 @@ def main():
     parser.add_argument('--years', type=int, default=22, help='Number of years to simulate')
     parser.add_argument('--start-year', type=int, default=2027, help='Simulation start year')
     parser.add_argument('--auto-install-deps', action='store_true', help='Auto-install missing optional dependencies without prompting')
-    parser.add_argument('--dashboard', action='store_true', help='Launch CBO 2.0 Streamlit dashboard (Phase 2+) instead of legacy GUI')
+    parser.add_argument('--dashboard', action='store_true', default=True, help='Launch CBO 2.0 Streamlit dashboard (Phase 2+, default)')
     parser.add_argument('--legacy-gui', action='store_true', help='Launch legacy Tkinter GUI (Phase 1 healthcare only)')
     args = parser.parse_args()
 
@@ -41,27 +41,35 @@ def main():
         run_scenario(args.scenario, years=args.years, start_year=args.start_year)
         return
 
-    # If dashboard flag is set, launch Streamlit dashboard (CBO 2.0)
-    if args.dashboard or not args.legacy_gui:
-        print("Launching CBO 2.0 Streamlit Dashboard (Phase 2+)...")
-        try:
-            subprocess.check_call([sys.executable, '-m', 'streamlit', 'run', 'ui/dashboard.py'])
-        except FileNotFoundError:
-            print("Error: Streamlit not installed. Install with: pip install streamlit plotly")
-            print("Falling back to legacy GUI...")
-        except subprocess.CalledProcessError:
-            print("Streamlit dashboard error. Falling back to legacy GUI...")
-        except KeyboardInterrupt:
-            print("Dashboard closed.")
-            return
-
-    # Default: launch legacy Tkinter GUI (healthcare only)
-    if args.legacy_gui or args.dashboard:
-        # If dashboard was specified but failed, ask user
-        if args.dashboard:
-            return
+    # If legacy-gui flag is set, launch Tkinter GUI (Phase 1 healthcare only)
+    if args.legacy_gui:
+        print("Launching legacy Tkinter GUI...")
+        _launch_legacy_gui(args.auto_install_deps)
+        return
     
-    print("Launching legacy Economic Projector GUI (Phase 1 Healthcare)...")
+    # Default: Launch CBO 2.0 Streamlit Dashboard
+    print("\n" + "="*60)
+    print("  CBO 2.0 Streamlit Dashboard")
+    print("="*60)
+    print("\nFor interactive debugging with F5, use: python debug_dashboard.py")
+    print("For command-line launch with custom port, use: python run_dashboard.py --port 8502")
+    print("\nLaunching dashboard...\n")
+    
+    try:
+        import streamlit.cli as stcli
+        sys.argv = ['streamlit', 'run', 'ui/dashboard.py', '--logger.level=warning']
+        stcli.main()
+    except Exception as e:
+        print(f"\n❌ Could not launch dashboard: {e}")
+        print("\nTroubleshooting:")
+        print("  1. Try: python debug_dashboard.py")
+        print("  2. Try: python run_dashboard.py")
+        print("  3. Try: --legacy-gui for Tkinter GUI")
+        return
+
+
+def _launch_legacy_gui(auto_install=False):
+    """Launch the legacy Tkinter GUI (Phase 1 healthcare only)."""
     # Offer to install any missing packages into the active Python environment.
     # Each entry: (import_name, pip_name, friendly_name, min_version)
     DEPENDENCIES = [
