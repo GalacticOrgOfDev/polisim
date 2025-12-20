@@ -29,6 +29,9 @@ try:
     from core.combined_outlook import CombinedFiscalOutlookModel
     from core.healthcare import get_policy_by_type, PolicyType
     from core.economic_engine import MonteCarloEngine, PolicyScenario, EconomicParameters
+    from core.data_loader import load_real_data
+    from core.policy_builder import PolicyTemplate, PolicyLibrary
+    from core.pdf_policy_parser import PolicyPDFProcessor
     
     HAS_STREAMLIT = True
 except ImportError:
@@ -767,7 +770,370 @@ def page_policy_comparison():
                 st.error(f"Error during comparison: {str(e)}")
 
 
+def page_custom_policy_builder():
+    """Custom policy builder page with parameter sliders."""
+    st.title("🔧 Custom Policy Builder")
+    
+    st.markdown("""
+    Create and customize fiscal policies with adjustable parameters. Choose a template or build from scratch.
+    """)
+    
+    from core.policy_builder import PolicyTemplate, PolicyLibrary, PolicyType
+    
+    # Load policy library
+    library = PolicyLibrary()
+    
+    col1, col2 = st.columns([1, 2])
+    
+    with col1:
+        st.subheader("Create New Policy")
+        
+        # Policy template selection
+        template_choice = st.radio(
+            "Select template:",
+            ["Healthcare Reform", "Tax Reform", "Spending Reform", "Blank Custom"]
+        )
+        
+        template_map = {
+            "Healthcare Reform": "healthcare",
+            "Tax Reform": "tax_reform",
+            "Spending Reform": "spending_reform",
+        }
+        
+        if template_choice != "Blank Custom":
+            template_name = template_map[template_choice]
+            policy_name = st.text_input("Policy name:", f"My {template_choice}")
+            
+            if st.button("Create from template"):
+                policy = PolicyTemplate.create_from_template(template_name, policy_name)
+                library.add_policy(policy)
+                st.success(f"✓ Policy '{policy_name}' created!")
+                st.rerun()
+    
+    with col2:
+        st.subheader("Manage Policies")
+        
+        # Show existing policies
+        policies = library.list_policies()
+        
+        if policies:
+            selected_policy_name = st.selectbox("Edit existing policy:", policies)
+            selected_policy = library.get_policy(selected_policy_name)
+            
+            if selected_policy:
+                # Display policy info
+                st.write(f"**Type:** {selected_policy.policy_type.value}")
+                st.write(f"**Description:** {selected_policy.description}")
+                st.write(f"**Author:** {selected_policy.author}")
+                st.write(f"**Created:** {selected_policy.created_date[:10]}")
+                
+                # Parameter editor by category
+                categories = set(p.category for p in selected_policy.parameters.values())
+                
+                for category in sorted(categories):
+                    with st.expander(f"📊 {category.title()} Parameters", expanded=True):
+                        params_in_category = selected_policy.get_parameters_by_category(category)
+                        
+                        for param_name, param in params_in_category.items():
+                            col_a, col_b = st.columns([3, 1])
+                            
+                            with col_a:
+                                new_value = st.slider(
+                                    label=param.description,
+                                    min_value=param.min_value,
+                                    max_value=param.max_value,
+                                    value=param.value,
+                                    step=(param.max_value - param.min_value) / 100,
+                                    key=f"slider_{param_name}",
+                                )
+                                
+                                if new_value != param.value:
+                                    selected_policy.update_parameter(param_name, new_value)
+                                    library.save_policy(selected_policy)
+                            
+                            with col_b:
+                                st.caption(param.unit if param.unit else "")
+                
+                # Save and delete options
+                col_save, col_delete = st.columns(2)
+                
+                with col_save:
+                    if st.button("💾 Save Changes"):
+                        library.save_policy(selected_policy)
+                        st.success("Policy saved!")
+                
+                with col_delete:
+                    if st.button("🗑️ Delete Policy"):
+                        library.delete_policy(selected_policy_name)
+                        st.warning(f"Policy '{selected_policy_name}' deleted!")
+                        st.rerun()
+        else:
+            st.info("No policies yet. Create one from a template above!")
+    
+    # Policy library overview
+    st.divider()
+    st.subheader("Policy Library")
+    
+    if policies:
+        library_df = library.export_policies_dataframe()
+        st.dataframe(library_df, use_container_width=True)
+        
+        # Export all policies
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("📥 Export All Policies"):
+                export_data = {}
+                for name in policies:
+                    policy = library.get_policy(name)
+                    export_data[name] = policy.to_dict()
+                
+                st.json(export_data)
+    else:
+        st.info("Your policy library is empty. Create policies to get started!")
 
+
+def page_real_data_dashboard():
+    """Real data integration dashboard showing CBO/SSA baselines."""
+    st.title("📊 Real Data: CBO & SSA Integration")
+    
+    st.markdown("""
+    View authentic federal fiscal data from the Congressional Budget Office and Social Security Administration.
+    These baselines power all fiscal projections.
+    """)
+    
+    from core.data_loader import load_real_data
+    
+    data_loader = load_real_data()
+    
+    # Three main tabs
+    tab_summary, tab_revenues, tab_spending, tab_demographics = st.tabs([
+        "Summary", "Revenues", "Spending", "Demographics"
+    ])
+    
+    with tab_summary:
+        st.subheader("Federal Fiscal Summary (FY 2025)")
+        
+        # Key metrics cards
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric(
+                "Total Revenue",
+                f"${data_loader.cbo.total_revenue:,.0f}B",
+                delta=f"{(data_loader.cbo.total_revenue / data_loader.cbo.gdp * 100):.1f}% of GDP"
+            )
+        
+        with col2:
+            st.metric(
+                "Total Spending",
+                f"${data_loader.cbo.total_spending:,.0f}B",
+                delta=f"{(data_loader.cbo.total_spending / data_loader.cbo.gdp * 100):.1f}% of GDP"
+            )
+        
+        with col3:
+            deficit = data_loader.cbo.total_spending - data_loader.cbo.total_revenue
+            st.metric(
+                "Federal Deficit",
+                f"${deficit:,.0f}B",
+                delta=f"{(deficit / data_loader.cbo.gdp * 100):.1f}% of GDP"
+            )
+        
+        with col4:
+            st.metric(
+                "Public Debt",
+                f"${data_loader.cbo.public_debt_held:,.0f}B",
+                delta=f"{(data_loader.cbo.public_debt_held / data_loader.cbo.gdp * 100):.1f}% of GDP"
+            )
+        
+        # Full summary table
+        st.divider()
+        summary_df = data_loader.export_summary_metrics()
+        st.dataframe(summary_df, use_container_width=True)
+    
+    with tab_revenues:
+        st.subheader("Federal Revenue Sources (FY 2025)")
+        
+        revenue_data = data_loader.get_revenue_baseline()
+        
+        # Revenue chart
+        revenue_df = pd.DataFrame({
+            "Source": [k.replace("_", " ").title() for k in revenue_data.keys() if k != "total"],
+            "Amount": [v for k, v in revenue_data.items() if k != "total"]
+        })
+        
+        fig = px.pie(
+            revenue_df,
+            values="Amount",
+            names="Source",
+            title="Federal Revenue Distribution",
+            template="plotly_white"
+        )
+        st.plotly_chart(fig, use_container_width=True)
+        
+        # Revenue details
+        st.write("**Revenue by Source ($B)**")
+        for source, amount in revenue_data.items():
+            if source != "total":
+                st.write(f"- **{source.replace('_', ' ').title()}**: ${amount:,.1f}B")
+        
+        st.write(f"**Total:** ${revenue_data['total']:,.1f}B")
+    
+    with tab_spending:
+        st.subheader("Federal Spending by Category (FY 2025)")
+        
+        spending_data = data_loader.get_spending_baseline()
+        
+        # Spending chart
+        spending_df = pd.DataFrame({
+            "Category": [k.replace("_", " ").title() for k in spending_data.keys() if k != "total"],
+            "Amount": [v for k, v in spending_data.items() if k != "total"]
+        })
+        
+        fig = px.pie(
+            spending_df,
+            values="Amount",
+            names="Category",
+            title="Federal Spending Distribution",
+            template="plotly_white"
+        )
+        st.plotly_chart(fig, use_container_width=True)
+        
+        # Spending details
+        st.write("**Spending by Category ($B)**")
+        for category, amount in spending_data.items():
+            if category != "total":
+                st.write(f"- **{category.replace('_', ' ').title()}**: ${amount:,.1f}B")
+        
+        st.write(f"**Total:** ${spending_data['total']:,.1f}B")
+    
+    with tab_demographics:
+        st.subheader("U.S. Population & Demographics")
+        
+        pop_metrics = data_loader.get_population_metrics()
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric("Total Population", f"{pop_metrics['total_population']:.1f}M")
+            st.metric("Under 18", f"{pop_metrics['percent_under_18']:.1f}%")
+        
+        with col2:
+            st.metric("Working Age (18-64)", f"{pop_metrics['percent_18_64']:.1f}%")
+            st.metric("Age 65+", f"{pop_metrics['percent_65_plus']:.1f}%")
+        
+        with col3:
+            st.metric("Annual Growth", f"{pop_metrics['annual_growth_rate']:.2f}%")
+            st.metric("Life Expectancy", f"{pop_metrics['life_expectancy']:.1f} years")
+        
+        st.info(f"""
+        The U.S. is experiencing significant aging:
+        - In 2025, about **{pop_metrics['percent_65_plus']:.0f}%** of Americans are 65+
+        - By 2045, this will grow to approximately **{pop_metrics['percent_65_plus'] * 1.4:.0f}%**
+        - This affects demand for Social Security, Medicare, and Medicaid
+        """)
+
+
+def page_policy_upload():
+    """Policy PDF upload and extraction page."""
+    st.title("📄 Upload & Extract Policy from PDF")
+    
+    st.markdown("""
+    Upload policy documents (like the United States Galactic Health Act) to extract parameters and create policies.
+    """)
+    
+    from core.pdf_policy_parser import PolicyPDFProcessor
+    from core.policy_builder import PolicyLibrary
+    import tempfile
+    
+    # File uploader
+    uploaded_file = st.file_uploader(
+        "Upload PDF policy document",
+        type=["pdf", "txt"],
+        help="Supports PDF and text files up to 200MB"
+    )
+    
+    if uploaded_file:
+        st.write(f"**File:** {uploaded_file.name}")
+        st.write(f"**Size:** {uploaded_file.size / 1024:.1f} KB")
+        
+        if st.button("🔍 Extract Policy Parameters"):
+            with st.spinner("Extracting policy parameters..."):
+                try:
+                    # Save to temp file
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+                        tmp.write(uploaded_file.getbuffer())
+                        tmp_path = tmp.name
+                    
+                    # Extract policy
+                    processor = PolicyPDFProcessor()
+                    from pathlib import Path
+                    extraction = processor.analyze_policy_text(
+                        text=f"[Uploaded: {uploaded_file.name}]",
+                        policy_title=uploaded_file.name.replace(".pdf", "")
+                    )
+                    
+                    # Display extraction results
+                    st.subheader("✓ Extraction Results")
+                    
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.metric("Confidence Score", f"{extraction.confidence_score:.1%}")
+                    with col2:
+                        st.metric("Sections Found", extraction.identified_parameters["num_sections"])
+                    with col3:
+                        st.metric("Fiscal Figures", len(extraction.fiscal_impact_estimates))
+                    
+                    # Detailed results
+                    with st.expander("📊 Extracted Parameters"):
+                        st.json(extraction.identified_parameters)
+                    
+                    with st.expander("💰 Fiscal Impact Estimates"):
+                        for desc, amount in extraction.fiscal_impact_estimates.items():
+                            st.write(f"- **{desc}**: ${amount:,.0f}B")
+                    
+                    # Create policy from extraction
+                    st.divider()
+                    st.subheader("Create Policy from Extraction")
+                    
+                    policy_name = st.text_input(
+                        "Policy Name:",
+                        value=uploaded_file.name.replace(".pdf", "")
+                    )
+                    
+                    if st.button("➕ Create Policy"):
+                        processor = PolicyPDFProcessor()
+                        policy = processor.create_policy_from_extraction(extraction, policy_name)
+                        
+                        library = PolicyLibrary()
+                        if library.add_policy(policy):
+                            st.success(f"✓ Policy '{policy_name}' created and saved!")
+                            st.info(f"Policy has {len(policy.parameters)} parameters. Edit them in Custom Policy Builder.")
+                        else:
+                            st.error(f"Policy '{policy_name}' already exists.")
+                
+                except Exception as e:
+                    st.error(f"Error extracting policy: {str(e)}")
+    
+    # Example policies
+    st.divider()
+    st.subheader("📋 Example: Policy Structure")
+    
+    example = """
+    The system can extract parameters from policies like:
+    
+    **United States Galactic Health Act of 2025**
+    - Universal coverage: 100% of population
+    - Out-of-pocket maximum: $0
+    - Health spending target: 7% of GDP
+    - Pharmaceutical cost reduction: 15%
+    - Innovation fund: 3% of budget
+    
+    Upload your policy PDF to automatically extract these parameters!
+    """
+    st.info(example)
+
+
+def main():
     """Main Streamlit app."""
     if not HAS_STREAMLIT:
         print("Streamlit not installed. Install with: pip install streamlit plotly")
@@ -791,7 +1157,11 @@ def page_policy_comparison():
             "Medicare/Medicaid",
             "Discretionary Spending",
             "Combined Outlook",
-            "Policy Comparison"
+            "Policy Comparison",
+            "---",
+            "Custom Policy Builder",
+            "Real Data Dashboard",
+            "Policy Upload"
         ]
     )
     
@@ -811,6 +1181,12 @@ def page_policy_comparison():
         page_combined_outlook()
     elif page == "Policy Comparison":
         page_policy_comparison()
+    elif page == "Custom Policy Builder":
+        page_custom_policy_builder()
+    elif page == "Real Data Dashboard":
+        page_real_data_dashboard()
+    elif page == "Policy Upload":
+        page_policy_upload()
 
 
 if __name__ == "__main__":

@@ -89,6 +89,32 @@ from core.combined_outlook import (
     CombinedFiscalOutlookModel,
 )
 
+# Phase 4: Real Data & Policy Builder modules
+from core.data_loader import (
+    RealDataLoader,
+    load_real_data,
+    CBOHistoricalData,
+    SSAHistoricalData,
+    MedicareHistoricalData,
+    MedicaidHistoricalData,
+    PopulationProjections,
+)
+
+from core.policy_builder import (
+    CustomPolicy,
+    PolicyParameter,
+    PolicyTemplate,
+    PolicyLibrary,
+    PolicyType as BuilderPolicyType,
+)
+
+from core.pdf_policy_parser import (
+    PolicyPDFProcessor,
+    PolicyKeywordMatcher,
+    PolicyExtraction,
+    process_policy_pdf,
+)
+
 # Configure module-level logging
 _logger = logging.getLogger(__name__)
 _logger.addHandler(logging.NullHandler())
@@ -143,5 +169,22 @@ __all__ = [
     'InterestOnDebtModel',
     'DebtAssumptions',
     'CombinedFiscalOutlookModel',
+    
+    # Phase 4: Real Data & Policy Builder
+    'RealDataLoader',
+    'load_real_data',
+    'CBOHistoricalData',
+    'SSAHistoricalData',
+    'MedicareHistoricalData',
+    'MedicaidHistoricalData',
+    'PopulationProjections',
+    'CustomPolicy',
+    'PolicyParameter',
+    'PolicyTemplate',
+    'PolicyLibrary',
+    'PolicyPDFProcessor',
+    'PolicyKeywordMatcher',
+    'PolicyExtraction',
+    'process_policy_pdf',
 ]
 
