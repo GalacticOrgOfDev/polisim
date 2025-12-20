@@ -32,6 +32,16 @@ try:
     from core.data_loader import load_real_data
     from core.policy_builder import PolicyTemplate, PolicyLibrary
     from core.pdf_policy_parser import PolicyPDFProcessor
+    from core.policy_enhancements import (
+        PolicyRecommendationEngine,
+        InteractiveScenarioExplorer,
+        PolicyImpactCalculator,
+    )
+    from core.monte_carlo_scenarios import (
+        MonteCarloPolicySimulator,
+        PolicySensitivityAnalyzer,
+        StressTestAnalyzer,
+    )
     
     HAS_STREAMLIT = True
 except ImportError:
@@ -1133,6 +1143,570 @@ def page_policy_upload():
     st.info(example)
 
 
+def page_policy_recommendations():
+    """Policy recommendation engine based on fiscal goals."""
+    st.title("Recommendation Engine: Find Your Ideal Policy")
+    
+    st.markdown("""
+    Get personalized policy recommendations based on your fiscal priorities.
+    The engine scores policies across multiple dimensions.
+    """)
+    
+    from core.policy_enhancements import (
+        PolicyRecommendationEngine, 
+        FiscalGoal
+    )
+    
+    # Goal selector
+    goal = st.selectbox(
+        "What is your primary fiscal goal?",
+        [
+            "Minimize Deficit",
+            "Maximize Revenue",
+            "Reduce Spending",
+            "Balance Budget",
+            "Sustainable Debt",
+            "Growth-Focused",
+            "Equity-Focused",
+        ],
+        format_func=lambda x: {
+            "Minimize Deficit": "Minimize Deficit (fastest path to balance)",
+            "Maximize Revenue": "Maximize Revenue (increase taxes/fees)",
+            "Reduce Spending": "Reduce Spending (cut programs)",
+            "Balance Budget": "Balance Budget (both revenue and spending)",
+            "Sustainable Debt": "Sustainable Debt (long-term stability)",
+            "Growth-Focused": "Growth-Focused (prioritize economic growth)",
+            "Equity-Focused": "Equity-Focused (progressive policies)",
+        }.get(x, x)
+    )
+    
+    goal_map = {
+        "Minimize Deficit": FiscalGoal.MINIMIZE_DEFICIT,
+        "Maximize Revenue": FiscalGoal.MAXIMIZE_REVENUE,
+        "Reduce Spending": FiscalGoal.REDUCE_SPENDING,
+        "Balance Budget": FiscalGoal.BALANCE_BUDGET,
+        "Sustainable Debt": FiscalGoal.SUSTAINABLE_DEBT,
+        "Growth-Focused": FiscalGoal.GROWTH_FOCUSED,
+        "Equity-Focused": FiscalGoal.EQUITY_FOCUSED,
+    }
+    
+    engine = PolicyRecommendationEngine()
+    
+    # Score some example policies
+    engine.score_policy(
+        policy_name="Progressive Tax Reform",
+        deficit_reduction=150.0,
+        revenue_change=5.0,
+        spending_change=0.0,
+        growth_impact=-0.3,
+        equity_impact="progressive",
+        feasibility=60.0,
+    )
+    
+    engine.score_policy(
+        policy_name="Spending Efficiency Program",
+        deficit_reduction=75.0,
+        revenue_change=0.0,
+        spending_change=-3.0,
+        growth_impact=0.5,
+        equity_impact="neutral",
+        feasibility=65.0,
+    )
+    
+    engine.score_policy(
+        policy_name="Healthcare Cost Control",
+        deficit_reduction=120.0,
+        revenue_change=2.0,
+        spending_change=-5.0,
+        growth_impact=0.2,
+        equity_impact="progressive",
+        feasibility=55.0,
+    )
+    
+    engine.score_policy(
+        policy_name="Growth-First Strategy",
+        deficit_reduction=50.0,
+        revenue_change=-2.0,
+        spending_change=-1.0,
+        growth_impact=1.5,
+        equity_impact="regressive",
+        feasibility=70.0,
+    )
+    
+    # Get recommendations
+    recommended = engine.recommend_policies(goal_map[goal], num_recommendations=3)
+    
+    # Display recommendations
+    st.subheader("Top Recommendations")
+    
+    for i, policy in enumerate(recommended, 1):
+        with st.expander(f"{i}. {policy.policy_name} - Score: {policy.overall_score:.0f}/100", expanded=(i==1)):
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                st.metric("Fiscal Impact", f"${policy.fiscal_impact:,.0f}B/yr", "deficit reduction")
+            with col2:
+                st.metric("Sustainability", f"{policy.sustainability:.0f}%")
+            with col3:
+                st.metric("Feasibility", f"{policy.feasibility:.0f}%")
+            with col4:
+                st.metric("Equity Score", f"{policy.equity_score:.0f}%")
+            
+            st.write("**Growth Impact:**", f"{policy.growth_impact:+.1f}%")
+            
+            st.write("**Why this policy?**")
+            reasoning = engine.get_policy_reasoning(policy.policy_name)
+            for reason in reasoning:
+                st.write(f"- {reason}")
+
+
+def page_scenario_explorer():
+    """Interactive scenario explorer for comparing multiple policy scenarios."""
+    st.title("Scenario Explorer: Compare Policy Impacts")
+    
+    st.markdown("""
+    Create and compare multiple policy scenarios side-by-side with real-time calculations.
+    """)
+    
+    from core.policy_enhancements import InteractiveScenarioExplorer, PolicyImpactCalculator
+    
+    explorer = InteractiveScenarioExplorer()
+    
+    # Pre-configured scenarios
+    scenarios = {
+        "Status Quo": {"revenue": 0, "spending": 0},
+        "Tax Reform (+5%)": {"revenue": 5, "spending": 0},
+        "Spending Cut (-3%)": {"revenue": 0, "spending": -3},
+        "Balanced Package": {"revenue": 3, "spending": -2},
+    }
+    
+    # Let user create custom scenario
+    st.subheader("Create Custom Scenario")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        scenario_name = st.text_input("Scenario name:", "My Scenario")
+    
+    with col2:
+        revenue_change = st.slider(
+            "Revenue change (%):",
+            min_value=-10.0,
+            max_value=20.0,
+            value=0.0,
+            step=0.5,
+        )
+    
+    with col3:
+        spending_change = st.slider(
+            "Spending change (%):",
+            min_value=-20.0,
+            max_value=10.0,
+            value=0.0,
+            step=0.5,
+        )
+    
+    if st.button("Add Custom Scenario"):
+        scenarios[scenario_name] = {"revenue": revenue_change, "spending": spending_change}
+        st.success(f"Added scenario: {scenario_name}")
+    
+    # Add scenarios to explorer
+    for name, params in scenarios.items():
+        explorer.add_scenario(
+            name=name,
+            revenue_change_pct=params["revenue"],
+            spending_change_pct=params["spending"],
+        )
+    
+    # Calculate all scenarios
+    explorer.calculate_all_scenarios(years=10)
+    
+    # Display summary
+    st.subheader("Scenario Comparison")
+    summary_df = explorer.get_scenario_summary()
+    st.dataframe(summary_df, use_container_width=True)
+    
+    # Chart: Deficit by scenario
+    st.subheader("10-Year Cumulative Deficit by Scenario")
+    
+    chart_data = []
+    for name, df in explorer.results.items():
+        chart_data.append({
+            "Scenario": name,
+            "Total Deficit": df["deficit"].sum(),
+        })
+    
+    chart_df = pd.DataFrame(chart_data).sort_values("Total Deficit")
+    
+    fig = px.bar(
+        chart_df,
+        x="Scenario",
+        y="Total Deficit",
+        title="Cumulative 10-Year Deficit by Scenario",
+        labels={"Total Deficit": "Deficit ($B)"},
+        template="plotly_white",
+        color="Total Deficit",
+        color_continuous_scale="RdYlGn_r",
+    )
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # Show best scenario
+    st.subheader("Best Scenario")
+    best_name, best_df = explorer.get_best_scenario("lowest_deficit")
+    
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Scenario", best_name)
+    with col2:
+        st.metric("10-Year Deficit", f"${best_df['deficit'].sum():,.0f}B")
+    with col3:
+        st.metric("Avg Annual Deficit", f"${best_df['deficit'].mean():,.0f}B")
+    
+    # Detailed year-by-year for best scenario
+    st.subheader(f"Year-by-Year: {best_name}")
+    
+    display_df = best_df[["year", "revenue", "spending", "deficit"]].copy()
+    display_df.columns = ["Year", "Revenue ($B)", "Spending ($B)", "Deficit ($B)"]
+    display_df = display_df.round(1)
+    st.dataframe(display_df, use_container_width=True)
+
+
+def page_impact_calculator():
+    """Real-time policy impact calculator."""
+    st.title("Impact Calculator: Measure Policy Effects")
+    
+    st.markdown("""
+    Adjust policy parameters and instantly see fiscal impact over time.
+    """)
+    
+    from core.policy_enhancements import PolicyImpactCalculator
+    from core.data_loader import load_real_data
+    
+    # Get baseline data
+    data = load_real_data()
+    base_revenue = data.cbo.total_revenue
+    base_spending = data.cbo.total_spending
+    
+    # Parameter sliders
+    st.subheader("Policy Parameters")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        revenue_change = st.slider(
+            "Revenue change (%):",
+            min_value=-15.0,
+            max_value=30.0,
+            value=0.0,
+            step=1.0,
+            help="How much to increase or decrease total federal revenue",
+        )
+    
+    with col2:
+        spending_change = st.slider(
+            "Spending change (%):",
+            min_value=-30.0,
+            max_value=15.0,
+            value=0.0,
+            step=1.0,
+            help="How much to increase or decrease total federal spending",
+        )
+    
+    with col3:
+        years = st.slider(
+            "Projection years:",
+            min_value=1,
+            max_value=30,
+            value=10,
+            step=1,
+        )
+    
+    # Calculate impact
+    impact_df = PolicyImpactCalculator.calculate_impact(
+        base_revenue,
+        base_spending,
+        revenue_change,
+        spending_change,
+        years=years,
+    )
+    
+    # Key metrics
+    st.subheader("Impact Summary")
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    baseline_deficit = base_spending - base_revenue
+    final_deficit = impact_df["deficit"].iloc[-1]
+    total_deficit = impact_df["deficit"].sum()
+    savings = -impact_df["cumulative_savings"].iloc[-1]
+    
+    with col1:
+        st.metric(
+            "Baseline Annual Deficit",
+            f"${baseline_deficit:,.0f}B",
+            "-"
+        )
+    
+    with col2:
+        st.metric(
+            f"Year {years} Deficit",
+            f"${final_deficit:,.0f}B",
+            f"${final_deficit - baseline_deficit:+,.0f}B"
+        )
+    
+    with col3:
+        st.metric(
+            f"{years}-Year Total Deficit",
+            f"${total_deficit:,.0f}B",
+        )
+    
+    with col4:
+        st.metric(
+            f"Cumulative Savings",
+            f"${savings:,.0f}B",
+        )
+    
+    # Charts
+    st.subheader("Fiscal Projections")
+    
+    # Revenue vs Spending
+    fig1 = go.Figure()
+    fig1.add_trace(go.Scatter(
+        x=impact_df["year"],
+        y=impact_df["revenue"],
+        name="Revenue",
+        mode="lines",
+        line=dict(color="green", width=3),
+    ))
+    fig1.add_trace(go.Scatter(
+        x=impact_df["year"],
+        y=impact_df["spending"],
+        name="Spending",
+        mode="lines",
+        line=dict(color="red", width=3),
+    ))
+    fig1.update_layout(
+        title="Revenue vs Spending Over Time",
+        xaxis_title="Year",
+        yaxis_title="Amount ($B)",
+        template="plotly_white",
+        hovermode="x unified",
+    )
+    st.plotly_chart(fig1, use_container_width=True)
+    
+    # Deficit trend
+    fig2 = px.bar(
+        impact_df,
+        x="year",
+        y="deficit",
+        title="Annual Deficit",
+        labels={"year": "Year", "deficit": "Deficit ($B)"},
+        template="plotly_white",
+        color="deficit",
+        color_continuous_scale="Reds",
+    )
+    st.plotly_chart(fig2, use_container_width=True)
+    
+    # Data table
+    st.subheader("Year-by-Year Details")
+    
+    display_df = impact_df[["year", "revenue", "spending", "deficit"]].copy()
+    display_df.columns = ["Year", "Revenue ($B)", "Spending ($B)", "Deficit ($B)"]
+    display_df = display_df.round(1)
+    st.dataframe(display_df, use_container_width=True, height=400)
+
+
+def page_monte_carlo_scenarios():
+    """Advanced Monte Carlo scenario analysis."""
+    st.title("Advanced Scenarios: Monte Carlo Uncertainty Analysis")
+    
+    st.markdown("""
+    Analyze policies under uncertainty with Monte Carlo simulation.
+    Generate P10/P90 confidence bounds, stress tests, and sensitivity analysis.
+    """)
+    
+    from core.monte_carlo_scenarios import (
+        MonteCarloPolicySimulator,
+        PolicySensitivityAnalyzer,
+        StressTestAnalyzer,
+    )
+    
+    tabs = st.tabs(["Monte Carlo", "Sensitivity", "Stress Test"])
+    
+    with tabs[0]:
+        st.subheader("Monte Carlo Simulation")
+        st.write("Run stochastic analysis on custom policies with confidence bounds.")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            revenue_change = st.slider(
+                "Revenue change (%):",
+                min_value=-15.0,
+                max_value=30.0,
+                value=0.0,
+                step=1.0,
+                key="mc_revenue",
+            )
+        
+        with col2:
+            spending_change = st.slider(
+                "Spending change (%):",
+                min_value=-30.0,
+                max_value=15.0,
+                value=0.0,
+                step=1.0,
+                key="mc_spending",
+            )
+        
+        with col3:
+            iterations = st.slider(
+                "Monte Carlo iterations:",
+                min_value=1_000,
+                max_value=100_000,
+                value=10_000,
+                step=1_000,
+            )
+        
+        if st.button("Run Monte Carlo Simulation"):
+            with st.spinner("Running 10,000 simulations..."):
+                simulator = MonteCarloPolicySimulator()
+                result = simulator.simulate_policy(
+                    policy_name="Custom Policy",
+                    revenue_change_pct=revenue_change,
+                    spending_change_pct=spending_change,
+                    years=10,
+                    iterations=iterations,
+                )
+                
+                # Display results
+                col1, col2, col3, col4, col5 = st.columns(5)
+                
+                with col1:
+                    st.metric("Mean Deficit", f"${result.mean_deficit:,.0f}B")
+                with col2:
+                    st.metric("Median Deficit", f"${result.median_deficit:,.0f}B")
+                with col3:
+                    st.metric("Std Dev", f"${result.std_dev_deficit:,.0f}B")
+                with col4:
+                    st.metric("P10 (Best)", f"${result.p10_deficit:,.0f}B")
+                with col5:
+                    st.metric("P90 (Worst)", f"${result.p90_deficit:,.0f}B")
+                
+                st.write(f"**Probability of balanced budget:** {result.probability_balanced:.1f}%")
+                
+                # Distribution chart
+                fig = px.histogram(
+                    x=result.simulation_results[:, -1],
+                    nbins=50,
+                    title="Distribution of Final Year Deficit (10,000 simulations)",
+                    labels={"x": "Deficit ($B)"},
+                    template="plotly_white",
+                )
+                
+                # Add confidence bounds
+                fig.add_vline(x=result.p10_deficit, line_dash="dash", line_color="green", 
+                             annotation_text="P10", annotation_position="top")
+                fig.add_vline(x=result.p90_deficit, line_dash="dash", line_color="red",
+                             annotation_text="P90", annotation_position="top")
+                fig.add_vline(x=result.mean_deficit, line_dash="solid", line_color="blue",
+                             annotation_text="Mean", annotation_position="top")
+                
+                st.plotly_chart(fig, use_container_width=True)
+    
+    with tabs[1]:
+        st.subheader("Parameter Sensitivity Analysis")
+        st.write("Which policy parameters have the biggest impact on outcomes?")
+        
+        parameters = {
+            "Revenue Change": (-10.0, 20.0),
+            "Spending Change": (-30.0, 10.0),
+            "Revenue Uncertainty": (2.0, 20.0),
+            "Spending Uncertainty": (2.0, 20.0),
+        }
+        
+        analyzer = PolicySensitivityAnalyzer()
+        tornado_df = analyzer.tornado_analysis(
+            base_revenue=5_980,
+            base_spending=6_911,
+            parameter_ranges=parameters,
+        )
+        
+        # Tornado chart
+        fig = go.Figure()
+        
+        fig.add_trace(go.Bar(
+            name="Negative Impact",
+            x=tornado_df["Negative Impact"],
+            y=tornado_df["Parameter"],
+            orientation="h",
+            marker=dict(color="rgba(255, 0, 0, 0.7)"),
+        ))
+        
+        fig.add_trace(go.Bar(
+            name="Positive Impact",
+            x=tornado_df["Positive Impact"],
+            y=tornado_df["Parameter"],
+            orientation="h",
+            marker=dict(color="rgba(0, 0, 255, 0.7)"),
+        ))
+        
+        fig.update_layout(
+            title="Parameter Sensitivity (Tornado Chart)",
+            xaxis_title="10-Year Deficit Impact ($B)",
+            barmode="relative",
+            template="plotly_white",
+            height=400,
+        )
+        
+        st.plotly_chart(fig, use_container_width=True)
+        
+        st.write("**Interpretation:** The longer the bar, the more impact that parameter has on the deficit.")
+    
+    with tabs[2]:
+        st.subheader("Stress Test Analysis")
+        st.write("How does the policy perform under adverse economic scenarios?")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            revenue_change = st.slider(
+                "Revenue change (%):",
+                min_value=-15.0,
+                max_value=30.0,
+                value=0.0,
+                step=1.0,
+                key="stress_revenue",
+            )
+        
+        with col2:
+            spending_change = st.slider(
+                "Spending change (%):",
+                min_value=-30.0,
+                max_value=15.0,
+                value=0.0,
+                step=1.0,
+                key="stress_spending",
+            )
+        
+        stress_analyzer = StressTestAnalyzer()
+        stress_df = stress_analyzer.run_stress_test(
+            policy_params={
+                "revenue_change_pct": revenue_change,
+                "spending_change_pct": spending_change,
+            }
+        )
+        
+        st.dataframe(stress_df, use_container_width=True)
+        
+        st.write("**Stress Scenarios:**")
+        st.write("- **Recession:** 10% revenue drop, 5% spending increase")
+        st.write("- **Inflation:** Growth reduction, interest rate increase")
+        st.write("- **Demographic Shock:** Beneficiary surge, coverage challenges")
+        st.write("- **Market Correction:** General deficit pressures")
+        st.write("- **Perfect Storm:** Combined worst-case scenario")
+
+
 def main():
     """Main Streamlit app."""
     if not HAS_STREAMLIT:
@@ -1159,6 +1733,11 @@ def main():
             "Combined Outlook",
             "Policy Comparison",
             "---",
+            "Recommendations",
+            "Scenario Explorer",
+            "Impact Calculator",
+            "Advanced Scenarios",
+            "---",
             "Custom Policy Builder",
             "Real Data Dashboard",
             "Policy Upload"
@@ -1181,6 +1760,14 @@ def main():
         page_combined_outlook()
     elif page == "Policy Comparison":
         page_policy_comparison()
+    elif page == "Recommendations":
+        page_policy_recommendations()
+    elif page == "Scenario Explorer":
+        page_scenario_explorer()
+    elif page == "Impact Calculator":
+        page_impact_calculator()
+    elif page == "Advanced Scenarios":
+        page_monte_carlo_scenarios()
     elif page == "Custom Policy Builder":
         page_custom_policy_builder()
     elif page == "Real Data Dashboard":

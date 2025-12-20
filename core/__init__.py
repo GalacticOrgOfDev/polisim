@@ -115,6 +115,24 @@ from core.pdf_policy_parser import (
     process_policy_pdf,
 )
 
+# Phase 4b: Policy Enhancements
+from core.policy_enhancements import (
+    PolicyRecommendationEngine,
+    PolicyImpactCalculator,
+    InteractiveScenarioExplorer,
+    PolicyComparator,
+    PolicyScore,
+    FiscalGoal,
+)
+
+# Phase 4c: Monte Carlo Scenarios
+from core.monte_carlo_scenarios import (
+    MonteCarloPolicySimulator,
+    PolicySensitivityAnalyzer,
+    StressTestAnalyzer,
+    MonteCarloResult,
+)
+
 # Configure module-level logging
 _logger = logging.getLogger(__name__)
 _logger.addHandler(logging.NullHandler())
@@ -186,5 +204,19 @@ __all__ = [
     'PolicyKeywordMatcher',
     'PolicyExtraction',
     'process_policy_pdf',
+    
+    # Phase 4b: Policy Enhancements
+    'PolicyRecommendationEngine',
+    'PolicyImpactCalculator',
+    'InteractiveScenarioExplorer',
+    'PolicyComparator',
+    'PolicyScore',
+    'FiscalGoal',
+    
+    # Phase 4c: Monte Carlo Scenarios
+    'MonteCarloPolicySimulator',
+    'PolicySensitivityAnalyzer',
+    'StressTestAnalyzer',
+    'MonteCarloResult',
 ]
 
