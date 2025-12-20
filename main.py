@@ -32,6 +32,8 @@ def main():
     parser.add_argument('--years', type=int, default=22, help='Number of years to simulate')
     parser.add_argument('--start-year', type=int, default=2027, help='Simulation start year')
     parser.add_argument('--auto-install-deps', action='store_true', help='Auto-install missing optional dependencies without prompting')
+    parser.add_argument('--dashboard', action='store_true', help='Launch CBO 2.0 Streamlit dashboard (Phase 2+) instead of legacy GUI')
+    parser.add_argument('--legacy-gui', action='store_true', help='Launch legacy Tkinter GUI (Phase 1 healthcare only)')
     args = parser.parse_args()
 
     if args.simulate:
@@ -39,8 +41,27 @@ def main():
         run_scenario(args.scenario, years=args.years, start_year=args.start_year)
         return
 
-    # Default: launch GUI
-    # Before importing the GUI, ensure required optional libs are available.
+    # If dashboard flag is set, launch Streamlit dashboard (CBO 2.0)
+    if args.dashboard or not args.legacy_gui:
+        print("Launching CBO 2.0 Streamlit Dashboard (Phase 2+)...")
+        try:
+            subprocess.check_call([sys.executable, '-m', 'streamlit', 'run', 'ui/dashboard.py'])
+        except FileNotFoundError:
+            print("Error: Streamlit not installed. Install with: pip install streamlit plotly")
+            print("Falling back to legacy GUI...")
+        except subprocess.CalledProcessError:
+            print("Streamlit dashboard error. Falling back to legacy GUI...")
+        except KeyboardInterrupt:
+            print("Dashboard closed.")
+            return
+
+    # Default: launch legacy Tkinter GUI (healthcare only)
+    if args.legacy_gui or args.dashboard:
+        # If dashboard was specified but failed, ask user
+        if args.dashboard:
+            return
+    
+    print("Launching legacy Economic Projector GUI (Phase 1 Healthcare)...")
     # Offer to install any missing packages into the active Python environment.
     # Each entry: (import_name, pip_name, friendly_name, min_version)
     DEPENDENCIES = [
