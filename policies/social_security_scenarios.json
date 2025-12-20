@@ -1,0 +1,153 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "description": "Social Security policy reform scenarios for CBO 2.0 Phase 2",
+    "baseline_year": 2025,
+    "source": "SSA Trustees 2024 Report",
+    "created": "2025-12-19"
+  },
+  "baseline": {
+    "name": "Current Law Baseline",
+    "description": "Social Security under current law (2025)",
+    "parameters": {
+      "oasi_payroll_tax_rate": 0.1050,
+      "di_payroll_tax_rate": 0.0150,
+      "combined_payroll_tax_rate": 0.124,
+      "wage_cap": 168600,
+      "full_retirement_age": 67,
+      "cola_adjustment": 0.032,
+      "benefit_reductions": 0.0
+    },
+    "expected_outcomes": {
+      "oasi_depletion_year": 2034,
+      "oasi_depletion_p10": 2033,
+      "oasi_depletion_p90": 2035,
+      "di_solvency_through_year": 2051
+    }
+  },
+  "scenarios": {
+    "raise_payroll_tax": {
+      "name": "Raise Payroll Tax Rate",
+      "description": "Increase combined payroll tax from 12.4% to 14.2% (phased 2027-2031)",
+      "implementation_year": 2027,
+      "parameters": {
+        "oasi_payroll_tax_rate": 0.1176,
+        "di_payroll_tax_rate": 0.0174,
+        "combined_payroll_tax_rate": 0.1350,
+        "wage_cap": 168600,
+        "full_retirement_age": 67,
+        "cola_adjustment": 0.032,
+        "benefit_reductions": 0.0,
+        "phase_in_years": 5
+      },
+      "expected_outcomes": {
+        "oasi_depletion_year": 2046,
+        "revenue_increase_10yr_billions": 1850,
+        "worker_tax_increase_annual": 3200
+      }
+    },
+    "remove_wage_cap": {
+      "name": "Remove Social Security Wage Cap",
+      "description": "Subject all wages to payroll tax (currently capped at $168,600 in 2025)",
+      "implementation_year": 2027,
+      "parameters": {
+        "oasi_payroll_tax_rate": 0.1050,
+        "di_payroll_tax_rate": 0.0150,
+        "combined_payroll_tax_rate": 0.124,
+        "wage_cap": null,
+        "full_retirement_age": 67,
+        "cola_adjustment": 0.032,
+        "benefit_reductions": 0.0,
+        "tax_earnings_over_cap": true,
+        "benefit_coverage_expansion": "85th_percentile"
+      },
+      "expected_outcomes": {
+        "oasi_depletion_year": 2041,
+        "revenue_increase_10yr_billions": 2200,
+        "high_earner_tax_increase_annual": 4800,
+        "affecting_population_percent": 8.5
+      }
+    },
+    "raise_full_retirement_age": {
+      "name": "Raise Full Retirement Age (FRA)",
+      "description": "Gradually increase FRA from 67 to 70 (1 month per year, 2026-2049)",
+      "implementation_year": 2026,
+      "parameters": {
+        "oasi_payroll_tax_rate": 0.1050,
+        "di_payroll_tax_rate": 0.0150,
+        "combined_payroll_tax_rate": 0.124,
+        "wage_cap": 168600,
+        "full_retirement_age": 70,
+        "full_retirement_age_increase_schedule": "1_month_per_year",
+        "cola_adjustment": 0.032,
+        "benefit_reductions": 0.0,
+        "early_claiming_age": 62
+      },
+      "expected_outcomes": {
+        "oasi_depletion_year": 2039,
+        "benefit_reduction_all_claimers_percent": 15,
+        "workforce_participation_change_percent": 2.5
+      }
+    },
+    "reduce_benefits": {
+      "name": "Across-the-Board Benefit Reduction",
+      "description": "Reduce all future benefits by 17% effective 2027 (targets 100-year solvency)",
+      "implementation_year": 2027,
+      "parameters": {
+        "oasi_payroll_tax_rate": 0.1050,
+        "di_payroll_tax_rate": 0.0150,
+        "combined_payroll_tax_rate": 0.124,
+        "wage_cap": 168600,
+        "full_retirement_age": 67,
+        "cola_adjustment": 0.032,
+        "benefit_reductions": 0.17,
+        "low_income_protections": true,
+        "minimum_benefit_floor": "175_percent_poverty_line"
+      },
+      "expected_outcomes": {
+        "oasi_depletion_year": 2050,
+        "average_annual_benefit_reduction_dollars": 2400,
+        "elderly_poverty_increase_percent": 8
+      }
+    },
+    "combined_reform_package": {
+      "name": "Comprehensive Reform Package",
+      "description": "Balanced approach: raise tax 1.5%, remove cap at 85th percentile, raise FRA to 68.5, modest benefits adjustment",
+      "implementation_year": 2027,
+      "parameters": {
+        "oasi_payroll_tax_rate": 0.1132,
+        "di_payroll_tax_rate": 0.0168,
+        "combined_payroll_tax_rate": 0.1300,
+        "wage_cap": null,
+        "wage_cap_expansion_to_percentile": 85,
+        "full_retirement_age": 68.5,
+        "full_retirement_age_increase_schedule": "1_month_per_2_years",
+        "cola_adjustment": 0.032,
+        "benefit_reductions": 0.05,
+        "low_income_protections": true,
+        "phase_in_years": 5
+      },
+      "expected_outcomes": {
+        "oasi_depletion_year": 2065,
+        "75_year_solvency": true,
+        "revenue_increase_10yr_billions": 2500,
+        "benefit_reduction_average_dollars": 800,
+        "worker_burden_distribution": "progressive"
+      }
+    }
+  },
+  "sensitivity_analysis": {
+    "life_expectancy_increase": {
+      "description": "1-year increase in life expectancy pushes depletion forward by X years",
+      "sensitivity_factor": 2.3
+    },
+    "wage_growth_increase": {
+      "description": "0.1% increase in real wage growth",
+      "sensitivity_factor": -1.8
+    },
+    "fertility_rate_change": {
+      "description": "0.1 child increase per woman",
+      "sensitivity_factor": -1.2
+    }
+  }
+}

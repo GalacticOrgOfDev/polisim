@@ -1,0 +1,121 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "description": "Economic scenarios for federal revenue projections",
+    "baseline_year": 2025,
+    "source": "CBO 2025 Economic Outlook, NIPA data",
+    "created": "2025-12-19"
+  },
+  "baseline_2025": {
+    "gdp_nominal_billions": 29000,
+    "gdp_real_growth_rate": 0.025,
+    "wage_growth_rate": 0.03,
+    "inflation_rate": 0.025,
+    "unemployment_rate": 0.041,
+    "labor_force_participation": 0.628,
+    "average_wages_annual": 67500,
+    "employment_millions": 162
+  },
+  "scenarios": {
+    "baseline_current_law": {
+      "name": "Baseline Current Law",
+      "description": "CBO baseline projection (low unemployment, modest growth)",
+      "implementation_year": 2025,
+      "economic_assumptions": {
+        "gdp_real_growth_annual": [0.025, 0.024, 0.023, 0.022, 0.022, 0.022, 0.022, 0.022, 0.022, 0.022],
+        "wage_growth_annual": [0.03, 0.031, 0.031, 0.030, 0.030, 0.029, 0.029, 0.029, 0.029, 0.029],
+        "inflation_annual": [0.025, 0.024, 0.022, 0.021, 0.021, 0.021, 0.021, 0.021, 0.021, 0.021],
+        "unemployment_rate": [0.041, 0.042, 0.043, 0.042, 0.042, 0.042, 0.042, 0.042, 0.042, 0.042],
+        "labor_force_participation": [0.628, 0.628, 0.627, 0.626, 0.625, 0.624, 0.623, 0.622, 0.621, 0.620],
+        "profit_growth_annual": [0.02, 0.025, 0.025, 0.024, 0.024, 0.023, 0.023, 0.023, 0.023, 0.023],
+        "federal_funds_rate": [0.048, 0.040, 0.035, 0.030, 0.025, 0.025, 0.025, 0.025, 0.025, 0.025]
+      },
+      "revenue_projections": {
+        "total_10yr_billions": 52000,
+        "average_growth_rate": 0.035,
+        "components": {
+          "individual_income_tax_billions": 23500,
+          "payroll_taxes_billions": 15200,
+          "corporate_income_tax_billions": 2800,
+          "excise_taxes_billions": 280,
+          "other_revenues_billions": 10220
+        }
+      }
+    },
+    "recession_2026": {
+      "name": "Recession Scenario (2026)",
+      "description": "Mild recession in 2026 followed by recovery",
+      "implementation_year": 2025,
+      "economic_assumptions": {
+        "gdp_real_growth_annual": [-0.015, 0.015, 0.030, 0.028, 0.025, 0.024, 0.023, 0.023, 0.023, 0.022],
+        "wage_growth_annual": [0.030, -0.010, 0.025, 0.030, 0.031, 0.030, 0.030, 0.029, 0.029, 0.029],
+        "inflation_annual": [0.025, 0.030, 0.025, 0.022, 0.021, 0.021, 0.021, 0.021, 0.021, 0.021],
+        "unemployment_rate": [0.041, 0.065, 0.058, 0.048, 0.043, 0.042, 0.042, 0.042, 0.042, 0.042],
+        "labor_force_participation": [0.628, 0.620, 0.623, 0.625, 0.626, 0.627, 0.627, 0.627, 0.626, 0.625],
+        "profit_growth_annual": [0.02, -0.10, 0.08, 0.03, 0.025, 0.024, 0.023, 0.023, 0.023, 0.023],
+        "federal_funds_rate": [0.048, 0.020, 0.025, 0.030, 0.035, 0.035, 0.030, 0.025, 0.025, 0.025]
+      },
+      "revenue_projections": {
+        "total_10yr_billions": 48500,
+        "average_growth_rate": 0.015,
+        "components": {
+          "individual_income_tax_billions": 21200,
+          "payroll_taxes_billions": 14500,
+          "corporate_income_tax_billions": 2100,
+          "excise_taxes_billions": 250,
+          "other_revenues_billions": 9450
+        }
+      }
+    },
+    "strong_growth": {
+      "name": "Strong Growth Scenario",
+      "description": "Above-trend growth with productivity improvements",
+      "implementation_year": 2025,
+      "economic_assumptions": {
+        "gdp_real_growth_annual": [0.035, 0.038, 0.036, 0.034, 0.032, 0.030, 0.028, 0.027, 0.027, 0.026],
+        "wage_growth_annual": [0.035, 0.040, 0.039, 0.037, 0.035, 0.033, 0.032, 0.031, 0.031, 0.030],
+        "inflation_annual": [0.025, 0.023, 0.021, 0.020, 0.020, 0.020, 0.021, 0.021, 0.021, 0.021],
+        "unemployment_rate": [0.041, 0.035, 0.032, 0.033, 0.034, 0.035, 0.035, 0.035, 0.036, 0.036],
+        "labor_force_participation": [0.628, 0.632, 0.635, 0.636, 0.636, 0.635, 0.633, 0.631, 0.628, 0.625],
+        "profit_growth_annual": [0.02, 0.045, 0.040, 0.038, 0.035, 0.032, 0.030, 0.028, 0.027, 0.026],
+        "federal_funds_rate": [0.048, 0.050, 0.055, 0.055, 0.050, 0.045, 0.040, 0.035, 0.030, 0.030]
+      },
+      "revenue_projections": {
+        "total_10yr_billions": 57500,
+        "average_growth_rate": 0.055,
+        "components": {
+          "individual_income_tax_billions": 26800,
+          "payroll_taxes_billions": 16200,
+          "corporate_income_tax_billions": 3800,
+          "excise_taxes_billions": 320,
+          "other_revenues_billions": 10380
+        }
+      }
+    },
+    "demographic_challenge": {
+      "name": "Demographic Challenge (Aging)",
+      "description": "Aging population reduces labor force growth, revenue pressure",
+      "implementation_year": 2025,
+      "economic_assumptions": {
+        "gdp_real_growth_annual": [0.020, 0.019, 0.018, 0.017, 0.016, 0.015, 0.014, 0.014, 0.014, 0.013],
+        "wage_growth_annual": [0.028, 0.027, 0.026, 0.025, 0.024, 0.023, 0.022, 0.022, 0.021, 0.021],
+        "inflation_annual": [0.025, 0.024, 0.022, 0.021, 0.021, 0.021, 0.021, 0.021, 0.021, 0.021],
+        "unemployment_rate": [0.041, 0.042, 0.043, 0.044, 0.044, 0.044, 0.044, 0.044, 0.044, 0.044],
+        "labor_force_participation": [0.628, 0.620, 0.612, 0.604, 0.598, 0.592, 0.587, 0.582, 0.578, 0.574],
+        "profit_growth_annual": [0.02, 0.018, 0.018, 0.017, 0.016, 0.015, 0.014, 0.014, 0.013, 0.013],
+        "federal_funds_rate": [0.048, 0.045, 0.040, 0.035, 0.030, 0.025, 0.025, 0.025, 0.025, 0.025]
+      },
+      "revenue_projections": {
+        "total_10yr_billions": 47000,
+        "average_growth_rate": 0.018,
+        "components": {
+          "individual_income_tax_billions": 21000,
+          "payroll_taxes_billions": 13800,
+          "corporate_income_tax_billions": 2400,
+          "excise_taxes_billions": 260,
+          "other_revenues_billions": 9540
+        }
+      }
+    }
+  }
+}

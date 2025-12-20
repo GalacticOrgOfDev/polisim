@@ -66,6 +66,14 @@ from core.revenue_modeling import (
     TaxReforms,
 )
 
+# Phase 3.1: Medicare & Medicaid modules
+from core.medicare_medicaid import (
+    MedicareModel,
+    MedicaidModel,
+    MedicareAssumptions,
+    MedicaidAssumptions,
+)
+
 # Configure module-level logging
 _logger = logging.getLogger(__name__)
 _logger.addHandler(logging.NullHandler())
@@ -85,7 +93,7 @@ __all__ = [
     'get_policy_by_type',
     'list_available_policies',
     
-    # Economic engine (new)
+    # Economic engine
     'MonteCarloEngine',
     'EconomicModel',
     'PolicyScenario',
@@ -95,5 +103,23 @@ __all__ = [
     'SpendingCategory',
     'SensitivityAnalyzer',
     'ScenarioComparator',
+    
+    # Phase 2: Social Security & Revenue
+    'SocialSecurityModel',
+    'DemographicAssumptions',
+    'BenefitFormula',
+    'TrustFundAssumptions',
+    'SocialSecurityReforms',
+    'FederalRevenueModel',
+    'IndividualIncomeTaxAssumptions',
+    'PayrollTaxAssumptions',
+    'CorporateIncomeTaxAssumptions',
+    'TaxReforms',
+    
+    # Phase 3.1: Medicare & Medicaid
+    'MedicareModel',
+    'MedicaidModel',
+    'MedicareAssumptions',
+    'MedicaidAssumptions',
 ]
 

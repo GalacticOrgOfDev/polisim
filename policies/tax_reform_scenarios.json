@@ -1,0 +1,188 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "description": "Federal tax reform scenarios for CBO 2.0 Phase 2",
+    "baseline_year": 2025,
+    "source": "CBO 2025 Economic & Budget Outlook",
+    "created": "2025-12-19"
+  },
+  "baseline": {
+    "name": "Current Law (Baseline)",
+    "description": "Federal tax revenues under current law (2025)",
+    "parameters": {
+      "individual_income_tax_rate_top": 0.37,
+      "capital_gains_top_rate": 0.20,
+      "corporate_tax_rate": 0.21,
+      "payroll_tax_rate_ss": 0.062,
+      "payroll_tax_rate_medicare": 0.0145,
+      "payroll_tax_rate_combined": 0.124,
+      "payroll_tax_cap_ss": 168600,
+      "estate_tax_exemption": 13610000,
+      "tax_filing_compliance_rate": 0.84
+    },
+    "expected_10yr_revenues": {
+      "total_billions": 52000,
+      "individual_income_tax_billions": 23500,
+      "payroll_taxes_billions": 15200,
+      "corporate_income_tax_billions": 2800,
+      "excise_taxes_billions": 280
+    }
+  },
+  "scenarios": {
+    "increase_top_individual_rate": {
+      "name": "Increase Top Individual Income Tax Rate",
+      "description": "Raise top individual income tax rate from 37% to 42% effective 2026",
+      "implementation_year": 2026,
+      "parameters": {
+        "individual_income_tax_rate_top": 0.42,
+        "individual_income_tax_rate_second_tier": 0.37,
+        "income_threshold_top_rate": 700000,
+        "capital_gains_top_rate": 0.20,
+        "corporate_tax_rate": 0.21,
+        "payroll_tax_rate_ss": 0.062,
+        "payroll_tax_rate_medicare": 0.0145,
+        "payroll_tax_rate_combined": 0.124,
+        "payroll_tax_cap_ss": 168600,
+        "tax_filing_compliance_rate": 0.84
+      },
+      "expected_outcomes": {
+        "revenue_increase_10yr_billions": 750,
+        "affected_taxpayers": 1200000,
+        "average_tax_increase_affected": 6250,
+        "economic_growth_impact_percent": -0.08,
+        "labor_supply_elasticity": -0.15
+      }
+    },
+    "increase_corporate_rate": {
+      "name": "Increase Corporate Income Tax Rate",
+      "description": "Raise corporate tax rate from 21% to 25% effective 2026",
+      "implementation_year": 2026,
+      "parameters": {
+        "individual_income_tax_rate_top": 0.37,
+        "capital_gains_top_rate": 0.20,
+        "corporate_tax_rate": 0.25,
+        "payroll_tax_rate_ss": 0.062,
+        "payroll_tax_rate_medicare": 0.0145,
+        "payroll_tax_rate_combined": 0.124,
+        "payroll_tax_cap_ss": 168600,
+        "global_minimum_tax": true,
+        "minimum_tax_rate": 0.15,
+        "tax_filing_compliance_rate": 0.84
+      },
+      "expected_outcomes": {
+        "revenue_increase_10yr_billions": 1200,
+        "capital_formation_impact_percent": -2.5,
+        "investment_reduction_percent": -3.2,
+        "wage_impact_percent": -0.5,
+        "cross_border_impact": "moderate_relocation"
+      }
+    },
+    "increase_payroll_tax": {
+      "name": "Increase Payroll Tax Rate (Medicare)",
+      "description": "Increase Medicare payroll tax from 2.9% to 3.8% effective 2026 (phased over 3 years)",
+      "implementation_year": 2026,
+      "parameters": {
+        "individual_income_tax_rate_top": 0.37,
+        "capital_gains_top_rate": 0.20,
+        "corporate_tax_rate": 0.21,
+        "payroll_tax_rate_ss": 0.062,
+        "payroll_tax_rate_medicare": 0.0238,
+        "payroll_tax_rate_combined": 0.1300,
+        "payroll_tax_cap_ss": 168600,
+        "medicare_wage_base_cap": null,
+        "phase_in_years": 3,
+        "tax_filing_compliance_rate": 0.84
+      },
+      "expected_outcomes": {
+        "revenue_increase_10yr_billions": 850,
+        "medicare_trust_fund_extension_years": 15,
+        "worker_tax_increase_annual": 1200,
+        "employer_burden_increase_percent": 1.8,
+        "labor_supply_impact_percent": -0.05
+      }
+    },
+    "remove_ss_wage_cap": {
+      "name": "Remove Social Security Wage Cap",
+      "description": "Remove the $168,600 wage cap for Social Security tax (87% PIA coverage expansion)",
+      "implementation_year": 2027,
+      "parameters": {
+        "individual_income_tax_rate_top": 0.37,
+        "capital_gains_top_rate": 0.20,
+        "corporate_tax_rate": 0.21,
+        "payroll_tax_rate_ss": 0.062,
+        "payroll_tax_rate_medicare": 0.0145,
+        "payroll_tax_rate_combined": 0.124,
+        "payroll_tax_cap_ss": null,
+        "ss_coverage_expansion_to_percentile": 87,
+        "tax_filing_compliance_rate": 0.84
+      },
+      "expected_outcomes": {
+        "revenue_increase_10yr_billions": 2200,
+        "high_earner_tax_increase_annual": 4800,
+        "affected_population_percent": 8.5,
+        "ss_solvency_extension_years": 8,
+        "income_distribution_impact": "progressive"
+      }
+    },
+    "carbon_tax": {
+      "name": "Implement Carbon Tax",
+      "description": "New carbon tax starting at $50/ton CO2 rising to $200/ton by 2040",
+      "implementation_year": 2027,
+      "parameters": {
+        "carbon_tax_starting_rate_per_ton": 50,
+        "carbon_tax_ending_rate_per_ton": 200,
+        "carbon_tax_end_year": 2040,
+        "annual_increase_rate": 0.08,
+        "border_adjustment": true,
+        "individual_income_tax_rate_top": 0.37,
+        "capital_gains_top_rate": 0.20,
+        "corporate_tax_rate": 0.21,
+        "payroll_tax_rate_ss": 0.062,
+        "payroll_tax_rate_medicare": 0.0145,
+        "tax_filing_compliance_rate": 0.84
+      },
+      "expected_outcomes": {
+        "revenue_increase_10yr_billions": 1500,
+        "carbon_emissions_reduction_percent": 25,
+        "economic_growth_impact_percent": 0.15,
+        "regressive_impact_mitigation": "rebate_credits",
+        "transition_relief_billions": 500
+      }
+    },
+    "comprehensive_tax_reform": {
+      "name": "Comprehensive Tax Reform Package",
+      "description": "Balanced reform: corporate +2%, top rate +3%, eliminate cap, 0.8% Medicare increase",
+      "implementation_year": 2027,
+      "parameters": {
+        "individual_income_tax_rate_top": 0.40,
+        "individual_income_tax_rate_second_tier": 0.37,
+        "capital_gains_top_rate": 0.23,
+        "corporate_tax_rate": 0.23,
+        "payroll_tax_rate_ss": 0.062,
+        "payroll_tax_rate_medicare": 0.0225,
+        "payroll_tax_rate_combined": 0.1345,
+        "payroll_tax_cap_ss": null,
+        "ss_coverage_expansion_to_percentile": 85,
+        "estate_tax_exemption": 5000000,
+        "carbon_tax_starting_rate_per_ton": 25,
+        "tax_filing_compliance_rate": 0.88,
+        "phase_in_years": 3
+      },
+      "expected_outcomes": {
+        "revenue_increase_10yr_billions": 6500,
+        "deficit_reduction_10yr_billions": 5800,
+        "gini_coefficient_change": -0.015,
+        "gdp_growth_impact_percent": -0.25,
+        "labor_supply_impact_percent": -0.12,
+        "capital_formation_impact_percent": -1.8
+      }
+    }
+  },
+  "behavioral_parameters": {
+    "labor_supply_elasticity": 0.15,
+    "capital_supply_elasticity": 0.5,
+    "tax_avoidance_elasticity": 0.4,
+    "avoidance_baseline_share": 0.16,
+    "compliance_rate_sensitivity": 0.001
+  }
+}
