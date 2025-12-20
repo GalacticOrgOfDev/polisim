@@ -66,6 +66,16 @@ def load_revenue_scenarios():
         return json.load(f)
 
 
+def get_policy_library_policies(policy_type=None):
+    """Load policies from library (NOT cached - always fresh)."""
+    from core.policy_builder import PolicyLibrary, PolicyType
+    library = PolicyLibrary()
+    if policy_type:
+        return library.list_policies_by_type(policy_type), library
+    else:
+        return library.list_policies(), library
+
+
 def page_overview():
     """Main overview page."""
     st.title("🏛️ CBO 2.0: Open-Source Federal Fiscal Projections")
@@ -112,10 +122,9 @@ def page_healthcare():
     Compare healthcare policies using Monte Carlo stochastic simulation with full uncertainty quantification.
     """)
     
-    # Load custom policies from library
-    from core.policy_builder import PolicyLibrary, PolicyType
-    library = PolicyLibrary()
-    custom_healthcare_policies = library.list_policies_by_type(PolicyType.HEALTHCARE)
+    # Load custom policies from library - ALWAYS FRESH (not cached)
+    from core.policy_builder import PolicyType
+    custom_healthcare_policies, library = get_policy_library_policies(PolicyType.HEALTHCARE)
     
     # Combine built-in and custom policies
     policy_options = ["usgha", "current_us"]
@@ -723,10 +732,8 @@ def page_policy_comparison():
     Compare multiple policies or scenarios side-by-side to evaluate their fiscal impact.
     """)
     
-    # Load custom policies from library
-    from core.policy_builder import PolicyLibrary, PolicyType
-    library = PolicyLibrary()
-    all_custom_policies = library.list_policies()
+    # Load custom policies from library - ALWAYS FRESH (not cached)
+    all_custom_policies, library = get_policy_library_policies()
     
     col1, col2 = st.columns(2)
     with col1:
@@ -888,10 +895,10 @@ def page_custom_policy_builder():
     Create and customize fiscal policies with adjustable parameters. Choose a template or build from scratch.
     """)
     
-    from core.policy_builder import PolicyTemplate, PolicyLibrary, PolicyType
+    from core.policy_builder import PolicyTemplate, PolicyType
     
-    # Load policy library
-    library = PolicyLibrary()
+    # Load policy library - ALWAYS FRESH (not cached)
+    all_policies, library = get_policy_library_policies()
     
     col1, col2 = st.columns([1, 2])
     
@@ -918,7 +925,8 @@ def page_custom_policy_builder():
                 policy = PolicyTemplate.create_from_template(template_name, policy_name)
                 library.add_policy(policy)
                 st.success(f"✓ Policy '{policy_name}' created!")
-                st.rerun()
+                st.cache_data.clear()  # Clear any cached data
+                st.rerun()  # Force page refresh
     
     with col2:
         st.subheader("Manage Policies")
@@ -1223,6 +1231,10 @@ def page_policy_upload():
                         if library.add_policy(policy):
                             st.success(f"✓ Policy '{policy_name}' created and saved!")
                             st.info(f"Policy has {len(policy.parameters)} parameters. Edit them in Custom Policy Builder.")
+                            st.info("Navigate to 'Healthcare' or 'Policy Comparison' page to use this policy.")
+                            # Force Streamlit to refresh by clearing cache and rerunning
+                            st.cache_data.clear()
+                            st.rerun()
                         else:
                             st.error(f"Policy '{policy_name}' already exists.")
                 
