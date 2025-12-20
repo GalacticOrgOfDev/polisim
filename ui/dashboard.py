@@ -1077,8 +1077,13 @@ def page_policy_upload():
                     # Extract policy
                     processor = PolicyPDFProcessor()
                     from pathlib import Path
+                    
+                    # First extract text from PDF
+                    extracted_text = processor.extract_text_from_pdf(Path(tmp_path))
+                    
+                    # Then analyze the extracted text
                     extraction = processor.analyze_policy_text(
-                        text=f"[Uploaded: {uploaded_file.name}]",
+                        text=extracted_text,
                         policy_title=uploaded_file.name.replace(".pdf", "")
                     )
                     

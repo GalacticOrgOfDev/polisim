@@ -84,13 +84,13 @@ def _launch_legacy_gui(auto_install=False):
         ("yaml", "PyYAML", "PyYAML (YAML parser)", "6.0"),
         ("pypdf", "pypdf", "pypdf (PDF parser)", "3.0"),
         
-        # Optional but recommended for Report Generation (Phase 4b)
-        ("reportlab", "reportlab", "ReportLab (PDF generation)", "3.6"),
-        
-        # Optional for Enhanced PDF extraction (Phase 4a)
+        # Recommended for PDF extraction (Phase 4a)
         ("pdfplumber", "pdfplumber", "pdfplumber (Enhanced PDF extraction)", "0.8"),
         
-        # Optional for REST API (Phase 4d)
+        # Recommended for Report Generation (Phase 4b)
+        ("reportlab", "reportlab", "ReportLab (PDF generation)", "3.6"),
+        
+        # Recommended for REST API (Phase 4d)
         ("flask", "flask", "Flask (REST API server)", "2.0"),
         ("flask_cors", "flask-cors", "Flask-CORS (API cross-origin support)", "3.0"),
     ]
