@@ -116,7 +116,7 @@ def page_healthcare():
     with col1:
         healthcare_policy = st.selectbox(
             "Select policy:",
-            ["usgha", "current_law"],
+            ["usgha", "current_us"],
             help="USGHA = US Galactic Health Act proposal"
         )
     with col2:
@@ -126,7 +126,7 @@ def page_healthcare():
         try:
             from core.simulation import simulate_healthcare_years
             
-            policy = get_policy_by_type(PolicyType.USGHA if healthcare_policy == "usgha" else PolicyType.CURRENT_LAW)
+            policy = get_policy_by_type(PolicyType.USGHA if healthcare_policy == "usgha" else PolicyType.CURRENT_US)
             
             with st.spinner("Running healthcare simulations..."):
                 results = simulate_healthcare_years(
