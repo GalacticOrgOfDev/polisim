@@ -56,11 +56,17 @@ def main():
     print("\nLaunching dashboard...\n")
     
     try:
-        import streamlit.cli as stcli
-        sys.argv = ['streamlit', 'run', 'ui/dashboard.py', '--logger.level=warning']
-        stcli.main()
-    except Exception as e:
+        # Use subprocess to launch streamlit command
+        subprocess.run([sys.executable, '-m', 'streamlit', 'run', 'ui/dashboard.py', '--logger.level=warning'], check=True)
+    except subprocess.CalledProcessError as e:
         print(f"\n❌ Could not launch dashboard: {e}")
+        print("\nTroubleshooting:")
+        print("  1. Try: python debug_dashboard.py")
+        print("  2. Try: python run_dashboard.py")
+        print("  3. Try: --legacy-gui for Tkinter GUI")
+        return
+    except Exception as e:
+        print(f"\n❌ Error: {e}")
         print("\nTroubleshooting:")
         print("  1. Try: python debug_dashboard.py")
         print("  2. Try: python run_dashboard.py")
