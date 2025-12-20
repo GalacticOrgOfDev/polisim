@@ -144,27 +144,27 @@ def page_healthcare():
             with col1:
                 st.metric(
                     "Total 22-Year Spending",
-                    f"${results['total_spending'].sum()/1e12:.1f}T",
+                    f"${results['Health Spending ($)'].sum()/1e12:.1f}T",
                     delta="All categories"
                 )
             with col2:
                 st.metric(
                     "Latest Year Per-Capita",
-                    f"${results['per_capita_spending'].iloc[-1]:,.0f}",
+                    f"${results['Per Capita Health ($)'].iloc[-1]:,.0f}",
                     delta=f"Year {years}"
                 )
             with col3:
                 st.metric(
                     "Debt Reduction",
-                    f"${results['debt_reduction'].sum()/1e12:.1f}T",
+                    f"${results['Debt Reduction ($)'].sum()/1e12:.1f}T",
                     delta="22-year total"
                 )
             
             # Chart: Healthcare spending over time
             fig = go.Figure()
             fig.add_trace(go.Scatter(
-                x=results['year'],
-                y=results['total_spending']/1e9,
+                x=results['Year'],
+                y=results['Health Spending ($)']/1e9,
                 name='Total Spending',
                 line=dict(color='#1f77b4', width=2)
             ))
