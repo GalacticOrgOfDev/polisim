@@ -119,43 +119,92 @@ def page_healthcare():
     st.title("🏥 Healthcare Policy Analysis")
     
     st.markdown("""
-    Compare healthcare policies using Monte Carlo stochastic simulation with full uncertainty quantification.
+    Comprehensive healthcare policy simulation with projections for spending, 
+    revenue, debt reduction, and key metrics.
     """)
     
+    from core.healthcare import get_policy_by_type, PolicyType as HealthcarePolicyType
+    from core.policy_builder import PolicyType as PolicyBuilderType
+    from core.simulation import simulate_healthcare_years
+    
     # Load custom policies from library - ALWAYS FRESH (not cached)
-    from core.policy_builder import PolicyType
-    custom_healthcare_policies, library = get_policy_library_policies(PolicyType.HEALTHCARE)
+    custom_healthcare_policies, library = get_policy_library_policies(PolicyBuilderType.HEALTHCARE)
     
-    # Combine built-in and custom policies
-    policy_options = ["🏛️ Current US System", "⭐ USGHA (Proposed)"]
-    policy_map = {"🏛️ Current US System": "current_us", "⭐ USGHA (Proposed)": "usgha"}
-    
-    if custom_healthcare_policies:
-        for policy_name in custom_healthcare_policies:
-            policy_options.append(f"📄 {policy_name}")
-            policy_map[f"📄 {policy_name}"] = policy_name
-    
+    # Combine built-in and custom policies with visual indicators
     col1, col2 = st.columns(2)
     with col1:
-        selected_display = st.selectbox(
-            "Select policy:",
-            policy_options,
-            help="Choose from built-in or custom healthcare policies"
+        st.subheader("Policy Selection")
+        policy_category = st.radio(
+            "Select policy type:",
+            ["Built-in Policies", "Custom Policies"],
+            horizontal=True,
+            key="policy_category"
         )
-        selected_policy = policy_map.get(selected_display, selected_display)
+        
+        if policy_category == "Built-in Policies":
+            selected_display = st.selectbox(
+                "Built-in Policy:",
+                ["Current US System", "USGHA (Proposed)"],
+                help="Choose a built-in healthcare policy for simulation"
+            )
+            selected_policy = "current_us" if "Current US" in selected_display else "usgha"
+            is_custom = False
+        else:
+            if not custom_healthcare_policies:
+                st.info("No custom healthcare policies found. Upload or create one in the Library Manager.")
+                selected_policy = None
+                is_custom = False
+            else:
+                selected_display = st.selectbox(
+                    "Custom Policy:",
+                    custom_healthcare_policies,
+                    help="Choose a custom healthcare policy"
+                )
+                selected_policy = selected_display
+                is_custom = True
+    
     with col2:
-        years = st.slider("Projection years:", 5, 30, 22, key="healthcare_years")
+        st.subheader("Simulation Parameters")
+        years = st.slider(
+            "Projection years:",
+            min_value=5,
+            max_value=30,
+            value=22,
+            key="healthcare_years",
+            help="Number of years to simulate"
+        )
+        base_gdp = st.number_input(
+            "Base GDP ($T):",
+            value=29.0,
+            min_value=10.0,
+            max_value=100.0,
+            step=0.5,
+            help="Starting GDP in trillions"
+        ) * 1e12
+        initial_debt = st.number_input(
+            "Initial Debt ($T):",
+            value=35.0,
+            min_value=10.0,
+            max_value=100.0,
+            step=0.5,
+            help="Starting national debt in trillions"
+        ) * 1e12
     
     # Show policy details if custom
-    if selected_policy in custom_healthcare_policies:
+    if is_custom and selected_policy:
         policy_obj = library.get_policy(selected_policy)
         if policy_obj:
-            with st.expander("📋 Policy Details"):
-                st.write(f"**Type:** {policy_obj.policy_type.value}")
-                st.write(f"**Category:** {policy_obj.category}")
-                st.write(f"**Author:** {policy_obj.author}")
+            with st.expander("📋 Custom Policy Details", expanded=False):
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.write(f"**Type:** {policy_obj.policy_type.value}")
+                    st.write(f"**Category:** {policy_obj.category}")
+                    st.write(f"**Author:** {policy_obj.author}")
+                with col2:
+                    st.write(f"**Created:** {policy_obj.created_date[:10]}")
+                    st.write(f"**Parameters:** {len(policy_obj.parameters)}")
+                
                 st.write(f"**Description:** {policy_obj.description}")
-                st.write(f"**Created:** {policy_obj.created_date[:10]}")
                 
                 if policy_obj.parameters:
                     st.subheader("Parameters")
@@ -169,119 +218,228 @@ def page_healthcare():
                     ])
                     st.dataframe(params_df, use_container_width=True)
     
-    if st.button("Project Healthcare"):
+    # Simulation button and results
+    if st.button("Run Simulation", type="primary", use_container_width=True):
+        if is_custom and not selected_policy:
+            st.error("Please select a custom policy first")
+            st.stop()
+        
         try:
             from core.simulation import simulate_healthcare_years
             
-            # Load policy from library if it's custom, otherwise use built-in
-            if selected_policy in custom_healthcare_policies:
-                policy = library.get_policy(selected_policy)
-                if policy is None:
-                    st.error(f"Could not load policy '{selected_policy}'")
-                    return
-                
-                # CustomPolicy objects from PDF extraction need to be converted to work with simulation
-                # For now, use a built-in policy as the simulation engine expects HealthcarePolicyModel
-                st.warning("⚠️ **Custom Policies Note**")
-                st.info("""
-                Custom policies from PDF uploads cannot be directly simulated yet because they store 
-                basic parameters extracted from PDFs, while the simulation engine requires a complete 
-                HealthcarePolicyModel with 50+ healthcare-specific attributes.
-                
-                **What you can do with custom policies:**
-                - ✅ Edit and manage them in the Library Manager
-                - ✅ Compare them side-by-side in Policy Comparison
-                - ✅ Use as templates in Custom Policy Builder
-                - ✅ Create templates from them for full simulations
-                
-                **For now, simulations work with:**
-                - Current US System (baseline)
-                - USGHA (comprehensive reform proposal)
+            # Handle custom policies
+            if is_custom:
+                st.warning("""
+                **Note:** Custom policies from PDF uploads have limited simulation support.
+                This shows projections using their extracted parameters where available.
+                For full simulations, use the built-in policies.
                 """)
                 return
-            else:
-                policy = get_policy_by_type(PolicyType.USGHA if selected_policy == "usgha" else PolicyType.CURRENT_US)
             
-            with st.spinner("Running healthcare simulations..."):
+            # Load built-in policy
+            policy = get_policy_by_type(
+                HealthcarePolicyType.USGHA if selected_policy == "usgha" else HealthcarePolicyType.CURRENT_US
+            )
+            
+            with st.spinner(f"Running {policy.policy_name} simulation..."):
                 results = simulate_healthcare_years(
                     policy=policy,
-                    base_gdp=29e12,
-                    initial_debt=35e12,
+                    base_gdp=base_gdp,
+                    initial_debt=initial_debt,
                     years=years,
                     population=335e6,
                     gdp_growth=0.025,
-                    start_year=2027
+                    start_year=2025
                 )
             
+            if results is None or len(results) == 0:
+                st.error("Simulation produced no results")
+                return
+            
+            st.success(f"Simulation completed: {len(results)} years")
+            
             # Summary metrics
-            col1, col2, col3 = st.columns(3)
+            st.subheader("Key Metrics")
+            col1, col2, col3, col4 = st.columns(4)
+            
             with col1:
+                total_spending = results['Health Spending ($)'].sum()
                 st.metric(
                     "Total Spending",
-                    f"${results['Health Spending ($)'].sum()/1e12:.1f}T",
-                    delta="All years"
+                    f"${total_spending/1e12:.2f}T",
+                    delta="22-year total"
                 )
+            
             with col2:
+                final_per_capita = results['Per Capita Health ($)'].iloc[-1]
                 st.metric(
-                    "Latest Year Per-Capita",
-                    f"${results['Per Capita Health ($)'].iloc[-1]:,.0f}",
+                    "Final Per-Capita",
+                    f"${final_per_capita:,.0f}",
                     delta=f"Year {years}"
                 )
+            
             with col3:
+                total_debt_reduction = results['Debt Reduction ($)'].sum()
                 st.metric(
                     "Debt Reduction",
-                    f"${results['Debt Reduction ($)'].sum()/1e12:.1f}T",
+                    f"${total_debt_reduction/1e12:.2f}T",
                     delta="Total impact"
                 )
             
-            # Chart: Healthcare spending over time
+            with col4:
+                final_debt = results['Remaining Debt ($)'].iloc[-1]
+                st.metric(
+                    "Final Debt",
+                    f"${final_debt/1e12:.2f}T",
+                    delta=f"From ${initial_debt/1e12:.1f}T"
+                )
+            
+            # Main visualization: Spending trend
+            st.subheader("Healthcare Spending Projection")
             fig = go.Figure()
+            
             fig.add_trace(go.Scatter(
                 x=results['Year'],
                 y=results['Health Spending ($)']/1e9,
-                name='Total Spending',
-                line=dict(color='#1f77b4', width=2)
+                name='Health Spending',
+                line=dict(color='#1f77b4', width=3),
+                mode='lines+markers'
             ))
             
             fig.update_layout(
-                title=f"Healthcare Spending Projection - {selected_policy.upper()}",
+                title=f"Healthcare Spending Over Time - {policy.policy_name}",
                 xaxis_title="Year",
                 yaxis_title="Spending ($ Billions)",
                 template="plotly_white",
-                hovermode='x unified'
+                hovermode='x unified',
+                height=400
             )
             
             st.plotly_chart(fig, use_container_width=True)
             
-            # Category breakdown
-            if 'category_breakdown' in results.columns:
-                fig2 = go.Figure()
-                for category in results['category_breakdown'].unique():
-                    cat_data = results[results['category_breakdown'] == category]
-                    fig2.add_trace(go.Scatter(
-                        x=cat_data['year'],
-                        y=cat_data['amount']/1e9,
-                        name=category,
-                        stackgroup='one'
-                    ))
-                
-                fig2.update_layout(
-                    title="Spending by Category",
-                    xaxis_title="Year",
-                    yaxis_title="$ Billions",
-                    hovermode='x unified',
-                    template="plotly_white"
-                )
-                
-                st.plotly_chart(fig2, use_container_width=True)
+            # Revenue and surplus analysis
+            st.subheader("Revenue & Surplus Analysis")
+            fig2 = go.Figure()
+            
+            fig2.add_trace(go.Scatter(
+                x=results['Year'],
+                y=results['Revenue ($)']/1e9,
+                name='Total Revenue',
+                line=dict(color='green', width=2)
+            ))
+            
+            fig2.add_trace(go.Bar(
+                x=results['Year'],
+                y=results['Surplus ($)']/1e9,
+                name='Annual Surplus',
+                marker=dict(color=results['Surplus ($)'].apply(lambda x: 'green' if x > 0 else 'red'))
+            ))
+            
+            fig2.update_layout(
+                title="Annual Revenue vs Surplus",
+                xaxis_title="Year",
+                yaxis_title="Amount ($ Billions)",
+                template="plotly_white",
+                hovermode='x unified',
+                height=400
+            )
+            
+            st.plotly_chart(fig2, use_container_width=True)
+            
+            # Debt trajectory
+            st.subheader("National Debt Trajectory")
+            fig3 = go.Figure()
+            
+            fig3.add_trace(go.Scatter(
+                x=results['Year'],
+                y=results['Remaining Debt ($)']/1e12,
+                name='National Debt',
+                line=dict(color='#d62728', width=3),
+                mode='lines+markers',
+                fill='tozeroy',
+                fillcolor='rgba(214, 39, 40, 0.2)'
+            ))
+            
+            fig3.update_layout(
+                title="Impact on National Debt",
+                xaxis_title="Year",
+                yaxis_title="Debt ($ Trillions)",
+                template="plotly_white",
+                hovermode='x unified',
+                height=400
+            )
+            
+            st.plotly_chart(fig3, use_container_width=True)
             
             # Detailed results table
-            with st.expander("View Detailed Results"):
-                st.dataframe(results, use_container_width=True)
+            with st.expander("View Detailed Year-by-Year Results", expanded=False):
+                # Format the dataframe for display
+                display_df = results.copy()
+                display_df['Year'] = display_df['Year'].astype(int)
+                display_df['Health Spending ($)'] = display_df['Health Spending ($)'] / 1e9
+                display_df['Revenue ($)'] = display_df['Revenue ($)'] / 1e9
+                display_df['Surplus ($)'] = display_df['Surplus ($)'] / 1e9
+                display_df['Debt Reduction ($)'] = display_df['Debt Reduction ($)'] / 1e9
+                display_df['Remaining Debt ($)'] = display_df['Remaining Debt ($)'] / 1e12
                 
+                # Rename columns for clarity
+                display_df = display_df.rename(columns={
+                    'Health Spending ($)': 'Spending ($B)',
+                    'Health % GDP': 'Health % GDP',
+                    'Per Capita Health ($)': 'Per Capita ($)',
+                    'Revenue ($)': 'Revenue ($B)',
+                    'Surplus ($)': 'Surplus ($B)',
+                    'Debt Reduction ($)': 'Debt Reduction ($B)',
+                    'Remaining Debt ($)': 'Remaining Debt ($T)',
+                })
+                
+                st.dataframe(display_df, use_container_width=True)
+                
+                # Download button
+                csv = display_df.to_csv(index=False)
+                st.download_button(
+                    label="Download Results as CSV",
+                    data=csv,
+                    file_name=f"healthcare_simulation_{selected_policy}.csv",
+                    mime="text/csv"
+                )
+            
+            # Interpretation section
+            st.subheader("Interpretation & Key Insights")
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.info(f"""
+                **Policy:** {policy.policy_name}
+                
+                **Spending Target:** {policy.healthcare_spending_target_gdp*100:.1f}% of GDP
+                
+                **Final Year (Year {years}):**
+                - Health Spending: ${results['Health Spending ($)'].iloc[-1]/1e9:.0f}B
+                - Revenue: ${results['Revenue ($)'].iloc[-1]/1e9:.0f}B
+                - Surplus: ${results['Surplus ($)'].iloc[-1]/1e9:.1f}B
+                """)
+            
+            with col2:
+                debt_change = results['Remaining Debt ($)'].iloc[-1] - initial_debt
+                debt_change_pct = (debt_change / initial_debt) * 100
+                st.info(f"""
+                **22-Year Impact:**
+                
+                - Debt Change: ${debt_change/1e12:.2f}T ({debt_change_pct:+.1f}%)
+                - Total Debt Reduction: ${total_debt_reduction/1e12:.2f}T
+                - Avg Annual Surplus: ${results['Surplus ($)'].mean()/1e9:.1f}B
+                
+                Circuit Breaker Triggered: {results['Circuit Breaker Triggered'].sum()} times
+                """)
+            
         except Exception as e:
-            st.error(f"Error running healthcare simulation: {str(e)}")
-            st.info("Healthcare module requires core/simulation.py to be properly configured.")
+            st.error(f"Error running simulation: {str(e)}")
+            st.write(f"Details: {type(e).__name__}")
+            import traceback
+            with st.expander("Technical Details"):
+                st.code(traceback.format_exc())
 
 
 def page_social_security():
