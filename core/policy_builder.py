@@ -59,6 +59,8 @@ class CustomPolicy:
     policy_type: PolicyType
     created_date: str = field(default_factory=lambda: datetime.now().isoformat())
     author: str = "User"
+    category: str = "General"  # Category for organization (e.g., "My Policies", "Healthcare Ideas")
+    order: int = 0  # For ordering within categories
     
     # Parameters organized by category
     parameters: Dict[str, PolicyParameter] = field(default_factory=dict)
@@ -364,18 +366,40 @@ class PolicyTemplate:
 
 
 class PolicyLibrary:
-    """Manages collection of policies."""
+    """Manages collection of policies with categorization support."""
     
     def __init__(self, library_path: str = "policies/custom_policies"):
         """Initialize policy library."""
         self.library_path = Path(library_path)
         self.library_path.mkdir(parents=True, exist_ok=True)
         self.policies: Dict[str, CustomPolicy] = {}
+        self.metadata_file = self.library_path / "_library_metadata.json"
+        self.metadata: Dict[str, Any] = {"categories": ["General", "Uploaded Policies", "Custom"]}
+        self._load_metadata()
         self._load_all_policies()
+    
+    def _load_metadata(self) -> None:
+        """Load library metadata (categories, etc)."""
+        if self.metadata_file.exists():
+            try:
+                with open(self.metadata_file, "r") as f:
+                    self.metadata = json.load(f)
+            except Exception as e:
+                print(f"Error loading metadata: {e}")
+    
+    def _save_metadata(self) -> None:
+        """Save library metadata to disk."""
+        try:
+            with open(self.metadata_file, "w") as f:
+                json.dump(self.metadata, f, indent=2)
+        except Exception as e:
+            print(f"Error saving metadata: {e}")
     
     def _load_all_policies(self) -> None:
         """Load all policies from disk."""
         for policy_file in self.library_path.glob("*.json"):
+            if policy_file.name == "_library_metadata.json":
+                continue
             try:
                 with open(policy_file, "r") as f:
                     data = json.load(f)
@@ -384,10 +408,41 @@ class PolicyLibrary:
             except Exception as e:
                 print(f"Error loading policy {policy_file}: {e}")
     
+    def get_categories(self) -> List[str]:
+        """Get all available categories."""
+        return self.metadata.get("categories", ["General"])
+    
+    def add_category(self, category_name: str) -> bool:
+        """Add a new category."""
+        if category_name in self.metadata.get("categories", []):
+            return False
+        self.metadata.setdefault("categories", []).append(category_name)
+        self._save_metadata()
+        return True
+    
+    def delete_category(self, category_name: str) -> bool:
+        """Delete a category and move policies to General."""
+        if category_name not in self.metadata.get("categories", []):
+            return False
+        
+        # Reassign policies in this category to General
+        for policy in self.policies.values():
+            if policy.category == category_name:
+                policy.category = "General"
+                self.save_policy(policy)
+        
+        self.metadata["categories"].remove(category_name)
+        self._save_metadata()
+        return True
+    
     def add_policy(self, policy: CustomPolicy) -> bool:
         """Add policy to library."""
         if policy.name in self.policies:
             return False  # Policy with same name exists
+        
+        # Ensure category exists
+        if policy.category not in self.metadata.get("categories", []):
+            policy.category = "General"
         
         self.policies[policy.name] = policy
         self.save_policy(policy)
@@ -404,20 +459,92 @@ class PolicyLibrary:
             print(f"Error saving policy: {e}")
             return False
     
+    def rename_policy(self, old_name: str, new_name: str) -> bool:
+        """Rename a policy."""
+        if old_name not in self.policies or new_name in self.policies:
+            return False
+        
+        policy = self.policies[old_name]
+        policy.name = new_name
+        
+        # Delete old file, save new file
+        try:
+            old_file = self.library_path / f"{old_name}.json"
+            if old_file.exists():
+                old_file.unlink()
+            
+            self.save_policy(policy)
+            del self.policies[old_name]
+            self.policies[new_name] = policy
+            return True
+        except Exception as e:
+            print(f"Error renaming policy: {e}")
+            return False
+    
+    def clone_policy(self, source_name: str, new_name: str) -> bool:
+        """Clone an existing policy with a new name."""
+        if source_name not in self.policies or new_name in self.policies:
+            return False
+        
+        source = self.policies[source_name]
+        cloned = CustomPolicy(
+            name=new_name,
+            description=f"Clone of: {source.description}",
+            policy_type=source.policy_type,
+            author=source.author,
+            category=source.category,
+            created_date=datetime.now().isoformat(),
+        )
+        
+        # Copy all parameters
+        for param_name, param in source.parameters.items():
+            cloned.parameters[param_name] = PolicyParameter(
+                name=param.name,
+                description=param.description,
+                value=param.value,
+                min_value=param.min_value,
+                max_value=param.max_value,
+                unit=param.unit,
+                category=param.category,
+            )
+        
+        self.policies[new_name] = cloned
+        self.save_policy(cloned)
+        return True
+    
     def get_policy(self, name: str) -> Optional[CustomPolicy]:
         """Get policy by name."""
         return self.policies.get(name)
     
     def list_policies(self) -> List[str]:
-        """List all policy names."""
+        """List all policy names sorted."""
         return sorted(self.policies.keys())
+    
+    def list_policies_by_category(self, category: str) -> List[str]:
+        """List policies in a specific category."""
+        return sorted([
+            name for name, policy in self.policies.items()
+            if policy.category == category
+        ], key=lambda name: self.policies[name].order)
     
     def list_policies_by_type(self, policy_type: PolicyType) -> List[str]:
         """List policies of a specific type."""
-        return [
+        return sorted([
             name for name, policy in self.policies.items()
             if policy.policy_type == policy_type
-        ]
+        ])
+    
+    def reorder_policies(self, category: str, ordered_names: List[str]) -> bool:
+        """Reorder policies within a category."""
+        try:
+            for i, name in enumerate(ordered_names):
+                if name in self.policies:
+                    self.policies[name].order = i
+                    self.save_policy(self.policies[name])
+            return True
+        except Exception as e:
+            print(f"Error reordering policies: {e}")
+            return False
     
     def delete_policy(self, name: str) -> bool:
         """Delete policy from library."""

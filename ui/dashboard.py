@@ -127,39 +127,80 @@ def page_healthcare():
     custom_healthcare_policies, library = get_policy_library_policies(PolicyType.HEALTHCARE)
     
     # Combine built-in and custom policies
-    policy_options = ["usgha", "current_us"]
+    policy_options = ["🏛️ Current US System", "⭐ USGHA (Proposed)"]
+    policy_map = {"🏛️ Current US System": "current_us", "⭐ USGHA (Proposed)": "usgha"}
+    
     if custom_healthcare_policies:
-        policy_options.extend(custom_healthcare_policies)
+        for policy_name in custom_healthcare_policies:
+            policy_options.append(f"📄 {policy_name}")
+            policy_map[f"📄 {policy_name}"] = policy_name
     
     col1, col2 = st.columns(2)
     with col1:
-        healthcare_policy = st.selectbox(
+        selected_display = st.selectbox(
             "Select policy:",
             policy_options,
             help="Choose from built-in or custom healthcare policies"
         )
+        selected_policy = policy_map.get(selected_display, selected_display)
     with col2:
         years = st.slider("Projection years:", 5, 30, 22, key="healthcare_years")
+    
+    # Show policy details if custom
+    if selected_policy in custom_healthcare_policies:
+        policy_obj = library.get_policy(selected_policy)
+        if policy_obj:
+            with st.expander("📋 Policy Details"):
+                st.write(f"**Type:** {policy_obj.policy_type.value}")
+                st.write(f"**Category:** {policy_obj.category}")
+                st.write(f"**Author:** {policy_obj.author}")
+                st.write(f"**Description:** {policy_obj.description}")
+                st.write(f"**Created:** {policy_obj.created_date[:10]}")
+                
+                if policy_obj.parameters:
+                    st.subheader("Parameters")
+                    params_df = pd.DataFrame([
+                        {
+                            "Parameter": p.name,
+                            "Value": f"{p.value:.1f} {p.unit}",
+                            "Range": f"[{p.min_value:.1f} - {p.max_value:.1f}]"
+                        }
+                        for p in policy_obj.parameters.values()
+                    ])
+                    st.dataframe(params_df, use_container_width=True)
     
     if st.button("Project Healthcare"):
         try:
             from core.simulation import simulate_healthcare_years
             
             # Load policy from library if it's custom, otherwise use built-in
-            if healthcare_policy in custom_healthcare_policies:
-                policy = library.get_policy(healthcare_policy)
+            if selected_policy in custom_healthcare_policies:
+                policy = library.get_policy(selected_policy)
                 if policy is None:
-                    st.error(f"Could not load policy '{healthcare_policy}'")
+                    st.error(f"Could not load policy '{selected_policy}'")
                     return
                 
                 # CustomPolicy objects from PDF extraction need to be converted to work with simulation
                 # For now, use a built-in policy as the simulation engine expects HealthcarePolicyModel
-                st.warning("⚠️ Custom policies from PDF uploads are stored but cannot yet be simulated directly.")
-                st.info("Custom policies can be managed in the 'Custom Policy Builder' page and compared in 'Policy Comparison' page.")
-                st.info("For simulations, use the built-in policies (USGHA or Current US) as a baseline.")
+                st.warning("⚠️ **Custom Policies Note**")
+                st.info("""
+                Custom policies from PDF uploads cannot be directly simulated yet because they store 
+                basic parameters extracted from PDFs, while the simulation engine requires a complete 
+                HealthcarePolicyModel with 50+ healthcare-specific attributes.
+                
+                **What you can do with custom policies:**
+                - ✅ Edit and manage them in the Library Manager
+                - ✅ Compare them side-by-side in Policy Comparison
+                - ✅ Use as templates in Custom Policy Builder
+                - ✅ Create templates from them for full simulations
+                
+                **For now, simulations work with:**
+                - Current US System (baseline)
+                - USGHA (comprehensive reform proposal)
+                """)
                 return
             else:
-                policy = get_policy_by_type(PolicyType.USGHA if healthcare_policy == "usgha" else PolicyType.CURRENT_US)
+                policy = get_policy_by_type(PolicyType.USGHA if selected_policy == "usgha" else PolicyType.CURRENT_US)
             
             with st.spinner("Running healthcare simulations..."):
                 results = simulate_healthcare_years(
@@ -176,9 +217,9 @@ def page_healthcare():
             col1, col2, col3 = st.columns(3)
             with col1:
                 st.metric(
-                    "Total 22-Year Spending",
+                    "Total Spending",
                     f"${results['Health Spending ($)'].sum()/1e12:.1f}T",
-                    delta="All categories"
+                    delta="All years"
                 )
             with col2:
                 st.metric(
@@ -190,7 +231,7 @@ def page_healthcare():
                 st.metric(
                     "Debt Reduction",
                     f"${results['Debt Reduction ($)'].sum()/1e12:.1f}T",
-                    delta="22-year total"
+                    delta="Total impact"
                 )
             
             # Chart: Healthcare spending over time
@@ -203,7 +244,7 @@ def page_healthcare():
             ))
             
             fig.update_layout(
-                title=f"Healthcare Spending Projection - {healthcare_policy.upper()}",
+                title=f"Healthcare Spending Projection - {selected_policy.upper()}",
                 xaxis_title="Year",
                 yaxis_title="Spending ($ Billions)",
                 template="plotly_white",
@@ -1158,6 +1199,234 @@ def page_real_data_dashboard():
         """)
 
 
+def page_library_manager():
+    """Policy library manager with CRUD operations and categorization."""
+    st.title("📚 Policy Library Manager")
+    
+    st.markdown("""
+    Manage your custom policies and uploaded PDFs. Organize by category, edit parameters, 
+    clone for variations, and reorder your collection.
+    """)
+    
+    from core.policy_builder import PolicyLibrary
+    library = PolicyLibrary()
+    
+    # Tab navigation
+    tab_browse, tab_organize, tab_manage_categories = st.tabs(
+        ["📖 Browse & Edit", "🔄 Reorder", "🏷️ Categories"]
+    )
+    
+    # ========== BROWSE & EDIT TAB ==========
+    with tab_browse:
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            selected_category = st.selectbox(
+                "Select Category:",
+                options=library.get_categories(),
+                key="browse_category"
+            )
+        
+        with col2:
+            if st.button("🔄 Refresh", use_container_width=True):
+                st.rerun()
+        
+        category_policies = library.list_policies_by_category(selected_category)
+        
+        if not category_policies:
+            st.info(f"No policies in '{selected_category}' category")
+        else:
+            st.subheader(f"Policies in {selected_category} ({len(category_policies)})")
+            
+            for policy_name in category_policies:
+                policy = library.get_policy(policy_name)
+                if not policy:
+                    continue
+                
+                with st.container(border=True):
+                    col1, col2 = st.columns([3, 1])
+                    
+                    with col1:
+                        st.markdown(f"**{policy.name}**")
+                        st.caption(f"Type: {policy.policy_type.value} | Author: {policy.author}")
+                        st.text(policy.description)
+                        st.write(f"📊 Parameters: {len(policy.parameters)} | Created: {policy.created_date[:10]}")
+                    
+                    with col2:
+                        operation = st.selectbox(
+                            "Action:",
+                            ["Select...", "Edit", "View", "Clone", "Rename", "Move", "Delete"],
+                            key=f"action_{policy_name}"
+                        )
+                        
+                        if operation == "View":
+                            with st.expander("📋 View Parameters"):
+                                params_df = pd.DataFrame([
+                                    {
+                                        "Parameter": p.name,
+                                        "Value": p.value,
+                                        "Min": p.min_value,
+                                        "Max": p.max_value,
+                                        "Unit": p.unit,
+                                    }
+                                    for p in policy.parameters.values()
+                                ])
+                                st.dataframe(params_df, use_container_width=True)
+                        
+                        elif operation == "Edit":
+                            with st.expander("✏️ Edit Policy", expanded=True):
+                                policy.description = st.text_area(
+                                    "Description:",
+                                    value=policy.description,
+                                    key=f"desc_{policy_name}"
+                                )
+                                
+                                st.subheader("Edit Parameters")
+                                for param_name, param in policy.parameters.items():
+                                    new_val = st.slider(
+                                        f"{param.description}",
+                                        min_value=param.min_value,
+                                        max_value=param.max_value,
+                                        value=param.value,
+                                        key=f"param_{policy_name}_{param_name}"
+                                    )
+                                    param.value = new_val
+                                
+                                if st.button("💾 Save Changes", key=f"save_{policy_name}"):
+                                    if library.save_policy(policy):
+                                        st.success(f"✓ {policy_name} updated!")
+                                        st.rerun()
+                                    else:
+                                        st.error("Failed to save policy")
+                        
+                        elif operation == "Clone":
+                            with st.expander("👯 Clone Policy", expanded=True):
+                                clone_name = st.text_input(
+                                    "New Policy Name:",
+                                    value=f"{policy_name} (Clone)",
+                                    key=f"clone_name_{policy_name}"
+                                )
+                                if st.button("✨ Create Clone", key=f"clone_{policy_name}"):
+                                    if library.clone_policy(policy_name, clone_name):
+                                        st.success(f"✓ Created {clone_name}!")
+                                        st.rerun()
+                                    else:
+                                        st.error(f"Policy '{clone_name}' already exists")
+                        
+                        elif operation == "Rename":
+                            with st.expander("📝 Rename Policy", expanded=True):
+                                new_name = st.text_input(
+                                    "New Name:",
+                                    value=policy_name,
+                                    key=f"rename_{policy_name}"
+                                )
+                                if st.button("✓ Rename", key=f"rename_btn_{policy_name}"):
+                                    if library.rename_policy(policy_name, new_name):
+                                        st.success(f"✓ Renamed to {new_name}!")
+                                        st.rerun()
+                                    else:
+                                        st.error("Failed to rename (name may already exist)")
+                        
+                        elif operation == "Move":
+                            with st.expander("↔️ Change Category", expanded=True):
+                                new_category = st.selectbox(
+                                    "Move to category:",
+                                    options=library.get_categories(),
+                                    key=f"move_{policy_name}"
+                                )
+                                if st.button("🔗 Move", key=f"move_btn_{policy_name}"):
+                                    policy.category = new_category
+                                    if library.save_policy(policy):
+                                        st.success(f"✓ Moved to {new_category}!")
+                                        st.rerun()
+                                    else:
+                                        st.error("Failed to move policy")
+                        
+                        elif operation == "Delete":
+                            with st.expander("🗑️ Delete Policy", expanded=True):
+                                st.warning(f"Delete '{policy_name}'? This cannot be undone!")
+                                if st.button("🗑️ Confirm Delete", key=f"delete_{policy_name}"):
+                                    if library.delete_policy(policy_name):
+                                        st.success(f"✓ Deleted {policy_name}")
+                                        st.rerun()
+                                    else:
+                                        st.error("Failed to delete policy")
+    
+    # ========== REORDER TAB ==========
+    with tab_organize:
+        selected_category = st.selectbox(
+            "Select Category to Reorder:",
+            options=library.get_categories(),
+            key="reorder_category"
+        )
+        
+        category_policies = library.list_policies_by_category(selected_category)
+        
+        if not category_policies:
+            st.info(f"No policies in '{selected_category}' to reorder")
+        else:
+            st.markdown("### Drag to reorder (or use buttons below)")
+            
+            # Display ordered list with up/down buttons
+            ordered_list = list(category_policies)
+            
+            for idx, policy_name in enumerate(ordered_list):
+                col1, col2, col3, col4 = st.columns([3, 1, 1, 1])
+                
+                with col1:
+                    st.write(f"**{idx + 1}.** {policy_name}")
+                
+                with col2:
+                    if idx > 0 and st.button("⬆️", key=f"up_{policy_name}"):
+                        ordered_list[idx], ordered_list[idx-1] = ordered_list[idx-1], ordered_list[idx]
+                        library.reorder_policies(selected_category, ordered_list)
+                        st.rerun()
+                
+                with col3:
+                    if idx < len(ordered_list) - 1 and st.button("⬇️", key=f"down_{policy_name}"):
+                        ordered_list[idx], ordered_list[idx+1] = ordered_list[idx+1], ordered_list[idx]
+                        library.reorder_policies(selected_category, ordered_list)
+                        st.rerun()
+                
+                with col4:
+                    if st.button("📌", key=f"pin_{policy_name}"):
+                        st.info(f"Pinned: {policy_name}")
+    
+    # ========== CATEGORIES TAB ==========
+    with tab_manage_categories:
+        current_categories = library.get_categories()
+        st.subheader("Current Categories")
+        st.write(", ".join(current_categories))
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.subheader("➕ Add New Category")
+            new_cat = st.text_input("Category Name:")
+            if st.button("Create Category"):
+                if new_cat:
+                    if library.add_category(new_cat):
+                        st.success(f"✓ Created '{new_cat}'")
+                        st.rerun()
+                    else:
+                        st.error(f"Category '{new_cat}' already exists")
+                else:
+                    st.error("Category name cannot be empty")
+        
+        with col2:
+            st.subheader("🗑️ Delete Category")
+            cat_to_delete = st.selectbox(
+                "Select category to delete:",
+                options=[c for c in current_categories if c != "General"],
+                key="delete_cat"
+            )
+            if st.button("Delete Category"):
+                if library.delete_category(cat_to_delete):
+                    st.success(f"✓ Deleted '{cat_to_delete}' (policies moved to General)")
+                    st.rerun()
+                else:
+                    st.error("Failed to delete category")
+
+
 def page_policy_upload():
     """Policy PDF upload and extraction page."""
     st.title("📄 Upload & Extract Policy from PDF")
@@ -1278,6 +1547,9 @@ def page_policy_upload():
                         policy_name,
                         policy_type=selected_type
                     )
+                    
+                    # Set the category to "Uploaded Policies" for PDFs
+                    policy.category = "Uploaded Policies"
                     
                     library = PolicyLibrary()
                     if library.add_policy(policy):
@@ -2117,6 +2389,7 @@ def main():
             "---",
             "Report Generation",
             "Custom Policy Builder",
+            "Policy Library Manager",
             "Real Data Dashboard",
             "Policy Upload"
         ]
@@ -2150,6 +2423,8 @@ def main():
         page_report_generation()
     elif page == "Custom Policy Builder":
         page_custom_policy_builder()
+    elif page == "Policy Library Manager":
+        page_library_manager()
     elif page == "Real Data Dashboard":
         page_real_data_dashboard()
     elif page == "Policy Upload":
