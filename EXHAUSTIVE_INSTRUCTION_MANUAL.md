@@ -833,9 +833,540 @@ print(f"Peak memory: {peak / 1024 / 1024:.1f} MB")
 
 ---
 
-## 6. FEATURE IMPLEMENTATION
+## 6. COMPREHENSIVE PHASE 2-10 ROADMAP (DETAILED IMPLEMENTATION GUIDE)
 
-### 6.1 Adding a New Policy
+This section is the **definitive technical roadmap** integrating audit findings with specific implementation requirements, time estimates, and success criteria for all remaining development phases.
+
+---
+
+### 6.0 PHASE OVERVIEW & TIMELINE
+
+| Phase | Component | Status | Effort | Timeline |
+|-------|-----------|--------|--------|----------|
+| 1 | Healthcare Simulation | ✅ Complete | 0 | Done |
+| 2 | Social Security + Tax Reform | 🟡 70% | 38-49h | 5-7 days |
+| 3 | Discretionary Spending + Interest | 🟡 80% | 13h | 2-3 days |
+| 4 | Policy Comparison Module | ⏳ Queued | 16-20h | 2-3 days |
+| 5 | Comprehensive Metrics (100+) | ⏳ Queued | 20-24h | 3 days |
+| 6 | Government-Grade Visualizations | 🟡 Partial | 16-20h | 2-3 days |
+| 7 | Professional I/O System | ⏳ Queued | 12-16h | 2 days |
+| 8 | Comprehensive Documentation | 🟡 Partial | 16-20h | 2-3 days |
+| 9 | Professional User Interface | ⏳ Queued | 20-24h | 3 days |
+| 10 | REST API for Integration | ⏳ Queued | 24-32h | 4-5 days |
+| | **TOTAL** | | **154-214h** | **25-37 days** |
+
+---
+
+### 6.1 PHASE 2: SOCIAL SECURITY + TAX REFORM (38-49 hours, 5-7 days)
+
+**Status:** 🟡 70% Complete  
+**Audit Finding:** Two major incomplete modules identified  
+**Priority:** CRITICAL - Unlocks advanced policy analysis
+
+#### 6.1.1 Social Security Reform Module (11-17 hours)
+
+**Current State:**
+- ✅ Basic SS cost calculations (working)
+- ✅ Benefit payment modeling (working)
+- ❌ Payroll tax adjustments (NOT IMPLEMENTED)
+- ❌ Benefit reduction scenarios (NOT IMPLEMENTED)
+- ❌ Longevity indexing (NOT IMPLEMENTED)
+- ❌ COLA adjustments (NOT IMPLEMENTED)
+- ❌ Retirement age flexibility (NOT IMPLEMENTED)
+
+**Target File:** `core/social_security.py`
+
+**Task 2.1.1: Payroll Tax Adjustments (2-4 hours)**
+
+Implement progressive payroll tax structure with income thresholds:
+
+```python
+class SocialSecurityReform:
+    """Main Social Security reform handler"""
+    
+    def __init__(self, policy: HealthcarePolicyModel):
+        self.policy = policy
+        self.current_payroll_tax = 0.124  # Standard: 12.4%
+        self.wage_base_limit = 168600     # 2024 limit
+    
+    def apply_payroll_tax_adjustment(
+        self,
+        income_level: float,
+        adjustment_factor: float = 1.0,
+        taxable_percentage: float = 1.0
+    ) -> float:
+        """
+        Adjust payroll tax with progressive structure.
+        
+        Default: 12.4% up to wage base
+        High income (>$200K): Additional 1% surcharge
+        """
+        taxable_income = min(
+            income_level * taxable_percentage, 
+            self.wage_base_limit
+        )
+        
+        if income_level > 200000:
+            # High-income surcharge
+            high_income_rate = self.current_payroll_tax * adjustment_factor * 1.1
+            return taxable_income * high_income_rate
+        else:
+            standard_rate = self.current_payroll_tax * adjustment_factor
+            return taxable_income * standard_rate
+```
+
+**Task 2.1.2: Benefit Reduction & COLA (2-3 hours)**
+
+Implement means-tested benefits and annual adjustments:
+
+```python
+def calculate_benefit_with_reduction(
+    self,
+    base_benefit: float,
+    total_income: float,
+    benefit_reduction_rate: float = 0.33
+) -> float:
+    """Apply means testing: reduce benefits for high earners"""
+    threshold = 32000  # Annual income threshold
+    excess = max(0, total_income - threshold)
+    reduction = excess * benefit_reduction_rate
+    return max(0, base_benefit - reduction)
+
+def apply_cola_adjustment(
+    self,
+    benefit: float,
+    inflation_rate: float = 0.03
+) -> float:
+    """Apply cost-of-living adjustment annually"""
+    return benefit * (1 + inflation_rate)
+```
+
+**Task 2.1.3: Longevity Indexing & Retirement Age (3-4 hours)**
+
+```python
+def apply_longevity_indexing(
+    self,
+    benefit: float,
+    birth_year: int,
+    current_year: int = 2025
+) -> float:
+    """Adjust initial benefits for increasing life expectancy"""
+    baseline_le = 75.4
+    years_since = current_year - birth_year
+    estimated_le = baseline_le + (years_since * 0.02)
+    
+    if estimated_le > 80:
+        reduction_pct = (estimated_le - 80) * 0.01
+        return benefit * max(0.8, 1 - reduction_pct)
+    return benefit
+
+def calculate_age_adjusted_benefit(
+    self,
+    primary_insurance_amount: float,
+    full_retirement_age: int,
+    claimed_age: int
+) -> float:
+    """
+    Adjust benefit based on claiming age.
+    - Early (62): 6.67% reduction/year before FRA
+    - At FRA (67): 100% of PIA
+    - Late (70): 8% increase/year after FRA
+    """
+    years_diff = claimed_age - full_retirement_age
+    if years_diff < 0:
+        return primary_insurance_amount * (1 - abs(years_diff) * 0.0667)
+    elif years_diff > 0:
+        return primary_insurance_amount * (1 + years_diff * 0.08)
+    return primary_insurance_amount
+```
+
+**Social Security Implementation Checklist:**
+- [ ] Payroll tax adjustments with progressive structure (2-4h)
+- [ ] Means-tested benefit reduction (1h)
+- [ ] COLA adjustment mechanism (1h)
+- [ ] Longevity indexing formula (2h)
+- [ ] Retirement age flexibility (2h)
+- [ ] Write comprehensive tests (2h)
+- [ ] Integration testing (1h)
+
+---
+
+#### 6.1.2 Tax Reform Module (14-19 hours)
+
+**Current State:**
+- ✅ Basic income tax (working)
+- ✅ Corporate tax (working)
+- ❌ Wealth tax (NOT IMPLEMENTED)
+- ❌ Consumption tax (NOT IMPLEMENTED)
+- ❌ Carbon tax (NOT IMPLEMENTED)
+- ❌ Financial transaction tax (NOT IMPLEMENTED)
+- ❌ Tax incidence analysis (NOT IMPLEMENTED)
+
+**Target File:** `core/tax_reform.py`
+
+**Task 2.2.1: Wealth & Consumption Tax (3-4 hours)**
+
+```python
+class TaxReform:
+    """Tax policy modifications and analysis"""
+    
+    def __init__(self, policy: HealthcarePolicyModel):
+        self.policy = policy
+        self.wealth_tax_rate = 0.02
+        self.wealth_tax_threshold = 50_000_000
+    
+    def calculate_wealth_tax(
+        self,
+        net_assets: float,
+        wealth_tax_rate: float = 0.02
+    ) -> float:
+        """2% annual tax on net wealth above $50M"""
+        if net_assets > self.wealth_tax_threshold:
+            return (net_assets - self.wealth_tax_threshold) * wealth_tax_rate
+        return 0
+    
+    def calculate_consumption_tax(
+        self,
+        consumption_spending: float,
+        vat_rate: float = 0.05
+    ) -> float:
+        """5% VAT with ~30% exemption for essentials"""
+        taxable_consumption = consumption_spending * 0.7  # 30% exempt
+        return taxable_consumption * vat_rate
+```
+
+**Task 2.2.2: Carbon & Financial Transaction Tax (2-3 hours)**
+
+```python
+def calculate_carbon_tax(
+    self,
+    carbon_emissions_tons: float,
+    carbon_price: float = 50
+) -> float:
+    """Carbon tax at $50/ton CO2 equivalent"""
+    return carbon_emissions_tons * carbon_price
+
+def calculate_financial_transaction_tax(
+    self,
+    transaction_value: float,
+    transaction_type: str = 'stock'
+) -> float:
+    """
+    Financial transaction tax by type:
+    - Stocks: 0.05%
+    - Bonds: 0.02%
+    - Derivatives: 0.10%
+    """
+    rates = {
+        'stock': 0.0005,
+        'bond': 0.0002,
+        'derivative': 0.0010
+    }
+    return transaction_value * rates.get(transaction_type, 0.0005)
+```
+
+**Task 2.2.3: Tax Incidence Analysis (4-5 hours)**
+
+```python
+def analyze_tax_distribution_by_income(
+    self,
+    income_distribution: pd.DataFrame,
+    tax_policies: Dict[str, float]
+) -> pd.DataFrame:
+    """Analyze tax burden distribution across income levels"""
+    results = []
+    for _, row in income_distribution.iterrows():
+        income = row['income']
+        total_tax = (
+            income * tax_policies.get('income_rate', 0.1) +
+            income * tax_policies.get('payroll_rate', 0.124) +
+            self.calculate_wealth_tax(row.get('wealth', 0)) +
+            self.calculate_consumption_tax(row.get('consumption', income*0.7))
+        )
+        results.append({
+            'income': income,
+            'total_tax': total_tax,
+            'effective_rate': total_tax / income if income > 0 else 0
+        })
+    return pd.DataFrame(results)
+```
+
+**Tax Reform Implementation Checklist:**
+- [ ] Wealth tax implementation (2h)
+- [ ] Consumption tax with exemptions (2h)
+- [ ] Carbon & FTT taxes (2h)
+- [ ] Tax incidence analysis (4h)
+- [ ] Write comprehensive tests (2h)
+- [ ] Integration testing (1h)
+
+---
+
+#### 6.1.3 Phase 2 Integration & Validation (13 hours)
+
+**Target File:** `core/simulation.py` (extend existing)
+
+**Task 2.3.1: Social Security Integration (4 hours)**
+
+```python
+def apply_social_security_reform(
+    self,
+    results: pd.DataFrame,
+    ss_policy: SocialSecurityReform,
+    adjustment_factor: float = 1.0
+) -> pd.DataFrame:
+    """Integrate SS changes into simulation results"""
+    for idx in results.index:
+        # Updated payroll tax revenue
+        new_payroll_tax = (
+            results.loc[idx, 'total_income'] * 0.124 * adjustment_factor
+        )
+        results.loc[idx, 'payroll_tax_revenue'] = new_payroll_tax
+        
+        # Updated benefits
+        results.loc[idx, 'ss_benefits'] *= adjustment_factor
+        
+        # Recalculate surplus/deficit
+        results.loc[idx, 'total_revenue'] = (
+            results.loc[idx, 'income_tax'] +
+            results.loc[idx, 'corporate_tax'] +
+            new_payroll_tax
+        )
+    return results
+```
+
+**Task 2.3.2: Tax Reform Integration (4 hours)**
+
+```python
+def apply_tax_reform(
+    self,
+    results: pd.DataFrame,
+    tax_policy: TaxReform,
+    tax_changes: Dict[str, float]
+) -> pd.DataFrame:
+    """Integrate tax reform into simulation"""
+    for idx in results.index:
+        income = results.loc[idx, 'total_income']
+        
+        # New income tax
+        new_income_tax = income * tax_changes.get('income_rate', 0.1)
+        results.loc[idx, 'income_tax'] = new_income_tax
+        
+        # Additional taxes
+        results.loc[idx, 'wealth_tax'] = tax_policy.calculate_total_wealth_tax_revenue(
+            self.wealth_data,
+            tax_changes.get('wealth_rate', 0.02)
+        )
+        results.loc[idx, 'carbon_tax'] = tax_policy.calculate_carbon_tax(
+            results.loc[idx, 'carbon_emissions'],
+            tax_changes.get('carbon_price', 50)
+        )
+    return results
+```
+
+**Task 2.3.3-2.3.4: Validation & Scenarios (5 hours)**
+
+- Verify against CBO benchmark reports
+- Test edge cases (extreme incomes, rates)
+- Generate policy comparison scenarios
+- End-to-end validation
+
+**Phase 2 Integration Checklist:**
+- [ ] SS module integration (4h)
+- [ ] Tax reform integration (4h)
+- [ ] Scenario generation (2h)
+- [ ] CBO verification (2h)
+- [ ] Edge case testing (1h)
+
+---
+
+### 6.2 PHASE 3: DISCRETIONARY SPENDING & INTEREST (13 hours, 2-3 days)
+
+**Status:** 🟡 80% Complete  
+**Audit Finding:** Minor refinements needed, core logic solid  
+**Priority:** HIGH - Completes fiscal model
+
+#### 6.2.1 Discretionary Spending Module (4 hours)
+
+**Implementation:**
+
+```python
+def generate_spending_scenarios(
+    self,
+    base_spending: float,
+    years: int = 22
+) -> Dict[str, List[float]]:
+    """Generate 4 discretionary spending scenarios"""
+    scenarios = {}
+    for scenario, growth_rate in [
+        ('conservative', -0.02),   # -2% annual
+        ('baseline', 0.01),        # +1% annual
+        ('moderate', 0.02),        # +2% annual
+        ('invest', 0.05)           # +5% annual
+    ]:
+        spending = [base_spending * (1 + growth_rate)**y for y in range(years)]
+        scenarios[scenario] = spending
+    return scenarios
+
+def enforce_spending_caps(
+    self,
+    spending: List[float],
+    cap_baseline: float = 500_000_000_000,
+    annual_growth: float = 0.01
+) -> List[float]:
+    """Enforce annual spending caps"""
+    capped = []
+    cap = cap_baseline
+    for year_spending in spending:
+        capped.append(min(year_spending, cap))
+        cap *= (1 + annual_growth)
+    return capped
+```
+
+**Checklist:**
+- [ ] Scenario generation (1h)
+- [ ] Cap enforcement (1h)
+- [ ] Fiscal impact calculation (1h)
+- [ ] Testing (1h)
+
+---
+
+#### 6.2.2 Interest Rate Modeling (7 hours)
+
+**Implementation:**
+
+```python
+def calculate_interest_scenarios(
+    self,
+    debt_trajectory: List[float],
+    years: int = 22
+) -> Dict[str, float]:
+    """Calculate interest costs under different scenarios"""
+    base_rates = [0.020, 0.025, 0.030, 0.032, 0.033]
+    
+    scenarios = {
+        'baseline': self._calc_interest(debt_trajectory, base_rates, 0),
+        'rising_1pct': self._calc_interest(debt_trajectory, base_rates, 0.01),
+        'rising_2pct': self._calc_interest(debt_trajectory, base_rates, 0.02),
+        'falling': self._calc_interest(debt_trajectory, base_rates, -0.01),
+    }
+    return scenarios
+
+def _calc_interest(self, debt, rates, adjustment):
+    """Helper: calculate cumulative interest"""
+    total = 0
+    for year, debt_amount in enumerate(debt):
+        rate = rates[min(year, len(rates)-1)] + adjustment
+        total += debt_amount * rate
+    return total
+
+def project_long_term_interest(
+    self,
+    debt_trajectory: List[float],
+    years: int = 50
+) -> pd.DataFrame:
+    """Project 50-year interest with feedback loops"""
+    results = []
+    for year in range(years):
+        debt = debt_trajectory[min(year, len(debt_trajectory)-1)]
+        gdp = self.get_gdp_projection(year)
+        d2g = debt / gdp
+        
+        # Rate increases with debt-to-GDP
+        if d2g > 1.2:
+            rate = 0.05
+        elif d2g > 0.8:
+            rate = 0.04
+        else:
+            rate = 0.03
+        
+        results.append({
+            'year': year,
+            'debt': debt,
+            'rate': rate,
+            'interest': debt * rate
+        })
+    return pd.DataFrame(results)
+```
+
+**Checklist:**
+- [ ] Interest scenarios (2h)
+- [ ] Long-term projections (2h)
+- [ ] Feedback loops (2h)
+- [ ] Testing (1h)
+
+---
+
+### 6.3-6.10 FUTURE PHASES (OVERVIEW)
+
+**Phase 4: Policy Comparison Engine** (16-20h)
+- Side-by-side comparison framework
+- Difference calculations and visualization
+- Sensitivity analysis
+
+**Phase 5: 100+ Comprehensive Metrics** (20-24h)
+- Industry-standard KPIs
+- Advanced fiscal metrics
+- Population health metrics
+- Workforce economics
+
+**Phase 6: Government-Grade Visualizations** (16-20h)
+- Professional matplotlib/plotly charts
+- Interactive dashboards
+- Multi-policy comparisons
+- Export to publication-quality formats
+
+**Phase 7: Professional I/O System** (12-16h)
+- CSV, Excel, JSON export
+- PDF report generation
+- Data import capabilities
+- Batch processing
+
+**Phase 8: Comprehensive Documentation** (16-20h)
+- API documentation
+- User guides
+- Tutorial walkthroughs
+- Policy glossary
+
+**Phase 9: Professional UI** (20-24h)
+- Streamlit dashboard
+- Interactive controls
+- Real-time scenario analysis
+- Policy builder wizard
+
+**Phase 10: REST API** (24-32h)
+- Flask/FastAPI endpoints
+- Policy simulation service
+- Comparison API
+- Cloud deployment ready
+
+**Total Remaining:** 154-214 hours (25-37 days at 40h/week)
+
+*Detailed hour-by-hour breakdown available in PHASE_2_10_ROADMAP_UPDATED.md*
+
+---
+
+### 6.4 QUICK FEATURE ADDITION PATTERNS
+
+#### Adding a New Policy
+
+1. Create `policies/my_policy.json` with structure
+2. Register in `core/healthcare.py` PolicyType enum
+3. Write tests in `tests/test_policies.py`
+4. Run: `python run_compare_and_export.py --policies CURRENT_US MY_POLICY`
+
+#### Adding a New Metric
+
+1. Implement in `core/metrics.py`
+2. Add to `compute_all_metrics()` function
+3. Write unit tests
+4. Verify in comparison output
+
+#### Adding a New Scenario
+
+1. Create in `core/simulation.py` as new method
+2. Document assumptions and parameters
+3. Write scenario tests
+4. Add to scenario comparison output
 
 **Step 1: Define Policy Parameters**
 
