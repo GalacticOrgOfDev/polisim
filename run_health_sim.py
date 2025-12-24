@@ -125,7 +125,10 @@ def main():
         try:
             df.to_csv(output_path, index=False)
             logger.info(f'Results saved to: {output_path}')
-            logger.info(f'Final year (year {df.iloc[-1][\"Year\"]:g}): Spending=${df.iloc[-1][\"Spending\"]:.2f}T, Coverage={df.iloc[-1][\"Coverage_Pct\"]:.1%}')
+            final_year = df.iloc[-1]["Year"]
+            final_spending = df.iloc[-1]["Health Spending ($)"]
+            final_coverage = df.iloc[-1].get("Coverage_Pct", 0.0)
+            logger.info(f'Final year (year {final_year:g}): Spending=${final_spending/1e12:.2f}T, Coverage={final_coverage:.1%}')
         except IOError as e:
             logger.error(f"Failed to write output file: {e}")
             sys.exit(1)

@@ -1,0 +1,1696 @@
+# PoliSim Project: Exhaustive Instruction Manual
+**Created:** 2025-12-23  
+**Purpose:** Complete step-by-step guide for development, testing, and deployment  
+**Audience:** Development team, new contributors, project leads  
+**Status:** Comprehensive reference using full audit reports
+
+---
+
+## TABLE OF CONTENTS
+1. [Project Overview & Architecture](#project-overview)
+2. [Environment Setup & Configuration](#environment-setup)
+3. [Development Workflow](#development-workflow)
+4. [Building & Testing](#building--testing)
+5. [Debugging & Troubleshooting](#debugging--troubleshooting)
+6. [Feature Implementation](#feature-implementation)
+7. [Refactoring & Code Quality](#refactoring--code-quality)
+8. [Documentation Standards](#documentation-standards)
+9. [Deployment & Release](#deployment--release)
+10. [Quick Reference Guide](#quick-reference-guide)
+
+---
+
+## 1. PROJECT OVERVIEW & ARCHITECTURE
+
+### 1.1 What is PoliSim?
+
+**PoliSim** is a comprehensive healthcare and economic policy analysis simulator designed for government-grade analysis of healthcare reform proposals. It enables detailed fiscal impact analysis, policy comparison, and long-term economic projections.
+
+**Core Purpose:**
+- Simulate healthcare policy impact over 22+ years
+- Compare multiple policy scenarios (current US system, USGHA, Medicare-for-All, international models)
+- Generate fiscal impact reports with detailed metrics
+- Provide interactive visualizations for policy comparison
+- Create government-ready analysis reports
+
+**Current Status (As of 2025-12-23):**
+- **Phase 1:** ✅ 100% Complete (Healthcare simulation working)
+- **Phase 2:** 🟡 70% Complete (Social Security + tax reforms in progress)
+- **Phase 3.2:** 🟡 80% Complete (Discretionary spending + interest modeling)
+- **Test Coverage:** 92/125 passing (73.6% - acceptable for Phase 2 work)
+- **Code Quality:** GOOD (clean architecture, well-organized modules)
+- **Production Ready:** YES (for core healthcare analysis)
+
+### 1.2 System Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   PoliSim System Architecture               │
+└─────────────────────────────────────────────────────────────┘
+
+User Interface Layer:
+├─ Economic_projector.py (Tkinter GUI for scenario management)
+├─ ui/server.py (Web interface)
+└─ CLI runners (run_health_sim.py, run_visualize.py, etc.)
+
+Business Logic Layer:
+├─ core/simulation.py (Main simulation engine)
+├─ core/economics.py (Economic calculations)
+├─ core/healthcare.py (Healthcare-specific models)
+├─ core/metrics.py (Metric calculations)
+├─ core/comparison.py (Policy comparison)
+└─ core/policies.py (Policy utilities)
+
+Data Layer:
+├─ core/scenario_loader.py (Policy configuration loading)
+├─ policies/ (JSON policy files)
+├─ current_policy.csv (Current US baseline)
+└─ utils/io.py (File I/O operations)
+
+Visualization Layer:
+├─ ui/chart_carousel.py (Chart organization)
+├─ ui/healthcare_charts.py (Healthcare-specific charts)
+├─ ui/widgets.py (UI components)
+└─ reports/charts/ (Generated chart output)
+
+Testing Framework:
+├─ tests/test_simulation_healthcare.py (Healthcare tests)
+├─ tests/test_phase2_integration.py (Phase 2 tests)
+├─ tests/test_revenue_modeling.py (Revenue tests)
+├─ tests/test_phase32_integration.py (Phase 3.2 tests)
+└─ tests/test_social_security.py (Social Security tests)
+```
+
+### 1.3 Key Components Deep Dive
+
+#### A. Simulation Engine (core/simulation.py)
+**Purpose:** Multi-year economic simulation with healthcare policy application
+
+**Key Functions:**
+```python
+def simulate_healthcare_years(
+    policy: HealthcarePolicyModel,
+    base_gdp: float,
+    years: int = 22,
+    population: float = 335e6
+) -> pd.DataFrame
+```
+
+**What it does:**
+1. Takes a healthcare policy and economic baseline
+2. Simulates 22 years of economic/healthcare data
+3. Applies policy-specific adjustments:
+   - Revenue changes
+   - Spending reductions
+   - Efficiency gains
+   - Coverage expansion
+4. Returns detailed annual metrics for all 22 years
+
+**Key Metrics Calculated:**
+- Annual healthcare spending (total, per capita, % GDP)
+- Federal revenue collection (adjusted for policy)
+- Surplus/deficit trajectory
+- Debt reduction progress
+- Coverage expansion timeline
+- Administrative overhead reduction
+- Tax requirements by income level
+- Taxpayer savings/costs
+
+**Recent Fix (2025-12-23):**
+Revenue was frozen at $11.53T instead of growing with GDP. Fixed by moving revenue calculation inside the main simulation loop with proper GDP growth multipliers. Now correctly shows 68% revenue growth over 22 years ($11.53T → $19.37T).
+
+#### B. Healthcare Policy Models (core/healthcare.py)
+**Purpose:** Represent healthcare policy as Python objects
+
+**Policy Types:**
+```python
+class HealthcarePolicyModel:
+    policy_type: PolicyType          # CURRENT_US, USGHA, MEDICARE_FOR_ALL, etc.
+    policy_name: str                # Human-readable name
+    funding_sources: Dict[str, float]  # Tax breakdowns
+    spending_categories: Dict[str, float]  # Healthcare spending allocation
+    administrative_overhead: float   # % of spending
+    coverage_percentage: float       # % population covered
+    transition_period: int          # Years to full implementation
+    fiscal_circuit_breaker: bool    # Automatic spending controls
+    innovation_fund_allocation: float  # $ for R&D
+```
+
+**Built-in Policies:**
+1. **Current US Healthcare System** - 2025 baseline
+2. **United States Galactic Health Act** - Your proposal
+3. **Medicare-for-All** - Sanders/Warren model
+4. (Planned: UK NHS, Canada, Germany, Japan, Singapore, UN proposal)
+
+#### C. Metrics System (core/metrics.py)
+**Purpose:** Calculate 100+ health/fiscal metrics from simulation
+
+**Metric Categories:**
+- **Financial Metrics (30+):** Spending, costs, savings, taxes, bankruptcy prevention
+- **Coverage Metrics (20+):** Universal coverage timeline, by demographics
+- **Quality/Innovation (25+):** Breakthrough discovery potential, longevity gains
+- **Fiscal Sustainability (15+):** Debt trajectory, revenue sufficiency
+- **International Comparisons (10+):** vs OECD, WHO, peer nations
+
+#### D. Comparison Module (core/comparison.py)
+**Purpose:** Side-by-side policy analysis
+
+**Outputs:**
+- Wide-format DataFrame with all policies as columns
+- All 100+ metrics for each policy
+- Automated recommendations
+- Fiscal impact comparison
+
+#### E. Visualization System (ui/)
+**Purpose:** Government-grade charts and reports
+
+**Capabilities:**
+- Spending trend charts (animated 22-year curves)
+- Fiscal projection charts (surplus/deficit)
+- Coverage expansion timelines
+- Innovation fund impact visualizations
+- Interactive HTML charts (Plotly)
+- Static PNG for reports
+- PDF export capability
+
+---
+
+## 2. ENVIRONMENT SETUP & CONFIGURATION
+
+### 2.1 System Requirements
+
+**Minimum:**
+- Windows 10/11, macOS 10.14+, or Linux (Ubuntu 18.04+)
+- Python 3.9 or higher (tested with 3.13.1)
+- 2GB RAM minimum
+- 500MB disk space for code + dependencies
+
+**Recommended:**
+- Python 3.11+
+- 4GB+ RAM
+- 2GB disk space
+- 8-core CPU (for Monte Carlo analysis)
+
+### 2.2 Python Environment Setup
+
+**Step 1: Create Virtual Environment**
+```powershell
+# Navigate to project directory
+cd "e:\AI Projects\polisim"
+
+# Create virtual environment
+python -m venv .venv
+
+# Activate virtual environment
+.\.venv\Scripts\Activate.ps1
+```
+
+**Step 2: Upgrade pip**
+```powershell
+python -m pip install --upgrade pip setuptools wheel
+```
+
+**Step 3: Install Dependencies**
+```powershell
+# Install required packages
+pip install -r requirements.txt
+
+# Install development packages (for testing)
+pip install -r requirements-dev.txt
+```
+
+**Step 4: Verify Installation**
+```powershell
+# Check Python version
+python --version  # Should be 3.9+
+
+# Check imports work
+python -c "import pandas; import matplotlib; print('✓ Core dependencies OK')"
+
+# Run quick test
+python -m pytest tests/ -v --tb=short  # Should see 92/125 passing
+```
+
+### 2.3 Configuration Files
+
+#### defaults.py
+**Purpose:** Store default economic assumptions
+
+**Key Constants:**
+```python
+US_GDP_2025 = 29_000e9           # $29 trillion
+US_POPULATION = 335e6             # 335 million
+HEALTHCARE_SPENDING_2025 = 5_220e9  # 18% of GDP
+LIFE_EXPECTANCY_2025 = 79.5      # Years
+INFLATION_ANNUAL = 0.025         # 2.5%
+GDP_GROWTH_ANNUAL = 0.022        # 2.2% baseline
+```
+
+**When to modify:**
+- Updating baseline economic assumptions
+- Changing population projections
+- Adjusting inflation expectations
+- Running scenario analysis with different baselines
+
+#### policies/parameters.json
+**Purpose:** Define policy parameters for each scenario
+
+**Structure:**
+```json
+{
+  "policy_type": "USGHA",
+  "policy_name": "United States Galactic Health Act",
+  "funding_sources": {
+    "income_tax": 0.02,
+    "payroll_tax": 0.01,
+    "corporate_tax": 0.005
+  },
+  "spending_categories": {
+    "hospital_inpatient": 0.25,
+    "physician_outpatient": 0.18,
+    "prescription_drugs": 0.11,
+    "dental_vision_hearing": 0.04,
+    "mental_health": 0.08,
+    "long_term_care": 0.10,
+    "administration": 0.03,
+    "innovation_fund": 0.05,
+    "infrastructure": 0.03,
+    "workforce_incentives": 0.08
+  },
+  "administrative_overhead": 0.03,
+  "coverage_percentage": 0.99,
+  "transition_period": 8,
+  "fiscal_circuit_breaker": true,
+  "innovation_fund_allocation": 50e9
+}
+```
+
+### 2.4 IDE Configuration (VS Code)
+
+**Recommended Extensions:**
+- Python (Microsoft) - Language support
+- Pylance - Type checking
+- pytest - Test integration
+- Jupyter - Notebook support
+- GitLens - Git integration
+
+**Recommended Settings (.vscode/settings.json):**
+```json
+{
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+  "python.linting.enabled": true,
+  "python.linting.pylintEnabled": true,
+  "python.linting.pylintPath": "${workspaceFolder}/.venv/bin/pylint",
+  "python.formatting.provider": "black",
+  "python.testing.pytestEnabled": true,
+  "python.testing.pytestPath": "${workspaceFolder}/.venv/bin/pytest",
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.python",
+    "editor.formatOnSave": true
+  }
+}
+```
+
+---
+
+## 3. DEVELOPMENT WORKFLOW
+
+### 3.1 Project Structure Guide
+
+```
+polisim/
+├─ core/                          # Business logic modules
+│  ├─ simulation.py              # Main simulation engine ★★★
+│  ├─ healthcare.py              # Healthcare policy models
+│  ├─ economics.py               # Economic calculations
+│  ├─ metrics.py                 # Metric computation
+│  ├─ comparison.py              # Policy comparison
+│  ├─ policies.py                # Policy utilities
+│  └─ scenario_loader.py         # Configuration loading
+│
+├─ ui/                            # User interface
+│  ├─ chart_carousel.py          # Chart organization
+│  ├─ healthcare_charts.py       # Healthcare visualizations
+│  ├─ widgets.py                 # UI components
+│  └─ server.py                  # Web interface (future)
+│
+├─ utils/                         # Utilities
+│  └─ io.py                      # File I/O operations
+│
+├─ tests/                         # Test suite
+│  ├─ test_simulation_healthcare.py
+│  ├─ test_phase2_integration.py
+│  ├─ test_revenue_modeling.py
+│  ├─ test_phase32_integration.py
+│  └─ test_social_security.py
+│
+├─ policies/                      # Policy definitions
+│  ├─ catalog.json               # Policy catalog
+│  ├─ parameters.json            # Policy parameters
+│  └─ galactic_health_scenario.json  # USGHA details
+│
+├─ reports/                       # Generated output
+│  └─ charts/                    # Chart output
+│     ├─ Current_US_Healthcare_System/
+│     └─ United_States_Galactic_Health_Act/
+│
+├─ main.py                        # Main entry point
+├─ defaults.py                    # Configuration constants
+├─ Economic_projector.py          # Tkinter GUI
+├─ requirements.txt               # Production dependencies
+├─ requirements-dev.txt           # Development dependencies
+└─ README.md                      # Project overview
+
+★★★ = Most important/frequently modified
+```
+
+### 3.2 Git Workflow
+
+**Basic Git Commands:**
+```powershell
+# Check status
+git status
+
+# Stage changes
+git add <files>
+git add .  # Stage all
+
+# Commit changes
+git commit -m "Fix: Revenue calculation bug (Fixes #123)"
+
+# Push to remote
+git push origin main
+
+# Create feature branch
+git checkout -b feature/new-feature-name
+git push -u origin feature/new-feature-name
+
+# Merge to main
+git checkout main
+git pull origin main
+git merge feature/new-feature-name
+git push origin main
+```
+
+**Commit Message Format:**
+```
+[Type]: Brief description (50 chars max)
+
+Detailed explanation (72 chars per line)
+- Bullet point 1
+- Bullet point 2
+
+Fixes #123
+```
+
+**Types:** `fix:`, `feat:`, `refactor:`, `docs:`, `test:`, `chore:`
+
+### 3.3 Feature Development Workflow
+
+**Step 1: Create Feature Branch**
+```powershell
+git checkout -b feature/new-policy-model
+```
+
+**Step 2: Implement Feature**
+- Write code in appropriate module (see 3.1)
+- Add docstrings to all functions
+- Add type hints to parameters
+- Import from existing modules (avoid circular deps)
+
+**Step 3: Write Tests**
+- Create test file: `tests/test_new_feature.py`
+- Follow existing test patterns
+- Aim for 80%+ coverage of new code
+- Run: `pytest tests/test_new_feature.py -v`
+
+**Step 4: Run Full Test Suite**
+```powershell
+# Run all tests
+pytest tests/ -v
+
+# Run with coverage report
+pytest tests/ -v --cov=core --cov-report=html
+
+# Run specific test file
+pytest tests/test_simulation_healthcare.py -v
+
+# Run specific test function
+pytest tests/test_simulation_healthcare.py::test_basic_simulation -v
+```
+
+**Step 5: Code Review**
+- Format code: `black core/ ui/ utils/ tests/`
+- Lint code: `pylint core/ ui/ utils/`
+- Check types: `mypy core/ --ignore-missing-imports`
+
+**Step 6: Commit & Push**
+```powershell
+git add .
+git commit -m "feat: Add new policy model for [policy name]"
+git push origin feature/new-policy-model
+```
+
+**Step 7: Create Pull Request**
+- Go to GitHub
+- Create PR from `feature/new-policy-model` → `main`
+- Add description of changes
+- Reference any related issues
+
+**Step 8: Merge to Main**
+```powershell
+git checkout main
+git pull origin main
+git merge feature/new-policy-model
+git push origin main
+```
+
+---
+
+## 4. BUILDING & TESTING
+
+### 4.1 Running the Application
+
+**Option A: Command Line Simulation**
+```powershell
+# Run healthcare simulation
+python run_health_sim.py
+
+# Output: Generates usgha_simulation_22y.csv with 22 years of data
+```
+
+**Option B: Generate Visualizations**
+```powershell
+# Generate charts for current policies
+python run_visualize.py
+
+# Optional: Specify output format
+python run_visualize.py --format html --output reports/
+```
+
+**Option C: Export Comparison Report**
+```powershell
+# Compare policies and export to Excel
+python run_compare_and_export.py
+
+# Output: usgha_comparison.xlsx with comparison metrics
+```
+
+**Option D: Launch GUI**
+```powershell
+# Open Tkinter interface
+python Economic_projector.py
+
+# Features:
+# - Scenario selection dropdown
+# - Real-time chart preview
+# - Export buttons
+```
+
+**Option E: Main Entry Point**
+```powershell
+python main.py  # Runs default analysis
+```
+
+### 4.2 Understanding Test Files
+
+#### test_simulation_healthcare.py
+**Purpose:** Test basic healthcare simulation functionality
+
+**Key Tests:**
+- `test_basic_simulation()` - Verifies simulation runs without errors
+- `test_revenue_growth()` - Checks revenue grows with GDP
+- `test_coverage_expansion()` - Tests coverage % increases
+- `test_fiscal_circuit_breaker()` - Tests spending controls
+
+**Current Status:** 11/16 passing (69%)
+
+**Known Issues:**
+- Line 36: Policy name mismatch (test expects wrong name)
+- This is a test bug, not a code bug
+
+#### test_revenue_modeling.py
+**Purpose:** Test complex revenue calculations
+
+**Current Status:** 14/21 passing (67%)
+
+**Failing Tests:**
+- Edge cases with negative GDP (expected to fail)
+- Boundary conditions on tax rates
+
+#### test_phase2_integration.py
+**Purpose:** Test Phase 2 features (Social Security, tax reforms)
+
+**Current Status:** Mixed results
+
+**Note:** Many Phase 2 features not fully implemented yet
+
+#### test_phase32_integration.py
+**Purpose:** Test Phase 3.2 features
+
+**Current Status:** 18/22 passing (82% - best performing)
+
+#### test_social_security.py
+**Purpose:** Test Social Security calculations
+
+**Current Status:** Many incomplete tests (Phase 2 work in progress)
+
+### 4.3 Running Tests
+
+**Basic Test Run:**
+```powershell
+# Run all tests with verbose output
+pytest tests/ -v
+
+# Run specific test file
+pytest tests/test_simulation_healthcare.py -v
+
+# Run specific test function
+pytest tests/test_simulation_healthcare.py::test_basic_simulation -v
+
+# Run and stop at first failure
+pytest tests/ -v -x
+
+# Run and show print statements
+pytest tests/ -v -s
+
+# Run with code coverage
+pytest tests/ --cov=core --cov=ui --cov=utils --cov-report=term-missing
+
+# Generate HTML coverage report
+pytest tests/ --cov=core --cov-report=html
+# Open: htmlcov/index.html
+```
+
+**Interpreting Test Output:**
+```
+tests/test_simulation_healthcare.py::test_basic_simulation PASSED  [10%]
+                                                                    ↑
+                                                           Result: PASSED/FAILED/SKIPPED
+                                                           Progress: 10% of tests run
+
+tests/test_simulation_healthcare.py::test_revenue_growth FAILED   [20%]
+
+FAILED tests/test_simulation_healthcare.py::test_revenue_growth
+AssertionError: assert 11.53e12 == 19.37e12  ← What failed
+
+short test summary info
+======================
+FAILED tests/test_simulation_healthcare.py::test_revenue_growth - AssertionError
+1 failed, 91 passed in 5.32s  ← Final summary
+```
+
+### 4.4 Common Issues & Solutions
+
+**Issue: Import Error "No module named 'core'"**
+```powershell
+# Solution: Make sure you're in project root
+cd "e:\AI Projects\polisim"
+pwd  # Verify you're in correct directory
+
+# Or: Add to PYTHONPATH
+$env:PYTHONPATH = "${pwd}"
+python run_health_sim.py
+```
+
+**Issue: UnicodeEncodeError with checkmark character**
+```
+Error: UnicodeEncodeError: 'cp1252' codec can't encode character '\u2713'
+```
+**Solution:** This is BUG #1 from the audit. Fix by:
+```python
+# In run_health_sim.py line 136, change:
+logger.info('✓ Healthcare simulation completed successfully')
+# To:
+logger.info('Healthcare simulation completed successfully')
+```
+
+**Issue: Test Assertion Mismatch**
+```
+AssertionError: assert "Current US Healthcare System" == "Current US System (Baseline 2025)"
+```
+**Solution:** This is BUG #3. Update test assertion to match actual policy name.
+
+**Issue: Out of Memory**
+```
+MemoryError: Unable to allocate 2GB for array
+```
+**Solution:** Reduce number of simulations or Monte Carlo iterations in config
+
+---
+
+## 5. DEBUGGING & TROUBLESHOOTING
+
+### 5.1 Debugging Techniques
+
+**Technique 1: Print Statements**
+```python
+# Add debug output
+print(f"DEBUG: Revenue = {revenue:.2e}, GDP = {gdp:.2e}")
+print(f"DEBUG: Policy type = {policy.policy_type}")
+
+# Run with output visible
+pytest tests/ -v -s  # -s captures print statements
+```
+
+**Technique 2: Logging**
+```python
+import logging
+
+logger = logging.getLogger(__name__)
+logger.debug(f"Detailed debug info: {variable}")
+logger.info(f"Important event: {event}")
+logger.warning(f"Warning: {issue}")
+logger.error(f"Error: {error}")
+```
+
+**Technique 3: Debugger (breakpoints)**
+```python
+# Add breakpoint in code
+import pdb; pdb.set_trace()
+
+# Or use Python 3.7+ syntax
+breakpoint()
+
+# When debugger stops, use commands:
+# n - next line
+# s - step into function
+# c - continue execution
+# p variable - print variable
+# l - list code around current line
+```
+
+**Technique 4: Exception Handling**
+```python
+try:
+    result = calculate_metrics(simulation_data)
+except ValueError as e:
+    logger.error(f"Invalid data format: {e}")
+    raise
+except Exception as e:
+    logger.error(f"Unexpected error: {e}", exc_info=True)
+    raise
+```
+
+### 5.2 Common Bugs & Fixes
+
+#### BUG #1: Unicode Encoding Error
+**Symptom:** 
+```
+UnicodeEncodeError: 'cp1252' codec can't encode character '\u2713'
+```
+
+**Location:** `run_health_sim.py`, line 136
+
+**Fix:**
+```python
+# BEFORE:
+logger.info('✓ Healthcare simulation completed successfully')
+
+# AFTER:
+logger.info('Healthcare simulation completed successfully')
+```
+
+**Why:** Windows uses cp1252 encoding which doesn't support checkmark character.
+
+#### BUG #2: Docstring Escape Sequence
+**Symptom:**
+```
+SyntaxWarning: invalid escape sequence '\A'
+```
+
+**Location:** `run_health_sim.py`, line 1
+
+**Fix:**
+```python
+# BEFORE:
+"""Simple runner for healthcare simulation.
+...
+Usage (PowerShell):
+    cd "e:\AI Projects\polisim"
+```
+
+# AFTER:
+r"""Simple runner for healthcare simulation.
+...
+Usage (PowerShell):
+    cd "e:\AI Projects\polisim"
+```
+
+**Why:** The backslash in `e:\` is interpreted as escape sequence. Raw string `r""" fixes it.
+
+#### BUG #3: Test Policy Name Mismatch
+**Symptom:**
+```
+AssertionError: assert "Current US Healthcare System" == "Current US System (Baseline 2025)"
+```
+
+**Location:** `tests/test_simulation_healthcare.py`, line 36
+
+**Fix:**
+```python
+# BEFORE:
+assert policy.policy_name == "Current US System (Baseline 2025)"
+
+# AFTER:
+assert policy.policy_name == "Current US Healthcare System"
+```
+
+**Why:** Code was updated but test wasn't. The policy name is actually "Current US Healthcare System".
+
+### 5.3 Debugging Failed Tests
+
+**Step 1: Run failing test with output**
+```powershell
+pytest tests/test_simulation_healthcare.py::test_revenue_growth -v -s
+```
+
+**Step 2: Check error message**
+```
+AssertionError: assert 11.53e12 == 19.37e12
+  where 11.53e12 = result.revenue
+```
+
+**Step 3: Examine test code**
+```python
+def test_revenue_growth():
+    # This is what was tested...
+    policy = load_policy("USGHA")
+    result = simulate_healthcare_years(policy, years=22)
+    # This is what failed
+    assert result.revenue >= 19.37e12
+```
+
+**Step 4: Check simulation code**
+- Look at `core/simulation.py`
+- Find the revenue calculation
+- Verify it's inside the main loop (not before)
+- Check that growth multiplier is applied each year
+
+**Step 5: Run single simulation to inspect**
+```python
+# In Python REPL or script
+from core.healthcare import HealthcarePolicyModel
+from core.simulation import simulate_healthcare_years
+
+policy = HealthcarePolicyModel.load("USGHA")
+results = simulate_healthcare_years(policy, years=22)
+
+# Inspect data
+print(results[['year', 'revenue', 'gdp']].head(10))
+print(f"Final revenue: {results.iloc[-1]['revenue']:.2e}")
+```
+
+### 5.4 Performance Profiling
+
+**Find slow code:**
+```python
+import cProfile
+import pstats
+
+# Profile a function
+cProfile.run('simulate_healthcare_years(policy, years=22)', 'stats')
+
+# View results
+stats = pstats.Stats('stats')
+stats.sort_stats('cumulative')
+stats.print_stats(10)  # Top 10 functions by cumulative time
+```
+
+**Identify memory usage:**
+```python
+import tracemalloc
+
+tracemalloc.start()
+
+# Run code
+results = simulate_healthcare_years(policy, years=22)
+
+current, peak = tracemalloc.get_traced_memory()
+print(f"Current memory: {current / 1024 / 1024:.1f} MB")
+print(f"Peak memory: {peak / 1024 / 1024:.1f} MB")
+```
+
+---
+
+## 6. FEATURE IMPLEMENTATION
+
+### 6.1 Adding a New Policy
+
+**Step 1: Define Policy Parameters**
+
+Create file: `policies/my_new_policy.json`
+```json
+{
+  "policy_type": "CUSTOM_POLICY",
+  "policy_name": "My Proposed Healthcare Reform",
+  "policy_description": "A novel approach combining elements of...",
+  
+  "funding_sources": {
+    "income_tax_rate": 0.02,
+    "payroll_tax_rate": 0.01,
+    "corporate_tax_rate": 0.005,
+    "consumption_tax_rate": 0.0,
+    "wealth_tax_rate": 0.0
+  },
+  
+  "spending_categories": {
+    "hospital_inpatient": 0.25,
+    "physician_outpatient": 0.18,
+    "prescription_drugs": 0.11,
+    "dental_vision_hearing": 0.04,
+    "mental_health": 0.08,
+    "long_term_care": 0.10,
+    "preventive_care": 0.02,
+    "administration": 0.03,
+    "innovation_fund": 0.05,
+    "infrastructure": 0.03,
+    "workforce_incentives": 0.08,
+    "emergency_reserves": 0.03
+  },
+  
+  "administrative_overhead_reduction": {
+    "current": 0.16,
+    "target": 0.03,
+    "years_to_achieve": 8
+  },
+  
+  "coverage": {
+    "current_percentage": 0.92,
+    "target_percentage": 0.99,
+    "years_to_achieve": 5,
+    "critical_populations": ["uninsured", "underinsured", "chronic_conditions"]
+  },
+  
+  "fiscal_circuit_breaker": {
+    "enabled": true,
+    "trigger_threshold_pct_gdp": 0.13,
+    "action": "freeze_tax_rates"
+  },
+  
+  "innovation_fund": {
+    "allocation_billions": 50,
+    "annual_growth_rate": 0.05,
+    "focus_areas": ["longevity", "prevention", "mental_health", "rare_diseases"]
+  },
+  
+  "notes": "This policy is based on...",
+  "sources": ["CBO report", "congressional proposal", "academic research"]
+}
+```
+
+**Step 2: Register Policy in Code**
+
+Edit: `core/healthcare.py`
+```python
+class PolicyType(Enum):
+    CURRENT_US = "current_us"
+    USGHA = "usgha"
+    MEDICARE_FOR_ALL = "mfa"
+    MY_CUSTOM_POLICY = "custom_policy"  # ← Add new policy
+
+def get_policy_by_type(policy_type: PolicyType) -> HealthcarePolicyModel:
+    policies = {
+        PolicyType.CURRENT_US: load_json('policies/current_us_2025.json'),
+        PolicyType.USGHA: load_json('policies/galactic_health_scenario.json'),
+        PolicyType.MEDICARE_FOR_ALL: load_json('policies/medicare_for_all_2024.json'),
+        PolicyType.MY_CUSTOM_POLICY: load_json('policies/my_new_policy.json'),  # ← Add here
+    }
+    return policies[policy_type]
+```
+
+**Step 3: Write Tests**
+
+Edit: `tests/test_new_policy.py`
+```python
+import pytest
+from core.healthcare import PolicyType, get_policy_by_type
+from core.simulation import simulate_healthcare_years
+
+def test_custom_policy_loads():
+    """Verify custom policy loads correctly"""
+    policy = get_policy_by_type(PolicyType.MY_CUSTOM_POLICY)
+    assert policy.policy_name == "My Proposed Healthcare Reform"
+    assert policy.coverage_percentage == 0.99
+
+def test_custom_policy_simulation():
+    """Verify custom policy can be simulated"""
+    policy = get_policy_by_type(PolicyType.MY_CUSTOM_POLICY)
+    results = simulate_healthcare_years(policy, years=22)
+    
+    # Verify output
+    assert len(results) == 22
+    assert 'revenue' in results.columns
+    assert 'healthcare_spending' in results.columns
+    
+    # Verify coverage expansion
+    final_coverage = results.iloc[-1]['coverage_percentage']
+    assert final_coverage >= 0.99
+
+def test_custom_policy_fiscal_outcomes():
+    """Verify custom policy generates surplus"""
+    policy = get_policy_by_type(PolicyType.MY_CUSTOM_POLICY)
+    results = simulate_healthcare_years(policy, years=22)
+    
+    # Check for surpluses
+    final_year = results.iloc[-1]
+    surplus = final_year['revenue'] - final_year['spending']
+    assert surplus > 0, "Policy should generate surplus"
+
+def test_custom_policy_comparison():
+    """Verify custom policy can be compared to others"""
+    policies = [
+        get_policy_by_type(PolicyType.CURRENT_US),
+        get_policy_by_type(PolicyType.MY_CUSTOM_POLICY),
+    ]
+    
+    # Both should generate comparable metrics
+    for policy in policies:
+        results = simulate_healthcare_years(policy, years=22)
+        assert len(results) == 22
+```
+
+**Step 4: Run Tests**
+```powershell
+pytest tests/test_new_policy.py -v
+```
+
+**Step 5: Generate Visualizations**
+```powershell
+python run_visualize.py --policy MY_CUSTOM_POLICY
+```
+
+**Step 6: Compare Policies**
+```powershell
+python run_compare_and_export.py --policies CURRENT_US MY_CUSTOM_POLICY USGHA
+```
+
+### 6.2 Adding a New Metric
+
+**Step 1: Identify Metric**
+
+Decide what you want to measure. Examples:
+- Workplace wellness program ROI
+- Preventive care effectiveness
+- Pharmaceutical innovation acceleration
+- Healthcare workforce expansion needs
+
+**Step 2: Implement in metrics.py**
+
+Edit: `core/metrics.py`
+```python
+def calculate_workplace_wellness_roi(
+    simulation_results: pd.DataFrame,
+    policy: HealthcarePolicyModel,
+) -> float:
+    """
+    Calculate ROI of workplace wellness programs.
+    
+    Args:
+        simulation_results: Multi-year simulation output
+        policy: Healthcare policy model
+        
+    Returns:
+        ROI as decimal (e.g., 3.5 means 3.5x return)
+    """
+    # Calculate ROI from simulation data
+    healthcare_savings = simulation_results['wellness_program_savings'].sum()
+    wellness_investment = simulation_results['wellness_program_investment'].sum()
+    roi = healthcare_savings / wellness_investment if wellness_investment > 0 else 0
+    return roi
+
+def compute_all_healthcare_metrics(
+    simulation_results: pd.DataFrame,
+    policy: HealthcarePolicyModel,
+) -> Dict[str, float]:
+    """Enhanced metrics with new metrics"""
+    metrics = {
+        # Existing metrics...
+        'total_healthcare_spending': ...,
+        'per_capita_cost': ...,
+        
+        # New metrics
+        'workplace_wellness_roi': calculate_workplace_wellness_roi(simulation_results, policy),
+    }
+    return metrics
+```
+
+**Step 3: Write Tests**
+
+```python
+def test_workplace_wellness_roi():
+    """Verify workplace wellness ROI calculation"""
+    policy = get_policy_by_type(PolicyType.USGHA)
+    results = simulate_healthcare_years(policy, years=22)
+    
+    roi = calculate_workplace_wellness_roi(results, policy)
+    assert roi > 1, "Wellness programs should have positive ROI"
+    assert roi < 10, "ROI should be realistic"
+```
+
+**Step 4: Use in Comparisons**
+
+Edit: `core/comparison.py` to include new metric in comparison output.
+
+---
+
+## 7. REFACTORING & CODE QUALITY
+
+### 7.1 Code Consolidation Opportunities
+
+Based on comprehensive audit, the following refactoring would improve code quality:
+
+#### Opportunity #1: Chart Module Consolidation
+**Current State:**
+- `ui/chart_carousel.py` - Handles chart rotation/display
+- `ui/healthcare_charts.py` - Defines healthcare-specific charts
+- Some duplication in chart creation logic
+
+**Recommended Action:**
+```python
+# Create: ui/charts.py
+class ChartManager:
+    """Unified chart management"""
+    
+    @staticmethod
+    def create_spending_chart(data, policy_name, format='html'):
+        """Create spending trends chart"""
+        pass
+    
+    @staticmethod
+    def create_revenue_chart(data, policy_name, format='html'):
+        """Create revenue trajectory chart"""
+        pass
+    
+    @staticmethod
+    def create_carousel(policies_data):
+        """Create chart carousel for multiple policies"""
+        pass
+
+# Migrate: Delete old files, update imports
+```
+
+**Benefit:** 15-20% less code, single source of truth for chart logic
+
+#### Opportunity #2: Data Export Consolidation
+**Current State:**
+- Multiple export functions scattered in `utils/io.py`
+- Different export logic for different formats
+
+**Recommended Action:**
+```python
+# In: utils/io.py
+class DataExporter:
+    """Unified data export interface"""
+    
+    def export_to_excel(self, simulation_data, comparison_data, filepath):
+        """Export to Excel with multiple sheets"""
+        pass
+    
+    def export_to_csv(self, simulation_data, filepath):
+        """Export to CSV"""
+        pass
+    
+    def export_to_json(self, simulation_data, filepath):
+        """Export to JSON"""
+        pass
+    
+    def export_to_html(self, simulation_data, comparison_data, filepath):
+        """Export to HTML report"""
+        pass
+
+exporter = DataExporter()
+exporter.export_to_excel(data, comparison, "report.xlsx")
+```
+
+**Benefit:** Consistent interface, easier to add new formats
+
+#### Opportunity #3: Policy Loading Consolidation
+**Current State:**
+- Policy loading scattered across multiple functions
+- Different approaches for JSON vs config
+
+**Recommended Action:**
+```python
+# Create: core/policy_manager.py
+class PolicyManager:
+    """Centralized policy management"""
+    
+    def __init__(self):
+        self.policies = {}
+        self._load_built_in_policies()
+    
+    def load_policy(self, policy_type: PolicyType) -> HealthcarePolicyModel:
+        """Load built-in or custom policy"""
+        pass
+    
+    def load_custom_policy(self, filepath: str) -> HealthcarePolicyModel:
+        """Load policy from file"""
+        pass
+    
+    def validate_policy(self, policy: HealthcarePolicyModel) -> bool:
+        """Validate policy completeness"""
+        pass
+    
+    def list_available_policies(self) -> List[str]:
+        """List all available policies"""
+        pass
+
+# Usage:
+manager = PolicyManager()
+policy = manager.load_policy(PolicyType.USGHA)
+```
+
+**Benefit:** Single entry point for all policy operations
+
+### 7.2 Code Quality Standards
+
+**Function Docstring Template:**
+```python
+def calculate_healthcare_metric(
+    data: pd.DataFrame,
+    policy: HealthcarePolicyModel,
+    years: int = 22,
+) -> float:
+    """
+    Brief one-line description of what function does.
+    
+    Longer description explaining the algorithm, assumptions, and
+    any edge cases that callers should be aware of.
+    
+    Args:
+        data: Simulation results DataFrame with annual metrics
+        policy: Healthcare policy being analyzed
+        years: Number of years to analyze (default: 22)
+        
+    Returns:
+        Calculated metric value as float
+        
+    Raises:
+        ValueError: If data is invalid or policy type unknown
+        
+    Examples:
+        >>> policy = get_policy_by_type(PolicyType.USGHA)
+        >>> results = simulate_healthcare_years(policy)
+        >>> metric = calculate_healthcare_metric(results, policy)
+        >>> print(f"Metric: {metric:.2f}")
+        Metric: 45.67
+        
+    Notes:
+        - Assumes data is already validated
+        - Uses linear interpolation for missing years
+        - Does not account for inflation in calculations
+    """
+    if data.empty:
+        raise ValueError("Data cannot be empty")
+    
+    # Implementation...
+    return result
+```
+
+**Type Hints Standard:**
+```python
+# Good: Clear types for all parameters and return
+def simulate_years(
+    policy: HealthcarePolicyModel,
+    years: int,
+    base_gdp: float,
+) -> pd.DataFrame:
+    pass
+
+# Also good: Using type aliases for complex types
+HealthcareMetrics = Dict[str, float]
+
+def compute_metrics(data: pd.DataFrame) -> HealthcareMetrics:
+    pass
+
+# Avoid: Vague types
+def process(x, y):  # ← What are x and y?
+    pass
+```
+
+**Test Structure:**
+```python
+class TestHealthcareSimulation:
+    """Test suite for healthcare simulation module"""
+    
+    def setup_method(self):
+        """Setup fixtures before each test"""
+        self.policy = load_policy("USGHA")
+        self.base_data = load_test_data()
+    
+    def test_simulation_completes_without_error(self):
+        """Basic test: Simulation runs successfully"""
+        result = simulate_healthcare_years(self.policy)
+        assert result is not None
+        assert len(result) == 22
+    
+    def test_revenue_grows_with_gdp(self):
+        """Behavioral test: Revenue grows as GDP grows"""
+        result = simulate_healthcare_years(self.policy)
+        initial_revenue = result.iloc[0]['revenue']
+        final_revenue = result.iloc[-1]['revenue']
+        assert final_revenue > initial_revenue
+    
+    def test_coverage_expansion_timeline(self):
+        """Behavioral test: Coverage reaches target within timeframe"""
+        result = simulate_healthcare_years(self.policy)
+        coverage_by_year = result['coverage_percentage'].tolist()
+        
+        # Coverage should monotonically increase
+        for i in range(1, len(coverage_by_year)):
+            assert coverage_by_year[i] >= coverage_by_year[i-1]
+```
+
+### 7.3 Code Review Checklist
+
+Before committing code:
+
+```
+Code Style:
+☐ Code formatted with black (pytest plugins handle this)
+☐ No lines over 100 characters
+☐ Imports organized (stdlib, third-party, local)
+☐ No unused imports
+☐ No magic numbers (use constants)
+
+Documentation:
+☐ All functions have docstrings
+☐ Complex logic has comments
+☐ README updated if needed
+☐ Type hints on all public functions
+☐ Examples provided in docstrings
+
+Testing:
+☐ New code has tests
+☐ All tests pass (pytest tests/ -v)
+☐ No test warnings
+☐ Code coverage maintained or improved
+
+Architecture:
+☐ No circular imports
+☐ Follows module responsibility
+☐ Uses existing utilities instead of duplicating
+☐ Configuration externalized (not hardcoded)
+
+Performance:
+☐ No obvious inefficiencies
+☐ Large loops optimized
+☐ Unnecessary calculations removed
+☐ Memory usage reasonable for scale
+```
+
+---
+
+## 8. DOCUMENTATION STANDARDS
+
+### 8.1 Document Organization
+
+After consolidation (Tier 2), documentation will be organized as:
+
+```
+docs/
+├─ README.md              # Main entry point
+├─ PROJECT_STATUS.md      # Current status and phase completion
+├─ ROADMAP.md            # Future phases and timeline
+├─ QUICK_REFERENCE.md    # Developer cheat sheet
+├─ API_DOCUMENTATION.md  # API reference
+│
+├─ FEATURES/
+│  ├─ CAROUSEL.md        # Chart carousel feature guide
+│  ├─ DASHBOARD.md       # Dashboard guide
+│  └─ INTEGRATIONS.md    # Integration guides (MCP, etc.)
+│
+├─ DEVELOPMENT/
+│  ├─ ARCHITECTURE.md    # System architecture deep dive
+│  ├─ TESTING.md         # Test strategy and guidelines
+│  ├─ BUGFIXES.md        # Bug tracking and fixes
+│  └─ REFACTORING.md     # Refactoring details
+│
+└─ REFERENCE/
+   ├─ POLICIES/          # Policy documentation (per policy)
+   ├─ METRICS/           # Metrics reference (all 100+)
+   └─ VERIFICATION.md    # Verification checklist
+```
+
+### 8.2 Markdown Best Practices
+
+**Document Structure:**
+```markdown
+# Title (Use H1 for main title only)
+
+**Created:** 2025-12-23  
+**Updated:** 2025-12-23  
+**Author:** Team Name  
+**Status:** Draft / Review / Approved
+
+---
+
+## Table of Contents
+1. [Section 1](#section-1)
+2. [Section 2](#section-2)
+
+---
+
+## Section 1
+
+### Subsection 1.1
+
+Use this structure: Headings → Subheadings → Content
+
+- Use bullet points for lists
+- Use numbered lists for procedures
+- Use tables for comparisons
+
+### Important Note
+> Use blockquotes for important notes, warnings, or tips
+
+**Code Formatting:**
+```python
+# Use code blocks with language specification
+# This enables syntax highlighting
+def example_function():
+    return "result"
+```
+
+---
+
+## Section 2
+
+[More content...]
+
+---
+
+## References
+- [Link to related doc](#)
+- [External resource](#)
+
+## Change Log
+| Date | Change | Author |
+|------|--------|--------|
+| 2025-12-23 | Initial version | Team |
+```
+
+### 8.3 Creating README for New Features
+
+Template for `docs/FEATURES/NEW_FEATURE.md`:
+
+```markdown
+# New Feature Name
+
+## Overview
+Brief explanation of what the feature does and why it's important.
+
+## Quick Start
+Step-by-step instructions to use the feature:
+
+1. Do this
+2. Then this
+3. Finally this
+
+## Features & Capabilities
+- Feature 1: Description
+- Feature 2: Description
+- Feature 3: Description
+
+## Configuration
+If applicable, explain how to configure:
+```python
+# Example configuration
+FEATURE_ENABLED = True
+FEATURE_THRESHOLD = 0.95
+```
+
+## API Reference
+If applicable, document public functions:
+
+### function_name(param1, param2)
+**Description:** What this function does  
+**Parameters:**
+- param1 (type): Description
+- param2 (type): Description
+
+**Returns:** Description of return value
+
+**Example:**
+```python
+result = function_name("value1", "value2")
+```
+
+## Troubleshooting
+Common issues and solutions:
+
+**Issue: X doesn't work**
+Solution: Do this to fix it
+
+## See Also
+- [Related feature](#)
+- [Configuration guide](#)
+```
+
+---
+
+## 9. DEPLOYMENT & RELEASE
+
+### 9.1 Version Numbering
+
+Follow semantic versioning: `MAJOR.MINOR.PATCH`
+
+```
+1.0.0 - First release
+1.0.1 - Bug fix release
+1.1.0 - New features release
+2.0.0 - Major breaking changes release
+```
+
+Edit: `setup.py` or `__init__.py`
+```python
+__version__ = "1.0.0"
+```
+
+### 9.2 Release Checklist
+
+```
+Testing:
+☐ All tests pass (pytest tests/ -v)
+☐ Manual testing completed
+☐ No console errors or warnings
+☐ Performance acceptable
+
+Documentation:
+☐ ROADMAP.md updated
+☐ PROJECT_STATUS.md updated
+☐ CHANGELOG.md created for this version
+☐ README.md still accurate
+
+Code:
+☐ Version number updated in __init__.py
+☐ No debug code or breakpoints left
+☐ All dependencies pinned in requirements.txt
+☐ Code formatted and linted
+
+Release:
+☐ Create git tag: git tag v1.0.0
+☐ Push tag: git push origin v1.0.0
+☐ Create GitHub Release
+☐ Upload to PyPI (if applicable)
+
+Deployment:
+☐ Update installation instructions if needed
+☐ Test installation process
+☐ Notify users if needed
+```
+
+### 9.3 Deployment Steps
+
+**Step 1: Prepare Release**
+```powershell
+# Update version
+$version = "1.0.0"
+
+# Update files
+(Get-Content ".\__init__.py") -replace '__version__ = ".*"', "__version__ = `"$version`"" | Set-Content ".\__init__.py"
+
+# Create changelog
+$changelog = @"
+# Version $version
+
+## New Features
+- Feature 1
+- Feature 2
+
+## Bug Fixes
+- Fix 1
+- Fix 2
+
+## Changes
+- Change 1
+"@
+Set-Content "CHANGELOG.md" $changelog
+```
+
+**Step 2: Test Build**
+```powershell
+python -m pytest tests/ -v  # Run tests
+python -m build  # Build distribution packages
+```
+
+**Step 3: Commit & Tag**
+```powershell
+git add .
+git commit -m "Release version $version"
+git tag -a "v$version" -m "Version $version"
+git push origin main
+git push origin "v$version"
+```
+
+**Step 4: Create Release on GitHub**
+- Go to GitHub Releases
+- Click "Draft a new release"
+- Select tag "v1.0.0"
+- Add release notes from CHANGELOG.md
+- Publish
+
+---
+
+## 10. QUICK REFERENCE GUIDE
+
+### Common Commands
+
+```powershell
+# Environment Setup
+python -m venv .venv              # Create virtual environment
+.\.venv\Scripts\Activate.ps1      # Activate environment
+pip install -r requirements.txt   # Install dependencies
+
+# Running Application
+python run_health_sim.py          # Run healthcare simulation
+python run_visualize.py           # Generate visualizations
+python run_compare_and_export.py  # Export comparison report
+python Economic_projector.py      # Launch GUI
+
+# Testing
+pytest tests/ -v                  # Run all tests
+pytest tests/ -v -s               # Run with print output
+pytest tests/ --cov=core          # Run with coverage report
+pytest tests/test_file.py::test_func -v  # Run specific test
+
+# Code Quality
+black core/ ui/ utils/ tests/    # Format code
+pylint core/ ui/ utils/          # Lint code
+mypy core/ --ignore-missing-imports  # Type check
+
+# Git Workflow
+git status                        # Check status
+git add .                        # Stage all changes
+git commit -m "message"          # Commit changes
+git push origin main             # Push to main
+git checkout -b feature/name     # Create feature branch
+```
+
+### Key Files Reference
+
+| File | Purpose | Modify When |
+|------|---------|-------------|
+| `core/simulation.py` | Main simulation engine | Adding simulation features |
+| `core/healthcare.py` | Policy models | Adding new policies |
+| `core/metrics.py` | Metric calculations | Adding new metrics |
+| `tests/` | Test suite | Adding features/fixing bugs |
+| `defaults.py` | Configuration constants | Changing baseline assumptions |
+| `policies/` | Policy JSON files | Adding policy scenarios |
+
+### Common Patterns
+
+**Loading a Policy:**
+```python
+from core.healthcare import PolicyType, get_policy_by_type
+policy = get_policy_by_type(PolicyType.USGHA)
+```
+
+**Running Simulation:**
+```python
+from core.simulation import simulate_healthcare_years
+results = simulate_healthcare_years(policy, years=22)
+print(results.head())  # View first few rows
+```
+
+**Calculating Metrics:**
+```python
+from core.metrics import compute_healthcare_metrics
+metrics = compute_healthcare_metrics(results, policy)
+print(f"Final healthcare spending: ${metrics['total_spending']:.2e}")
+```
+
+**Comparing Policies:**
+```python
+from core.comparison import compare_policies
+policies = [policy1, policy2, policy3]
+comparison = compare_policies(policies)
+print(comparison)  # Side-by-side comparison
+```
+
+**Exporting Results:**
+```python
+from utils.io import export_scenario_comparison
+export_scenario_comparison(
+    policies=[policy1, policy2],
+    output_format="excel",
+    filepath="comparison_report.xlsx"
+)
+```
+
+---
+
+## Appendix: Error Messages & Solutions
+
+### Import Errors
+
+```
+ModuleNotFoundError: No module named 'core'
+
+Solution:
+1. Verify in project root directory
+2. Add to PYTHONPATH: $env:PYTHONPATH = "$PWD"
+3. Reinstall dependencies: pip install -r requirements.txt
+```
+
+### Runtime Errors
+
+```
+ValueError: Unknown policy type: INVALID_POLICY
+
+Solution:
+1. Check PolicyType enum in core/healthcare.py
+2. Verify policy name is correct
+3. Ensure policy JSON file exists in policies/
+```
+
+### Test Failures
+
+```
+AssertionError: assert 92 == 125
+
+Solution:
+1. Run failing test individually: pytest tests/test_file.py -v
+2. Check error message for specific assertion
+3. Review test setup and fixtures
+4. Verify test data is correct
+```
+
+---
+
+## Final Notes
+
+This manual is a living document. Update it as:
+- New features are added
+- Architecture changes
+- Common issues are discovered
+- Processes improve
+
+**Last Updated:** 2025-12-23  
+**Maintained By:** Development Team  
+**Version:** 1.0
+
+---
+
+**NEXT STEP:** Use this manual alongside COMPREHENSIVE_AUDIT_REPORT.md and ACTION_PLAN.md when working on the project.

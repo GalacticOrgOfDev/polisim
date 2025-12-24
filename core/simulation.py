@@ -233,6 +233,24 @@ def simulate_healthcare_years(policy, base_gdp: float, initial_debt: float, year
 
         # Calculate absolute spending
         health_spending = current_gdp * current_health_pct
+        
+        # UPDATE REVENUE COMPONENTS WITH GDP/WAGE GROWTH
+        # Payroll revenue grows with employment and wage growth
+        employment = float(policy.employment_rate) * float(population) if getattr(policy, 'employment_rate', None) is not None else 0.0
+        payroll_base = employment * float(policy.avg_annual_wage) * float(policy.payroll_coverage_rate) * ((1.0 + gdp_growth) ** i)
+        payroll_revenue = payroll_base * payroll_tax_rate
+        # General revenue grows with GDP
+        general_revenue = current_gdp * float(policy.general_revenue_pct)
+        # Other funding sources grow with GDP
+        other_sources_abs = 0.0
+        if policy.other_funding_sources:
+            for _, frac in policy.other_funding_sources.items():
+                try:
+                    other_sources_abs += current_gdp * float(frac)
+                except Exception:
+                    continue
+        # Total revenue = sum of all sources
+        revenue = payroll_revenue + general_revenue + other_sources_abs
 
         # Category-level estimates (proportional to category current_spending_pct)
         category_spending = {}
