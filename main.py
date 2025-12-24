@@ -176,7 +176,7 @@ def _launch_legacy_gui(auto_install=False):
         importlib.invalidate_caches()
         return True
 
-    ok = check_and_offer_install(DEPENDENCIES, auto_install=args.auto_install_deps)
+    ok = check_and_offer_install(DEPENDENCIES, auto_install=auto_install)
     if not ok:
         return
 

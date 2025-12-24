@@ -19,6 +19,7 @@ plotly>=5.0.0
 
 # HTTP & REST API
 requests>=2.25.0
+beautifulsoup4>=4.12.0  # CBO web scraper
 
 # Optional: Report generation (PDF)
 # reportlab>=3.6.0  # Uncomment for PDF report generation: pip install reportlab

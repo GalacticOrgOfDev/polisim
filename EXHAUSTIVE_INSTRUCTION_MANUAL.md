@@ -252,6 +252,52 @@ GDP_GROWTH_ANNUAL = 0.022        # 2.2% baseline
 - Adjusting inflation expectations
 - Running scenario analysis with different baselines
 
+#### core/cbo_scraper.py
+**Purpose:** Fetch real-time Congressional Budget Office data for Current US baseline
+
+**Status:** ✅ NEW - Implemented 2025-12-23
+
+**Key Features:**
+- Multi-source scraping from CBO, Treasury, OMB
+- Automatic fallback to cached data if network fails
+- Real-time accuracy ensures simulation baseline matches reality
+- Prevents outdated "impossible surplus" scenarios
+
+**Main Functions:**
+```python
+def get_current_us_parameters() -> dict:
+    """
+    Fetch current US budget parameters from CBO web sources.
+    Returns simulation-ready parameters with GDP, revenues, spending, debt.
+    """
+
+class CBODataScraper:
+    """Scrapes Congressional Budget Office and Treasury data."""
+    def get_current_us_budget_data() -> dict
+    def _get_gdp_data() -> float
+    def _get_revenue_data() -> dict
+    def _get_spending_data() -> dict
+    def _get_national_debt() -> float
+    def _get_interest_rate() -> float
+```
+
+**Data Sources:**
+- Congressional Budget Office: https://www.cbo.gov/
+- Treasury Department: https://fiscal.treasury.gov/
+- OMB Historical Tables: https://www.whitehouse.gov/omb/
+
+**Usage in UI:**
+- User clicks "Fetch from CBO" button in Current Policy tab
+- System fetches real-time data from official government sources
+- Parameters update automatically
+- Baseline simulation uses current, accurate numbers
+
+**Why This Matters:**
+- Previous defaults showed $1.76T surplus (unrealistic)
+- Real US runs ~$1.8T annual deficit
+- CBO scraper ensures simulation stays grounded in truth
+- Data updates automatically as CBO publishes new figures
+
 #### policies/parameters.json
 **Purpose:** Define policy parameters for each scenario
 

@@ -27,12 +27,16 @@ except Exception:
     NavigationToolbar2Tk = _MissingMatplotlib
     Figure = _MissingMatplotlib
 from copy import deepcopy
+import logging
 
 from defaults import initial_revenues, initial_outs, initial_general
 from core import simulate_years, calculate_cbo_summary
+from core.cbo_scraper import get_current_us_parameters
 from ui import ScrollableFrame
 from ui.chart_carousel import ChartCarousel
 from utils import export_policy_to_csv, import_policy_from_csv, export_results_to_file
+
+logger = logging.getLogger(__name__)
 
 
 # ============================================================================
@@ -1141,6 +1145,64 @@ class EconomicProjectorApp:
         widget.bind('<Enter>', enter)
         widget.bind('<Leave>', leave)
 
+    def load_current_us_from_cbo(self):
+        """
+        Load Current US policy from CBO web scraper.
+        
+        This fetches real-time budget data from CBO/Treasury sources
+        to keep the baseline accurate and up-to-date.
+        """
+        try:
+            logger.info("Fetching Current US budget data from CBO...")
+            messagebox.showinfo(
+                "Fetching Data",
+                "Fetching real-time budget data from Congressional Budget Office...\n\n"
+                "This may take a few seconds. Please wait."
+            )
+            
+            # Fetch CBO parameters
+            cbo_params = get_current_us_parameters()
+            
+            if not cbo_params:
+                messagebox.showerror(
+                    "CBO Data Error",
+                    "Could not fetch CBO data. Using cached/default values."
+                )
+                return False
+            
+            # Update current policy with CBO data
+            self.current_policy['general'] = cbo_params['general']
+            self.current_policy['revenues'] = cbo_params['revenues']
+            self.current_policy['outs'] = cbo_params['outs']
+            
+            # Refresh the UI
+            self.populate_current_policy_data()
+            
+            # Show summary
+            general = cbo_params['general']
+            summary = (
+                f"Current US Budget Loaded from CBO\n"
+                f"{'='*50}\n"
+                f"GDP: ${general['gdp']:.1f}T\n"
+                f"National Debt: ${general['national_debt']:.1f}T\n"
+                f"Interest Rate: {general['interest_rate']:.1f}%\n\n"
+                f"Data will be used for baseline simulation.\n"
+                f"Ready to run simulation?"
+            )
+            
+            messagebox.showinfo("CBO Data Loaded", summary)
+            logger.info("Successfully loaded CBO data")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error loading CBO data: {e}")
+            messagebox.showerror(
+                "CBO Fetch Error",
+                f"Error fetching CBO data:\n\n{str(e)}\n\n"
+                "Using default values instead."
+            )
+            return False
+
     def run_baseline_simulation(self):
         """Run simulation with current policy parameters from the Current Policy tab"""
         try:
@@ -1250,8 +1312,11 @@ class EconomicProjectorApp:
         run_button = ttk.Button(button_frame, text="Run Baseline Simulation", command=self.run_baseline_simulation)
         run_button.grid(row=0, column=0, padx=5)
 
+        fetch_cbo_button = ttk.Button(button_frame, text="Fetch from CBO", command=self.load_current_us_from_cbo)
+        fetch_cbo_button.grid(row=0, column=1, padx=5)
+
         preview_button = ttk.Button(button_frame, text="Preview Flow", command=lambda: self.show_flow_preview(use_current=True))
-        preview_button.grid(row=0, column=1, padx=5)
+        preview_button.grid(row=0, column=2, padx=5)
 
         # Status label for validation messages
         self.current_status_label = ttk.Label(self.current_general_tab, text="", foreground="red")
