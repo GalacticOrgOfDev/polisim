@@ -249,23 +249,30 @@ def page_healthcare():
         try:
             from core.simulation import simulate_healthcare_years
             
-            # Handle custom policies
+            # Load policy - either built-in or custom
             if is_custom:
-                st.warning("""
-                **Note:** Custom policies from PDF uploads have limited simulation support.
-                This shows projections using their extracted parameters where available.
-                For full simulations, use the built-in policies.
-                """)
-                return
-            
-            # Load built-in policy
-            policy = get_policy_by_type(
-                HealthcarePolicyType.USGHA if selected_policy == "usgha" else HealthcarePolicyType.CURRENT_US
-            )
+                # Get custom policy from library
+                policy_obj = library.get_policy(selected_policy)
+                if not policy_obj:
+                    st.error(f"Could not load custom policy: {selected_policy}")
+                    st.stop()
+                
+                # Convert custom policy to healthcare policy for simulation
+                try:
+                    policy = policy_obj.to_healthcare_policy()
+                    st.info(f"Running simulation with custom policy: {policy_obj.name}")
+                except Exception as e:
+                    st.error(f"Could not convert custom policy to simulation format: {str(e)}")
+                    st.stop()
+            else:
+                # Load built-in policy
+                policy = get_policy_by_type(
+                    HealthcarePolicyType.USGHA if selected_policy == "usgha" else HealthcarePolicyType.CURRENT_US
+                )
             
             # If Current US, fetch and use real CBO data
             cbo_data = None
-            if selected_policy == "current_us":
+            if not is_custom and selected_policy == "current_us":
                 try:
                     from core.cbo_scraper import get_current_us_parameters
                     cbo_data = get_current_us_parameters()

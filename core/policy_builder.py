@@ -167,6 +167,84 @@ class CustomPolicy:
         """Create policy from JSON string."""
         data = json.loads(json_str)
         return CustomPolicy.from_dict(data)
+    
+    def to_healthcare_policy(self):
+        """Convert CustomPolicy to HealthcarePolicyModel for simulation."""
+        from core.healthcare import HealthcarePolicyModel, HealthcareCategory, PolicyType as HealthcarePolicyType
+        
+        # Create base healthcare policy with custom parameters
+        policy = HealthcarePolicyModel(
+            policy_type=HealthcarePolicyType.CURRENT_US,  # Use as custom baseline
+            policy_name=self.name,
+            policy_version="custom",
+            created_date=self.created_date,
+            description=self.description,
+            
+            # Default values (can be overridden by parameters)
+            universal_coverage=False,
+            zero_out_of_pocket=False,
+            opt_out_allowed=False,
+            emergency_coverage=True,
+            coverage_percentage=0.92,
+            
+            total_payroll_tax=self.get_parameter_value('payroll_tax') or 0.075,
+            employer_contribution_pct=self.get_parameter_value('employer_contribution') or 0.10,
+            employee_contribution_pct=self.get_parameter_value('employee_contribution') or 0.08,
+            general_revenue_pct=self.get_parameter_value('general_revenue') or 0.07,
+            
+            healthcare_spending_target_gdp=self.get_parameter_value('healthcare_spending_target') or 0.18,
+            admin_overhead_pct=self.get_parameter_value('admin_overhead') or 0.16,
+        )
+        
+        # Set other funding sources from parameters
+        other_funding = {}
+        if self.get_parameter_value('out_of_pocket'):
+            other_funding['out_of_pocket'] = self.get_parameter_value('out_of_pocket')
+        if self.get_parameter_value('other_private'):
+            other_funding['other_private'] = self.get_parameter_value('other_private')
+        if other_funding:
+            policy.other_funding_sources = other_funding
+        
+        # Set up healthcare categories with default values
+        policy.categories = {
+            "hospital": HealthcareCategory(
+                category_name="Hospital Inpatient/Outpatient",
+                current_spending_pct=self.get_parameter_value('hospital_spending_pct') or 0.31,
+                baseline_cost=250.0,
+                reduction_target=self.get_parameter_value('hospital_reduction') or 0.0,
+                description="Hospital services"
+            ),
+            "physician": HealthcareCategory(
+                category_name="Physician Services",
+                current_spending_pct=self.get_parameter_value('physician_spending_pct') or 0.20,
+                baseline_cost=160.0,
+                reduction_target=self.get_parameter_value('physician_reduction') or 0.0,
+                description="Physician care"
+            ),
+            "pharmacy": HealthcareCategory(
+                category_name="Pharmaceuticals",
+                current_spending_pct=self.get_parameter_value('pharmacy_spending_pct') or 0.10,
+                baseline_cost=80.0,
+                reduction_target=self.get_parameter_value('pharmacy_reduction') or 0.0,
+                description="Drugs"
+            ),
+            "administrative": HealthcareCategory(
+                category_name="Administrative",
+                current_spending_pct=self.get_parameter_value('admin_spending_pct') or 0.16,
+                baseline_cost=128.0,
+                reduction_target=self.get_parameter_value('admin_reduction') or 0.0,
+                description="Insurance overhead, billing"
+            ),
+            "other": HealthcareCategory(
+                category_name="Other",
+                current_spending_pct=self.get_parameter_value('other_spending_pct') or 0.23,
+                baseline_cost=184.0,
+                reduction_target=0.0,
+                description="Other services"
+            ),
+        }
+        
+        return policy
 
 
 class PolicyTemplate:
