@@ -13,3 +13,5 @@ ENV/
 *.egg-info/
 dist/
 build/
+# Local copilot instructions
+.github/copilot-instructions.md
