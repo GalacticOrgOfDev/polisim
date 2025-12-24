@@ -153,7 +153,7 @@ def simulate_years(internal_general, internal_revenues, internal_outs):
 
 def simulate_healthcare_years(policy, base_gdp: float, initial_debt: float, years: int = 22,
                               population: float = 335e6, gdp_growth: float = 0.025,
-                              start_year: int = None):
+                              start_year: int = None, cbo_data: dict = None):
     """
     Simplified multi-year healthcare-focused simulation.
 
@@ -170,6 +170,7 @@ def simulate_healthcare_years(policy, base_gdp: float, initial_debt: float, year
     - population: population count for per-capita metrics
     - gdp_growth: annual GDP growth rate (decimal, default 0.025)
     - start_year: calendar start year (optional)
+    - cbo_data: optional dict with 'revenues' and 'outs' arrays from CBO scraper
 
     Returns: pandas.DataFrame with yearly projections
     """
@@ -235,22 +236,40 @@ def simulate_healthcare_years(policy, base_gdp: float, initial_debt: float, year
         health_spending = current_gdp * current_health_pct
         
         # UPDATE REVENUE COMPONENTS WITH GDP/WAGE GROWTH
-        # Payroll revenue grows with employment and wage growth
-        employment = float(policy.employment_rate) * float(population) if getattr(policy, 'employment_rate', None) is not None else 0.0
-        payroll_base = employment * float(policy.avg_annual_wage) * float(policy.payroll_coverage_rate) * ((1.0 + gdp_growth) ** i)
-        payroll_revenue = payroll_base * payroll_tax_rate
-        # General revenue grows with GDP
-        general_revenue = current_gdp * float(policy.general_revenue_pct)
-        # Other funding sources grow with GDP
-        other_sources_abs = 0.0
-        if policy.other_funding_sources:
-            for _, frac in policy.other_funding_sources.items():
-                try:
-                    other_sources_abs += current_gdp * float(frac)
-                except Exception:
-                    continue
-        # Total revenue = sum of all sources
-        revenue = payroll_revenue + general_revenue + other_sources_abs
+        # Use CBO data if provided (for Current US System), otherwise use policy percentages
+        if cbo_data and cbo_data.get('revenues'):
+            # Use actual CBO revenue data scaled by GDP growth
+            cbo_rev_dict = {}
+            for rev in cbo_data['revenues']:
+                cbo_rev_dict[rev['name']] = rev['value']
+            
+            # Scale revenues by GDP ratio and growth
+            gdp_growth_multiplier = (current_gdp / base_gdp) ** (i / max(1, years))
+            payroll_revenue = cbo_rev_dict.get('payroll_tax', 1.6) * 1e12 * gdp_growth_multiplier
+            income_revenue = cbo_rev_dict.get('income_tax', 2.5) * 1e12 * gdp_growth_multiplier
+            corporate_revenue = cbo_rev_dict.get('corporate_tax', 0.6) * 1e12 * gdp_growth_multiplier
+            other_revenue = cbo_rev_dict.get('other_revenues', 1.1) * 1e12 * gdp_growth_multiplier
+            
+            general_revenue = income_revenue + corporate_revenue
+            other_sources_abs = other_revenue
+            revenue = payroll_revenue + general_revenue + other_sources_abs
+        else:
+            # Use policy percentages (default behavior)
+            employment = float(policy.employment_rate) * float(population) if getattr(policy, 'employment_rate', None) is not None else 0.0
+            payroll_base = employment * float(policy.avg_annual_wage) * float(policy.payroll_coverage_rate) * ((1.0 + gdp_growth) ** i)
+            payroll_revenue = payroll_base * payroll_tax_rate
+            # General revenue grows with GDP
+            general_revenue = current_gdp * float(policy.general_revenue_pct)
+            # Other funding sources grow with GDP
+            other_sources_abs = 0.0
+            if policy.other_funding_sources:
+                for _, frac in policy.other_funding_sources.items():
+                    try:
+                        other_sources_abs += current_gdp * float(frac)
+                    except Exception:
+                        continue
+            # Total revenue = sum of all sources
+            revenue = payroll_revenue + general_revenue + other_sources_abs
 
         # Category-level estimates (proportional to category current_spending_pct)
         category_spending = {}

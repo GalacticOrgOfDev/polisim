@@ -173,9 +173,31 @@ def page_healthcare():
             key="healthcare_years",
             help="Number of years to simulate"
         )
+        
+        # If "Current US System" is selected, fetch real CBO data
+        if not is_custom and selected_policy == "current_us":
+            st.info("📊 Fetching real-time CBO data for Current US baseline...")
+            try:
+                from core.cbo_scraper import get_current_us_parameters
+                cbo_params = get_current_us_parameters()
+                if cbo_params:
+                    default_gdp = cbo_params['general'].get('gdp', 29.0)
+                    default_debt = cbo_params['general'].get('national_debt', 35.0)
+                    st.success(f"✓ CBO Data Loaded: GDP=${default_gdp:.1f}T, Debt=${default_debt:.1f}T")
+                else:
+                    default_gdp = 29.0
+                    default_debt = 35.0
+            except Exception as e:
+                st.warning(f"Could not fetch CBO data: {str(e)}. Using defaults.")
+                default_gdp = 29.0
+                default_debt = 35.0
+        else:
+            default_gdp = 29.0
+            default_debt = 35.0
+        
         base_gdp = st.number_input(
             "Base GDP ($T):",
-            value=29.0,
+            value=default_gdp,
             min_value=10.0,
             max_value=100.0,
             step=0.5,
@@ -183,7 +205,7 @@ def page_healthcare():
         ) * 1e12
         initial_debt = st.number_input(
             "Initial Debt ($T):",
-            value=35.0,
+            value=default_debt,
             min_value=10.0,
             max_value=100.0,
             step=0.5,
@@ -241,6 +263,17 @@ def page_healthcare():
                 HealthcarePolicyType.USGHA if selected_policy == "usgha" else HealthcarePolicyType.CURRENT_US
             )
             
+            # If Current US, fetch and use real CBO data
+            cbo_data = None
+            if selected_policy == "current_us":
+                try:
+                    from core.cbo_scraper import get_current_us_parameters
+                    cbo_data = get_current_us_parameters()
+                    if cbo_data:
+                        st.info(f"Using real CBO data: GDP=${cbo_data['general']['gdp']:.1f}T, Debt=${cbo_data['general']['national_debt']:.1f}T")
+                except Exception as e:
+                    st.warning(f"Could not fetch CBO data: {str(e)}. Using defaults.")
+            
             with st.spinner(f"Running {policy.policy_name} simulation..."):
                 results = simulate_healthcare_years(
                     policy=policy,
@@ -249,7 +282,8 @@ def page_healthcare():
                     years=years,
                     population=335e6,
                     gdp_growth=0.025,
-                    start_year=2025
+                    start_year=2025,
+                    cbo_data=cbo_data  # Pass CBO data if available
                 )
             
             if results is None or len(results) == 0:
