@@ -68,6 +68,7 @@ class CustomPolicy:
     # Projection results (optional)
     projection_results: Optional[pd.DataFrame] = None
     fiscal_impact: Optional[Dict[str, float]] = None
+    structured_mechanics: Optional[Dict[str, Any]] = None  # Serialized PolicyMechanics for context-aware sims
     
     def add_parameter(
         self,
@@ -139,6 +140,7 @@ class CustomPolicy:
             "parameters": {
                 name: param.to_dict() for name, param in self.parameters.items()
             },
+            "structured_mechanics": self.structured_mechanics,
         }
     
     def to_json(self) -> str:
@@ -159,6 +161,9 @@ class CustomPolicy:
         for param_name, param_data in data.get("parameters", {}).items():
             param = PolicyParameter(**param_data)
             policy.parameters[param_name] = param
+
+        # Optional structured mechanics for context-aware simulations
+        policy.structured_mechanics = data.get("structured_mechanics")
         
         return policy
     
@@ -169,10 +174,28 @@ class CustomPolicy:
         return CustomPolicy.from_dict(data)
     
     def to_healthcare_policy(self):
-        """Convert CustomPolicy to HealthcarePolicyModel for simulation."""
-        from core.healthcare import HealthcarePolicyModel, HealthcareCategory, PolicyType as HealthcarePolicyType
+        """Convert CustomPolicy to HealthcarePolicyModel for simulation.
+        
+        IMPORTANT: Revenue definitions must include ONLY government-dedicated healthcare revenues.
+        Patient out-of-pocket costs are NOT government revenue - they represent patient burden.
+        
+        The simulation calculates:
+        - Healthcare spending from spending_target_gdp
+        - Available revenue from payroll_tax + general_revenue_pct + other_funding_sources
+        - Surplus/Deficit as: revenue - spending (as % of GDP)
+        
+        Example:
+            - Payroll tax: 4% (employer+employee health insurance taxes only)
+            - General revenue: 3.5% (Medicare, Medicaid, VA funding only)  
+            - Other funding: 0.5% (savings from negotiated pricing, efficiency gains)
+            - Total revenue: 8% of GDP available for healthcare
+            - If spending target is 9%, then deficit is -1% of GDP (unrealistic without subsidies)
+        """
+        from core.healthcare import HealthcarePolicyModel, HealthcareCategory, PolicyType as HealthcarePolicyType, TransitionTimeline
+        from core.policy_mechanics_extractor import PolicyMechanicsExtractor
         
         # Create base healthcare policy with custom parameters
+        # NOTE: All percentages represent % of GDP
         policy = HealthcarePolicyModel(
             policy_type=HealthcarePolicyType.CURRENT_US,  # Use as custom baseline
             policy_name=self.name,
@@ -187,23 +210,72 @@ class CustomPolicy:
             emergency_coverage=True,
             coverage_percentage=0.92,
             
-            total_payroll_tax=self.get_parameter_value('payroll_tax') or 0.075,
+            # Revenue sources (% of GDP)
+            # CRITICAL: Only include government-dedicated healthcare revenues
+            # Do NOT include patient out-of-pocket costs or private insurance premiums
+            total_payroll_tax=self.get_parameter_value('payroll_tax') or 0.04,
             employer_contribution_pct=self.get_parameter_value('employer_contribution') or 0.10,
             employee_contribution_pct=self.get_parameter_value('employee_contribution') or 0.08,
-            general_revenue_pct=self.get_parameter_value('general_revenue') or 0.07,
+            general_revenue_pct=self.get_parameter_value('general_revenue') or 0.035,
             
+            # Spending target (% of GDP)
             healthcare_spending_target_gdp=self.get_parameter_value('healthcare_spending_target') or 0.18,
             admin_overhead_pct=self.get_parameter_value('admin_overhead') or 0.16,
         )
         
         # Set other funding sources from parameters
+        # CRITICAL: Only include government-dedicated sources (savings, efficiency gains, etc.)
+        # Do NOT include patient out-of-pocket or private insurance - those are not government revenue
         other_funding = {}
-        if self.get_parameter_value('out_of_pocket'):
-            other_funding['out_of_pocket'] = self.get_parameter_value('out_of_pocket')
-        if self.get_parameter_value('other_private'):
-            other_funding['other_private'] = self.get_parameter_value('other_private')
+        
+        # Only include legitimate government healthcare revenue sources
+        healthcare_specific_sources = {
+            'drug_pricing_negotiation',
+            'administrative_savings', 
+            'efficiency_gains',
+            'fraud_prevention',
+            'provider_consolidation_savings'
+        }
+        
+        for source in healthcare_specific_sources:
+            if self.get_parameter_value(source):
+                other_funding[source] = self.get_parameter_value(source)
+        
         if other_funding:
             policy.other_funding_sources = other_funding
+
+        # Attach structured mechanics when available so the simulator can use
+        # the context-aware path instead of legacy hard-coded assumptions.
+        mechanics_dict = getattr(self, "structured_mechanics", None)
+        if mechanics_dict:
+            try:
+                policy.mechanics = PolicyMechanicsExtractor.mechanics_from_dict(
+                    mechanics_dict,
+                    default_name=self.name,
+                    default_type=self.policy_type.value
+                )
+
+                # Map key targets/flags onto the policy for legacy consumers
+                if policy.mechanics.target_spending_pct_gdp:
+                    policy.healthcare_spending_target_gdp = float(policy.mechanics.target_spending_pct_gdp) / 100.0
+                policy.zero_out_of_pocket = bool(policy.mechanics.zero_out_of_pocket)
+                policy.universal_coverage = bool(policy.mechanics.universal_coverage)
+
+                # Build a transition timeline from milestones if provided
+                if policy.mechanics.timeline_milestones:
+                    milestones = {m.year: m.description or "" for m in policy.mechanics.timeline_milestones}
+                    start_year = min(m.year for m in policy.mechanics.timeline_milestones)
+                    target_year = policy.mechanics.target_spending_year or max(m.year for m in policy.mechanics.timeline_milestones)
+                    policy.transition_timeline = TransitionTimeline(
+                        start_year=start_year,
+                        full_implementation_year=target_year,
+                        sunset_year=None,
+                        key_milestones=milestones,
+                        transition_funding_source="Extracted from policy text"
+                    )
+            except Exception:
+                # If anything goes wrong we simply fall back to legacy values
+                policy.mechanics = None
         
         # Set up healthcare categories with default values
         policy.categories = {

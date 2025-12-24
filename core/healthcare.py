@@ -15,9 +15,12 @@ Policy Models:
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, TYPE_CHECKING
 import pandas as pd
 from datetime import datetime
+
+if TYPE_CHECKING:
+    from core.policy_mechanics_extractor import PolicyMechanics
 
 
 class PolicyType(Enum):
@@ -163,6 +166,9 @@ class HealthcarePolicyModel:
     # Implementation
     transition_timeline: Optional[TransitionTimeline] = None
     
+    # Extracted policy mechanics (context-aware)
+    mechanics: Optional["PolicyMechanics"] = None
+    
     # Anti-fraud and enforcement
     fraud_penalties_multiplier: float = 1.0  # 3.0 = 300% fines
     malpractice_cap_non_economic: Optional[float] = None  # $ cap on non-economic damages
@@ -202,13 +208,32 @@ class HealthcarePolicyFactory:
     
     @staticmethod
     def create_usgha() -> HealthcarePolicyModel:
-        """US Galactic Health Act V0.6"""
+        """US Galactic Health Act V0.6
+        
+        USGHA targets:
+        - Healthcare spending: 9% of GDP (document: <7% long-term goal)
+        - Fiscal surplus: 1-2% of GDP
+        - Zero out-of-pocket costs
+        - Full implementation by 2027
+        
+        Revenue breakdown (dedicated to healthcare):
+        - Payroll tax: 15.0% of payroll (for employed workers)
+        - Health income tax surcharge: 6.0% of GDP (new dedicated tax)
+        - Drug pricing savings: ~0.5% of GDP (negotiation revenue)
+        - Administrative overhead savings: ~0.5% of GDP (current US waste reduction)
+        Total dedicated: ~12% of GDP for healthcare operations
+        
+        Plus general federal revenues (already existing):
+        - General income tax, corporate tax, etc. provide ~14.7% of GDP
+        - Healthcare allocation: ~9% goes to Medicare/Medicaid now
+        - USGHA consolidates this plus adds payroll tax surcharge
+        """
         policy = HealthcarePolicyModel(
             policy_type=PolicyType.USGHA,
             policy_name="United States Galactic Health Act",
             policy_version="0.6",
             created_date="2025-11-25",
-            description="Universal zero-out-of-pocket healthcare with innovation focus and multiplanetary imperatives",
+            description="Universal zero-out-of-pocket healthcare with innovation focus. Targets: 7% healthcare spending by 2045, 1-2% fiscal surplus, zero medical bankruptcy.",
             
             universal_coverage=True,
             zero_out_of_pocket=True,
@@ -216,22 +241,31 @@ class HealthcarePolicyFactory:
             emergency_coverage=True,
             coverage_percentage=0.99,
             
-            total_payroll_tax=0.15,
-            employer_contribution_pct=0.0825,
-            employee_contribution_pct=0.0675,
-            general_revenue_pct=0.15,
+            # Healthcare-specific revenue streams (USGHA Section 6)
+            # CORRECTED MODEL: USGHA consolidates $5.4T existing US health spending (18.5% GDP)
+            # Sources: $1.8T federal + $1.2T employer premiums + $1.0T employee premiums + $1.4T other = $5.4T
+            # Revenues start at ~11-12% GDP, sufficient to fund 7% GDP spending + 1-2% surplus + 2% transition costs
+            total_payroll_tax=0.0,  # Payroll tax handled via converted premiums below
+            employer_contribution_pct=0.0,
+            employee_contribution_pct=0.0,
+            general_revenue_pct=0.062,  # 6.2% GDP redirected federal health (Medicare/Medicaid/VA/ACA/CHIP)
             other_funding_sources={
-                "drug_pricing_negotiation": 0.08,
-                "financial_transaction_tax": 0.04,
-                "excise_taxes": 0.03,
-                "import_tariffs": 0.03,
+                "employer_premiums_converted": 0.041,  # 4.1% GDP - employer health premiums converted to payroll
+                "employee_premiums_converted": 0.034,  # 3.4% GDP - employee health premiums converted to payroll
+                "mfn_pricing_savings": 0.007,  # 0.7% GDP from MFN-minus-20% pharmaceutical pricing
+                "administrative_efficiencies": 0.008,  # 0.8% GDP from reducing 30% admin waste to 3%
+                "financial_transaction_tax": 0.003,  # 0.3% GDP from 1% FTT reallocation
+                "excise_tax_reallocation": 0.002,  # 0.2% GDP from reallocated excise taxes
+                "import_tariffs": 0.004,  # 0.4% GDP from 12% of import tariffs
             },
+            # Total revenue: 6.2% + 7.5% (premiums) + 2.4% (other) = 16.1% GDP initially
+            # Covers: 7% GDP spending + 1-2% surplus + transition/equity funds
             
-            healthcare_spending_target_gdp=0.09,
+            healthcare_spending_target_gdp=0.07,  # 7% of GDP target by 2045 (USGHA Section 2(b)(3))
             debt_elimination_year=2057,
             life_expectancy_target=132.0,
             
-            admin_overhead_pct=0.03,
+            admin_overhead_pct=0.03,  # 3% admin (vs 16% current US)
             board_size=19,
             board_public_meetings=True,
             
@@ -388,26 +422,27 @@ class HealthcarePolicyFactory:
         # Surplus allocation
         policy.surplus_allocation = SurplusAllocation(
             contingency_reserve_pct=0.10,
-            national_debt_reduction_pct=0.50,
-            infrastructure_education_pct=0.25,
+            national_debt_reduction_pct=0.70,
+            infrastructure_education_pct=0.10,
             space_exploration_pct=0.00,
-            taxpayer_dividend_pct=0.15,
+            taxpayer_dividend_pct=0.10,
             dividend_distribution_date="April 15",
-            description="Distribution of annual surpluses (when revenues > 105% of projections)"
+            description="Distribution of annual surpluses per USGHA Section 11(a)"
         )
         
-        # Transition timeline
+        # Transition timeline (USGHA Section 4(c))
         policy.transition_timeline = TransitionTimeline(
             start_year=2025,
-            full_implementation_year=2027,
+            full_implementation_year=2035,  # Full national implementation Jan 1, 2035
             sunset_year=2047,
             key_milestones={
                 2025: "Legislation enacted",
-                2026: "Enrollment begins, infrastructure built",
-                2027: "Coverage begins Jan 1",
-                2035: "Healthcare spending target: <9% GDP",
-                2045: "Longevity Moonshot Fund reaches $400B+",
-                2047: "Debt elimination projected, sunset review",
+                2027: "State pilots begin, enrollment starts",
+                2032: "Pilot acceleration possible if 95% metrics achieved",
+                2035: "Full national coverage",
+                2040: "Spending <10% GDP, surpluses begin",
+                2045: "Spending <7% GDP, longevity targets",
+                2047: "Debt elimination, sunset review",
             },
             transition_funding_source="Redirection of Medicare, Medicaid, CHIP, VA spending + payroll taxes"
         )
@@ -423,17 +458,111 @@ class HealthcarePolicyFactory:
             "innovation_breakthroughs_annual": 50,
         }
         
+        # Attach structured mechanics for context-aware simulation
+        from core.policy_mechanics_extractor import (
+            PolicyMechanics, FundingMechanism, SurplusAllocation as MechSurplusAllocation,
+            CircuitBreaker, InnovationFundRules, TimelineMilestone
+        )
+        
+        policy.mechanics = PolicyMechanics(
+            policy_name="United States Galactic Health Act",
+            policy_type="healthcare",
+            funding_mechanisms=[
+                FundingMechanism(
+                    source_type="payroll_tax",
+                    percentage_rate=15.0,
+                    percentage_gdp=None,
+                    description="15% payroll tax on wages (Section 6a)"
+                ),
+                FundingMechanism(
+                    source_type="redirected_federal",
+                    percentage_gdp=6.2,
+                    description="Redirected Medicare/Medicaid/VA/ACA/CHIP (Section 6b)"
+                ),
+                FundingMechanism(
+                    source_type="converted_premiums",
+                    percentage_gdp=7.5,
+                    description="Employer + employee premiums converted (4.1% + 3.4% GDP)"
+                ),
+                FundingMechanism(
+                    source_type="efficiency_gains",
+                    percentage_gdp=2.4,
+                    description="Drug pricing + admin savings + other (0.7% + 0.8% + 0.9% GDP)"
+                ),
+            ],
+            surplus_allocation=MechSurplusAllocation(
+                contingency_reserve_pct=10.0,
+                debt_reduction_pct=70.0,
+                infrastructure_pct=10.0,
+                dividends_pct=10.0,
+                other_allocations={},
+                trigger_conditions=["Annual surpluses after healthcare spending"]
+            ),
+            circuit_breakers=[
+                CircuitBreaker(
+                    trigger_type="spending_cap",
+                    threshold_value=13.0,
+                    threshold_unit="percent_gdp",
+                    action="Freeze tax rates and reduce spending",
+                    description="Healthcare spending must not exceed 13% GDP (Section 6d)"
+                ),
+                CircuitBreaker(
+                    trigger_type="surplus_trigger",
+                    threshold_value=600.0,
+                    threshold_unit="billion_dollars",
+                    action="Automatic 1% tax reduction",
+                    description="For every $600B in surpluses, reduce taxes by 1% (Section 6d)"
+                ),
+            ],
+            innovation_fund=InnovationFundRules(
+                funding_min_pct=1.0,
+                funding_max_pct=20.0,
+                funding_base="savings vs baseline",
+                prize_min_dollars=1e9,
+                prize_max_dollars=50e9,
+                annual_cap_pct=5.0,
+                annual_cap_base="annual surpluses",
+                eligible_categories=["longevity", "radiation_hardening", "alzheimers", "breakthrough_therapies"]
+            ),
+            timeline_milestones=[
+                TimelineMilestone(year=2025, description="Legislation enacted"),
+                TimelineMilestone(year=2027, description="State pilots begin, enrollment starts"),
+                TimelineMilestone(year=2032, description="Pilot acceleration if 95% metrics achieved"),
+                TimelineMilestone(year=2035, description="Full national coverage"),
+                TimelineMilestone(year=2040, description="Spending <10% GDP, surpluses begin", metric_type="spending_target", target_value=10.0),
+                TimelineMilestone(year=2045, description="Spending <7% GDP, longevity targets", metric_type="spending_target", target_value=7.0),
+                TimelineMilestone(year=2047, description="Debt elimination, sunset review"),
+            ],
+            target_spending_pct_gdp=7.0,
+            target_spending_year=2045,
+            zero_out_of_pocket=True,
+            universal_coverage=True,
+            confidence_score=1.0
+        )
+        
         return policy
     
     @staticmethod
     def create_current_us() -> HealthcarePolicyModel:
-        """Current US fragmented multi-payer system (2025 baseline)"""
+        """Current US fragmented multi-payer system (2025 baseline)
+        
+        Current US healthcare funding breakdown:
+        - Medicare/Medicaid/VA: ~3.5% of GDP
+        - Private insurance (payroll-based): ~4.0% of GDP  
+        - Out-of-pocket patient spending: ~1.0% of GDP
+        - Other (pharmaceutical, etc.): ~0.5% of GDP
+        Total: ~9% of GDP in government + employer healthcare spending
+        (Total including OOP is ~10.5% of GDP)
+        
+        Note: Out-of-pocket and other private are NOT government revenues
+        available for healthcare spending. They're what patients pay directly.
+        """
         policy = HealthcarePolicyModel(
             policy_type=PolicyType.CURRENT_US,
             policy_name="Current US Healthcare System",
             policy_version="2025",
             created_date="2025-11-25",
-            description="Baseline: multi-payer, fragmented system with 18% GDP spending",
+            description="Baseline: multi-payer fragmented system. Government + employer spending ~9% GDP, total (incl. patient OOP) ~10.5% GDP.",
             
             universal_coverage=False,
             zero_out_of_pocket=False,
@@ -441,17 +570,18 @@ class HealthcarePolicyFactory:
             emergency_coverage=True,
             coverage_percentage=0.92,
             
-            total_payroll_tax=0.075,
+            # Government + employer dedicated healthcare revenue only
+            total_payroll_tax=0.04,  # Employer + employee payroll-based insurance
             employer_contribution_pct=0.10,
             employee_contribution_pct=0.08,
-            general_revenue_pct=0.07,
+            general_revenue_pct=0.035,  # Medicare/Medicaid/VA from general revenue
             other_funding_sources={
-                "out_of_pocket": 0.11,
-                "other_private": 0.17,
+                # These are net reductions/offsets, not additional revenues
+                # Out-of-pocket is patient burden, not government revenue
             },
             
-            healthcare_spending_target_gdp=0.18,
-            admin_overhead_pct=0.16,
+            healthcare_spending_target_gdp=0.18,  # Total spending including OOP
+            admin_overhead_pct=0.16,  # 16% admin waste (insurance overhead)
         )
         
         policy.categories = {
@@ -498,6 +628,51 @@ class HealthcarePolicyFactory:
             "medical_bankruptcy_cases": 800_000,
             "avg_patient_oop": 1200,
         }
+        
+        # No surplus allocation for current US (fiscal deficits)
+        policy.surplus_allocation = None
+        
+        # Transition timeline
+        policy.transition_timeline = TransitionTimeline(
+            start_year=2025,
+            full_implementation_year=2025,  # Already implemented
+            sunset_year=None,
+            key_milestones={},
+            transition_funding_source="N/A - Status Quo"
+        )
+        
+        # Attach structured mechanics for context-aware simulation (baseline model)
+        from core.policy_mechanics_extractor import (
+            PolicyMechanics, FundingMechanism, TimelineMilestone
+        )
+        
+        policy.mechanics = PolicyMechanics(
+            policy_name="Current US Healthcare System",
+            policy_type="healthcare",
+            funding_mechanisms=[
+                FundingMechanism(
+                    source_type="redirected_federal",
+                    percentage_gdp=3.5,
+                    description="Medicare/Medicaid/VA federal spending (~3.5% GDP)"
+                ),
+                FundingMechanism(
+                    source_type="converted_premiums",
+                    percentage_gdp=4.0,
+                    description="Private insurance payroll-based premiums (~4% GDP)"
+                ),
+            ],
+            surplus_allocation=None,  # Current US runs deficits
+            circuit_breakers=[],
+            innovation_fund=None,
+            timeline_milestones=[
+                TimelineMilestone(year=2025, description="Current baseline year"),
+            ],
+            target_spending_pct_gdp=18.5,  # Current US spends ~18.5% GDP
+            target_spending_year=2025,
+            zero_out_of_pocket=False,
+            universal_coverage=False,
+            confidence_score=1.0
+        )
         
         return policy
     
@@ -621,12 +796,12 @@ def get_policy_by_type(policy_type: PolicyType) -> HealthcarePolicyModel:
     raise ValueError(f"Unknown policy type: {policy_type}")
 
 
-def list_available_policies() -> Dict[str, PolicyType]:
-    """Get all available policy types and names"""
-    return {
-        "USGHA": PolicyType.USGHA,
-        "Current US System": PolicyType.CURRENT_US,
-        "Medicare for All": PolicyType.MEDICARE_FOR_ALL,
-        "UK NHS": PolicyType.UK_NHS,
-        "Canada Single-Payer": PolicyType.CANADA_SP,
-    }
+def list_available_policies() -> List[HealthcarePolicyModel]:
+    """Get all available policy models"""
+    return [
+        get_policy_by_type(PolicyType.USGHA),
+        get_policy_by_type(PolicyType.CURRENT_US),
+        get_policy_by_type(PolicyType.MEDICARE_FOR_ALL),
+        get_policy_by_type(PolicyType.UK_NHS),
+        get_policy_by_type(PolicyType.CANADA_SP),
+    ]

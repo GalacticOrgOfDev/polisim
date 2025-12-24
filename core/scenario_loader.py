@@ -9,6 +9,7 @@ from typing import Any
 from datetime import datetime
 
 from core.healthcare import HealthcarePolicyFactory, HealthcarePolicyModel, TransitionTimeline
+from core.policy_mechanics_extractor import PolicyMechanicsExtractor
 
 
 def load_scenario(path: str) -> HealthcarePolicyModel:
@@ -71,6 +72,21 @@ def load_scenario(path: str) -> HealthcarePolicyModel:
         key_milestones={},
         transition_funding_source=scen.get('source', '')
     )
+
+    # Optional structured mechanics (context-aware simulation)
+    mechanics_data = scen.get('structured_mechanics')
+    if mechanics_data:
+        try:
+            policy.mechanics = PolicyMechanicsExtractor.mechanics_from_dict(
+                mechanics_data,
+                default_name=policy.policy_name,
+                default_type="healthcare"
+            )
+
+            if policy.mechanics.target_spending_pct_gdp:
+                policy.healthcare_spending_target_gdp = float(policy.mechanics.target_spending_pct_gdp) / 100.0
+        except Exception:
+            policy.mechanics = None
 
     # Attach excerpts to description for traceability
     excerpts = scen.get('excerpts')

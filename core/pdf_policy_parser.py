@@ -263,6 +263,103 @@ class PolicyPDFProcessor:
                         If provided, extraction will focus on matching parameters for this type
         """
         from datetime import datetime
+        from core.policy_mechanics_extractor import extract_policy_mechanics
+        from core.policy_mechanics_builder import extract_policy_context
+        
+        # Use NEW context-aware framework FIRST for healthcare policies
+        if policy_type == "healthcare" or "health" in text.lower()[:5000]:
+            try:
+                # Try context-aware extraction first
+                context_result = extract_policy_context(text, policy_title or "Extracted Policy")
+                policy_domain = context_result.get("policy_type", "unknown")
+                
+                # If context framework found strong signals, use it
+                if context_result.get("assessment", {}).get("overall_confidence", 0) > 0.3:
+                    mechanics = extract_policy_mechanics(text, policy_type="healthcare")
+                    # Enhanced with context findings
+                    if not mechanics.funding_mechanisms and context_result.get("concepts"):
+                        # Context framework found funding that old extractor missed
+                        pass
+                else:
+                    # Fall back to old extraction
+                    mechanics = extract_policy_mechanics(text, policy_type="healthcare")
+            except Exception as e:
+                # If context framework fails, use old extraction
+                print(f"Context framework extraction attempted: {e}")
+                mechanics = extract_policy_mechanics(text, policy_type="healthcare")
+            
+            # Convert structured mechanics to old format for backward compatibility
+            identified_parameters = {
+                "category": mechanics.policy_type,
+                "confidence_score": mechanics.confidence_score,
+                "structured_mechanics": {
+                    "policy_name": mechanics.policy_name,
+                    "policy_type": mechanics.policy_type,
+                    "confidence_score": mechanics.confidence_score,
+                    "funding_mechanisms": [
+                        {
+                            "source_type": f.source_type,
+                            "percentage_gdp": f.percentage_gdp,
+                            "percentage_rate": f.percentage_rate,
+                            "description": f.description
+                        }
+                        for f in mechanics.funding_mechanisms
+                    ],
+                    "surplus_allocation": {
+                        "contingency_reserve_pct": mechanics.surplus_allocation.contingency_reserve_pct,
+                        "debt_reduction_pct": mechanics.surplus_allocation.debt_reduction_pct,
+                        "infrastructure_pct": mechanics.surplus_allocation.infrastructure_pct,
+                        "dividends_pct": mechanics.surplus_allocation.dividends_pct
+                    } if mechanics.surplus_allocation else None,
+                    "circuit_breakers": [
+                        {
+                            "trigger_type": b.trigger_type,
+                            "threshold_value": b.threshold_value,
+                            "threshold_unit": b.threshold_unit,
+                            "action": b.action,
+                            "description": b.description
+                        }
+                        for b in mechanics.circuit_breakers
+                    ],
+                    "innovation_fund": {
+                        "funding_min_pct": mechanics.innovation_fund.funding_min_pct,
+                        "funding_max_pct": mechanics.innovation_fund.funding_max_pct,
+                        "prize_min_dollars": mechanics.innovation_fund.prize_min_dollars,
+                        "prize_max_dollars": mechanics.innovation_fund.prize_max_dollars,
+                        "annual_cap_pct": mechanics.innovation_fund.annual_cap_pct
+                    } if mechanics.innovation_fund else None,
+                    "timeline_milestones": [
+                        {
+                            "year": m.year,
+                            "description": m.description,
+                            "metric_type": m.metric_type,
+                            "target_value": m.target_value
+                        }
+                        for m in mechanics.timeline_milestones
+                    ],
+                    "target_spending_pct_gdp": mechanics.target_spending_pct_gdp,
+                    "target_spending_year": mechanics.target_spending_year,
+                    "zero_out_of_pocket": mechanics.zero_out_of_pocket,
+                    "universal_coverage": mechanics.universal_coverage
+                }
+            }
+            
+            sections = mechanics.source_sections if mechanics.source_sections else {}
+            fiscal_impact = {}
+            years = [m.year for m in mechanics.timeline_milestones]
+            
+            return PolicyExtraction(
+                title=policy_title or mechanics.policy_name,
+                source_file=str(Path.cwd()),
+                extracted_date=datetime.now().isoformat(),
+                text_content=text[:5000],
+                identified_parameters=identified_parameters,
+                legislative_sections=sections,
+                fiscal_impact_estimates=fiscal_impact,
+                confidence_score=mechanics.confidence_score,
+            )
+        
+        # Fallback to old extraction method for non-healthcare policies
         
         # Extract fiscal numbers
         fiscal_numbers = PolicyKeywordMatcher.extract_fiscal_numbers(text)
@@ -386,6 +483,10 @@ class PolicyPDFProcessor:
             policy_type=mapped_type,
             author="PDF Upload",
         )
+
+        # Preserve structured mechanics for context-aware simulation
+        if "structured_mechanics" in extraction.identified_parameters:
+            policy.structured_mechanics = extraction.identified_parameters["structured_mechanics"]
         
         # Add parameters based on extracted fiscal numbers
         for desc, amount in extraction.fiscal_impact_estimates.items():

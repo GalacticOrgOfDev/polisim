@@ -4,7 +4,7 @@ Runs a healthcare policy simulation with Monte Carlo uncertainty quantification.
 Generates CSV output with year-by-year projections, revenue, spending, and outcomes.
 
 Usage (PowerShell):
-    cd "e:\AI Projects\polisim"
+    cd "e:\\AI Projects\\polisim"
     python run_health_sim.py [--scenario path/to/scenario.json] [--years 22] [--verbose]
 
 Arguments:

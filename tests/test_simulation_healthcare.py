@@ -33,7 +33,7 @@ class TestPolicyLoading:
         """Test loading Current US policy."""
         policy = get_policy_by_type(PolicyType.CURRENT_US)
         assert policy is not None
-        assert policy.policy_name == "Current US System (Baseline 2025)"
+        assert policy.policy_name == "Current US Healthcare System"
         assert policy.coverage_percentage == 0.92
         logger.info(f"Loaded policy: {policy.policy_name}")
     
@@ -41,7 +41,7 @@ class TestPolicyLoading:
         """Test listing available policies."""
         policies = list_available_policies()
         assert len(policies) > 0
-        assert "USGHA" in [p.policy_name for p in policies]
+        assert "United States Galactic Health Act" in [p.policy_name for p in policies]
         logger.info(f"Found {len(policies)} available policies")
     
     def test_invalid_policy_type(self):

@@ -299,49 +299,41 @@ def page_healthcare():
             
             st.success(f"Simulation completed: {len(results)} years")
             
-            # Summary metrics
+            # Summary metrics with legacy + context-aware column support
             st.subheader("Key Metrics")
             col1, col2, col3, col4 = st.columns(4)
-            
+
+            # Column fallbacks
+            spend_col = 'Health Spending ($)' if 'Health Spending ($)' in results.columns else 'Healthcare Spending'
+            rev_col = 'Revenue ($)' if 'Revenue ($)' in results.columns else 'Total Revenue'
+            surplus_col = 'Surplus ($)' if 'Surplus ($)' in results.columns else 'Surplus/Deficit'
+            debt_red_col = 'Debt Reduction ($)' if 'Debt Reduction ($)' in results.columns else 'Debt Reduction'
+            debt_col = 'Remaining Debt ($)' if 'Remaining Debt ($)' in results.columns else 'National Debt'
+            per_cap_col = 'Per Capita Health ($)' if 'Per Capita Health ($)' in results.columns else 'Per Capita Spending'
+
             with col1:
-                total_spending = results['Health Spending ($)'].sum()
-                st.metric(
-                    "Total Spending",
-                    f"${total_spending/1e12:.2f}T",
-                    delta="22-year total"
-                )
-            
+                total_spending = results[spend_col].sum()
+                st.metric("Total Spending", f"${total_spending/1e12:.2f}T", delta=f"{len(results)}-year total")
+
             with col2:
-                final_per_capita = results['Per Capita Health ($)'].iloc[-1]
-                st.metric(
-                    "Final Per-Capita",
-                    f"${final_per_capita:,.0f}",
-                    delta=f"Year {years}"
-                )
-            
+                final_per_capita = results[per_cap_col].iloc[-1] if per_cap_col in results else float('nan')
+                st.metric("Final Per-Capita", f"${final_per_capita:,.0f}", delta=f"Year {years}")
+
             with col3:
-                total_debt_reduction = results['Debt Reduction ($)'].sum()
-                st.metric(
-                    "Debt Reduction",
-                    f"${total_debt_reduction/1e12:.2f}T",
-                    delta="Total impact"
-                )
-            
+                total_debt_reduction = results[debt_red_col].sum() if debt_red_col in results else 0.0
+                st.metric("Debt Reduction", f"${total_debt_reduction/1e12:.2f}T", delta="Total impact")
+
             with col4:
-                final_debt = results['Remaining Debt ($)'].iloc[-1]
-                st.metric(
-                    "Final Debt",
-                    f"${final_debt/1e12:.2f}T",
-                    delta=f"From ${initial_debt/1e12:.1f}T"
-                )
+                final_debt = results[debt_col].iloc[-1]
+                st.metric("Final Debt", f"${final_debt/1e12:.2f}T", delta=f"From ${initial_debt/1e12:.1f}T")
             
             # Main visualization: Spending trend
             st.subheader("Healthcare Spending Projection")
             fig = go.Figure()
-            
+
             fig.add_trace(go.Scatter(
                 x=results['Year'],
-                y=results['Health Spending ($)']/1e9,
+                y=results[spend_col]/1e9,
                 name='Health Spending',
                 line=dict(color='#1f77b4', width=3),
                 mode='lines+markers'
@@ -364,16 +356,16 @@ def page_healthcare():
             
             fig2.add_trace(go.Scatter(
                 x=results['Year'],
-                y=results['Revenue ($)']/1e9,
+                y=results[rev_col]/1e9,
                 name='Total Revenue',
                 line=dict(color='green', width=2)
             ))
             
             fig2.add_trace(go.Bar(
                 x=results['Year'],
-                y=results['Surplus ($)']/1e9,
+                y=results[surplus_col]/1e9,
                 name='Annual Surplus',
-                marker=dict(color=results['Surplus ($)'].apply(lambda x: 'green' if x > 0 else 'red'))
+                marker=dict(color=results[surplus_col].apply(lambda x: 'green' if x > 0 else 'red'))
             ))
             
             fig2.update_layout(
@@ -393,7 +385,7 @@ def page_healthcare():
             
             fig3.add_trace(go.Scatter(
                 x=results['Year'],
-                y=results['Remaining Debt ($)']/1e12,
+                y=results[debt_col]/1e12,
                 name='National Debt',
                 line=dict(color='#d62728', width=3),
                 mode='lines+markers',
@@ -417,22 +409,31 @@ def page_healthcare():
                 # Format the dataframe for display
                 display_df = results.copy()
                 display_df['Year'] = display_df['Year'].astype(int)
-                display_df['Health Spending ($)'] = display_df['Health Spending ($)'] / 1e9
-                display_df['Revenue ($)'] = display_df['Revenue ($)'] / 1e9
-                display_df['Surplus ($)'] = display_df['Surplus ($)'] / 1e9
-                display_df['Debt Reduction ($)'] = display_df['Debt Reduction ($)'] / 1e9
-                display_df['Remaining Debt ($)'] = display_df['Remaining Debt ($)'] / 1e12
-                
-                # Rename columns for clarity
-                display_df = display_df.rename(columns={
-                    'Health Spending ($)': 'Spending ($B)',
+                # Normalize column names for display
+                col_map = {
+                    spend_col: 'Spending ($B)',
+                    'Healthcare % GDP': 'Health % GDP',
                     'Health % GDP': 'Health % GDP',
-                    'Per Capita Health ($)': 'Per Capita ($)',
-                    'Revenue ($)': 'Revenue ($B)',
-                    'Surplus ($)': 'Surplus ($B)',
-                    'Debt Reduction ($)': 'Debt Reduction ($B)',
-                    'Remaining Debt ($)': 'Remaining Debt ($T)',
-                })
+                    per_cap_col: 'Per Capita ($)',
+                    rev_col: 'Revenue ($B)',
+                    surplus_col: 'Surplus ($B)',
+                    debt_red_col: 'Debt Reduction ($B)',
+                    debt_col: 'Remaining Debt ($T)',
+                }
+
+                # Scale values
+                if spend_col in display_df:
+                    display_df[spend_col] = display_df[spend_col] / 1e9
+                if rev_col in display_df:
+                    display_df[rev_col] = display_df[rev_col] / 1e9
+                if surplus_col in display_df:
+                    display_df[surplus_col] = display_df[surplus_col] / 1e9
+                if debt_red_col in display_df:
+                    display_df[debt_red_col] = display_df[debt_red_col] / 1e9
+                if debt_col in display_df:
+                    display_df[debt_col] = display_df[debt_col] / 1e12
+
+                display_df = display_df.rename(columns=col_map)
                 
                 st.dataframe(display_df, use_container_width=True)
                 
@@ -457,20 +458,20 @@ def page_healthcare():
                 **Spending Target:** {policy.healthcare_spending_target_gdp*100:.1f}% of GDP
                 
                 **Final Year (Year {years}):**
-                - Health Spending: ${results['Health Spending ($)'].iloc[-1]/1e9:.0f}B
-                - Revenue: ${results['Revenue ($)'].iloc[-1]/1e9:.0f}B
-                - Surplus: ${results['Surplus ($)'].iloc[-1]/1e9:.1f}B
+                - Health Spending: ${results[spend_col].iloc[-1]/1e9:.0f}B
+                - Revenue: ${results[rev_col].iloc[-1]/1e9:.0f}B
+                - Surplus: ${results[surplus_col].iloc[-1]/1e9:.1f}B
                 """)
             
             with col2:
-                debt_change = results['Remaining Debt ($)'].iloc[-1] - initial_debt
+                debt_change = results[debt_col].iloc[-1] - initial_debt
                 debt_change_pct = (debt_change / initial_debt) * 100
                 st.info(f"""
                 **22-Year Impact:**
                 
                 - Debt Change: ${debt_change/1e12:.2f}T ({debt_change_pct:+.1f}%)
                 - Total Debt Reduction: ${total_debt_reduction/1e12:.2f}T
-                - Avg Annual Surplus: ${results['Surplus ($)'].mean()/1e9:.1f}B
+                - Avg Annual Surplus: ${results[surplus_col].mean()/1e9:.1f}B
                 
                 Circuit Breaker Triggered: {results['Circuit Breaker Triggered'].sum()} times
                 """)
@@ -1709,21 +1710,81 @@ def page_policy_upload():
             # Display extraction results
             st.subheader("✓ Extraction Results")
             
+            # Handle both new structured mechanics and old format
+            params = extraction.identified_parameters
+            has_structured = "structured_mechanics" in params
+            
             col1, col2, col3 = st.columns(3)
             with col1:
                 st.metric("Confidence Score", f"{extraction.confidence_score:.1%}")
             with col2:
-                st.metric("Sections Found", extraction.identified_parameters["num_sections"])
+                # Get num_sections from either old or new format
+                if has_structured:
+                    num_sections = len(params.get("structured_mechanics", {}).get("timeline_milestones", []))
+                    st.metric("Timeline Milestones", num_sections)
+                else:
+                    st.metric("Sections Found", params.get("num_sections", 0))
             with col3:
-                st.metric("Fiscal Figures", len(extraction.fiscal_impact_estimates))
+                if has_structured:
+                    num_mechanisms = len(params.get("structured_mechanics", {}).get("funding_mechanisms", []))
+                    st.metric("Funding Mechanisms", num_mechanisms)
+                else:
+                    st.metric("Fiscal Figures", len(extraction.fiscal_impact_estimates))
             
-            # Detailed results
-            with st.expander("📊 Extracted Parameters"):
-                st.json(extraction.identified_parameters)
-            
-            with st.expander("💰 Fiscal Impact Estimates"):
-                for desc, amount in extraction.fiscal_impact_estimates.items():
-                    st.write(f"- **{desc}**: ${amount:,.0f}B")
+            # Show structured mechanics if available
+            if has_structured:
+                mechanics = params["structured_mechanics"]
+                
+                # Funding mechanisms
+                if mechanics.get("funding_mechanisms"):
+                    with st.expander("💰 Funding Mechanisms", expanded=True):
+                        for mech in mechanics["funding_mechanisms"]:
+                            st.write(f"**{mech['source_type'].replace('_', ' ').title()}**")
+                            if mech.get('percentage_rate'):
+                                st.write(f"  - Rate: {mech['percentage_rate']}%")
+                            if mech.get('percentage_gdp'):
+                                st.write(f"  - % GDP: {mech['percentage_gdp']}%")
+                            st.write(f"  - {mech.get('description', '')}")
+                
+                # Surplus allocation
+                if mechanics.get("surplus_allocation"):
+                    with st.expander("📊 Surplus Allocation", expanded=True):
+                        alloc = mechanics["surplus_allocation"]
+                        st.write(f"- **Contingency Reserves:** {alloc['contingency_reserve_pct']}%")
+                        st.write(f"- **Debt Reduction:** {alloc['debt_reduction_pct']}%")
+                        st.write(f"- **Infrastructure:** {alloc['infrastructure_pct']}%")
+                        st.write(f"- **Dividends:** {alloc['dividends_pct']}%")
+                
+                # Circuit breakers
+                if mechanics.get("circuit_breakers"):
+                    with st.expander("⚠️ Circuit Breakers"):
+                        for cb in mechanics["circuit_breakers"]:
+                            st.write(f"**{cb['trigger_type'].replace('_', ' ').title()}**")
+                            st.write(f"  - Threshold: {cb['threshold_value']} {cb['threshold_unit']}")
+                            st.write(f"  - Action: {cb['action']}")
+                
+                # Innovation fund
+                if mechanics.get("innovation_fund"):
+                    with st.expander("🚀 Innovation Fund"):
+                        fund = mechanics["innovation_fund"]
+                        st.write(f"- **Funding Range:** {fund['funding_min_pct']}% - {fund['funding_max_pct']}%")
+                        st.write(f"- **Prize Range:** ${fund['prize_min_dollars']:,.0f} - ${fund['prize_max_dollars']:,.0f}")
+                        st.write(f"- **Annual Cap:** {fund['annual_cap_pct']}%")
+                
+                # Spending targets
+                with st.expander("🎯 Policy Targets"):
+                    st.write(f"**Healthcare Spending Target:** {mechanics.get('target_spending_pct_gdp', 'N/A')}% GDP")
+                    st.write(f"**Target Year:** {mechanics.get('target_spending_year', 'N/A')}")
+                    st.write(f"**Zero Out-of-Pocket:** {'✓ Yes' if mechanics.get('zero_out_of_pocket') else '✗ No'}")
+                    st.write(f"**Universal Coverage:** {'✓ Yes' if mechanics.get('universal_coverage') else '✗ No'}")
+            else:
+                # Legacy format - show old parameters
+                with st.expander("📊 Extracted Parameters"):
+                    st.json(params)
+                
+                with st.expander("💰 Fiscal Impact Estimates"):
+                    for desc, amount in extraction.fiscal_impact_estimates.items():
+                        st.write(f"- **{desc}**: ${amount:,.0f}B")
             
             # Create policy from extraction
             st.divider()

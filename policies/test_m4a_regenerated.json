@@ -1,0 +1,24 @@
+{
+  "policy_name": "BILLS-118s1655is",
+  "policy_type": "USGHA",
+  "description": "Generated from PDF extraction - 1 funding mechanisms",
+  "mechanics": {
+    "funding_mechanisms": [
+      {
+        "source_type": "pharmaceutical_savings",
+        "description": "Pharmaceutical pricing reforms and savings (~1.5% GDP)",
+        "percentage_rate": null,
+        "percentage_gdp": 1.5
+      }
+    ],
+    "surplus_allocation": null,
+    "circuit_breakers": [],
+    "innovation_fund": null,
+    "timeline_milestones": [],
+    "target_spending_pct_gdp": null,
+    "target_spending_year": null,
+    "universal_coverage": true,
+    "zero_out_of_pocket": true,
+    "confidence_score": 0.67
+  }
+}

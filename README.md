@@ -80,12 +80,16 @@ python run_report.py
 
 # Visualize scenario overlays
 python run_visualize.py
+
+# Regenerate scenario from PDF (updates funding mechanisms)
+python scripts/regenerate_scenario_from_pdf.py "path/to/policy.pdf"
 ```
 
 **Expected Output:**
 - `reports/` directory with HTML charts (revenue, spending, debt scenarios)
 - Excel files with Monte Carlo distributions and sensitivity analysis
 - Console output with key metrics (cost savings, coverage improvements, timeline)
+- JSON scenarios with complete mechanism extraction (see `scripts/README_regenerate_scenario.md`)
 
 ---
 
@@ -154,10 +158,14 @@ polisim/
 │   ├── economics.py      # Monte Carlo & economic engines
 │   ├── comparison.py     # Scenario comparison logic
 │   ├── simulation.py     # Unified simulation runner
+│   ├── policy_mechanics_extractor.py  # PDF → structured data
 │   └── metrics.py        # KPI calculations
 ├── policies/             # Policy catalogs & parameters
 │   ├── catalog.json      # Policy registry
 │   └── parameters.json   # Scenario configurations
+├── scripts/              # Utility scripts
+│   ├── regenerate_scenario_from_pdf.py  # PDF → JSON extraction
+│   └── README_regenerate_scenario.md    # Script documentation
 ├── ui/                   # Visualization & reporting
 │   ├── chart_carousel.py # Multi-scenario displays
 │   └── server.py         # Future web interface
@@ -215,9 +223,20 @@ Tests validate:
 
 ## 📖 Documentation
 
-- **[00_START_HERE.md](00_START_HERE.md)** - Project roadmap and Phase 1-10 vision
-- **[CAROUSEL_QUICKSTART.md](CAROUSEL_QUICKSTART.md)** - Interactive visualization guide
-- **[PHASE_2_10_ROADMAP.md](PHASE_2_10_ROADMAP.md)** - Planned features (live data, AI, Streamlit UI)
+**Core Documentation** (in `documentation/` folder):
+- **[00_START_HERE.md](documentation/00_START_HERE.md)** - Project overview and quick start
+- **[CONTEXT_FRAMEWORK.md](documentation/CONTEXT_FRAMEWORK.md)** - Complete framework guide (extraction system)
+- **[CONTEXT_FRAMEWORK_INDEX.md](documentation/CONTEXT_FRAMEWORK_INDEX.md)** - Framework quick reference
+- **[QUICK_REFERENCE.md](documentation/QUICK_REFERENCE.md)** - API and usage guide
+- **[EXHAUSTIVE_INSTRUCTION_MANUAL.md](documentation/EXHAUSTIVE_INSTRUCTION_MANUAL.md)** - Phase 2-10 detailed roadmap
+- **[debug.md](documentation/debug.md)** - Known issues and debugging guide
+- **[debug_completion_summary.md](documentation/debug_completion_summary.md)** - ⭐ December 2025 extraction overhaul (60%→100% accuracy)
+- **[CHANGELOG.md](documentation/CHANGELOG.md)** - Implementation history and milestones
+- **[ASSESSMENT_AUDIT.md](documentation/ASSESSMENT_AUDIT.md)** - Quality audits and validation results
+
+**Phase Documentation:**
+- **[PHASE_2_10_ROADMAP_UPDATED.md](documentation/PHASE_2_10_ROADMAP_UPDATED.md)** - Detailed phase breakdown
+- **[PHASE_4_CBO_SCRAPER_COMPLETE.md](documentation/PHASE_4_CBO_SCRAPER_COMPLETE.md)** - CBO data integration
 
 ---
 

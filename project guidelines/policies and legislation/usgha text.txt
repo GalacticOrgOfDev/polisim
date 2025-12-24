@@ -1,0 +1,610 @@
+**United States Galactic Health Act of 2025**
+Preamble
+119th CONGRESS
+1st Session
+H.R. ____
+**IN THE HOUSE OF REPRESENTATIVES**
+December 5, 2025
+Mr. Timothy Harrington Nordyke (for himself and cosponsors) introduced the following bill; which
+was referred to the Committee on Energy and Commerce, and in addition to the Committees on
+Ways and Means, Education and the Workforce, and Oversight and Accountability, for a period
+to be subsequently determined by the Speaker, in each case for consideration of such
+provisions as fall within the jurisdiction of the committee concerned.
+A BILL
+To establish a universal zero-out-of-pocket healthcare system for all citizens and legal
+permanent residents, permanently eliminate medical bankruptcy, reduce national health
+expenditures to an average below 7 percent of gross domestic product within twenty years,
+accelerate the largest biomedical and longevity innovation boom in history, and generate fiscal
+surpluses equivalent to 1–2 percent of gross domestic product annually by 2040 for debt
+reduction, infrastructure, education, scientific research, space exploration, and direct taxpayer
+rebates while preserving maximum individual choice and aligning national biology with
+multiplanetary imperatives.
+Be it enacted by the Senate and House of Representatives of the United States of America in
+Congress assembled,
+---
+**TITLE I: GENERAL PROVISIONS**
+**CHAPTER 1: SHORT TITLE, TABLE OF CONTENTS, FINDINGS, AND PURPOSES**
+**Section 1. Short Title; Table of Contents**
+(a) Short Title.—This Act may be cited as the "United States Galactic Health Act of 2025".
+(b) Table of Contents.—The table of contents for this Act is as follows:
+Sec. 1. Short title; table of contents.
+Sec. 2. Findings and purposes.
+Sec. 3. Definitions.
+Sec. 4. Establishment of the Galactic Department of Health and universal coverage.
+Sec. 5. Opt-out provisions and voucher system.
+Sec. 6. Funding mechanisms and transition.
+Sec. 7. Private insurance transition and supplemental options.
+Sec. 8. Pricing reforms for pharmaceuticals and medical devices.
+Sec. 9. Health Innovation Fund, Longevity Moonshot Fund, and incentives.
+Sec. 10. Provider payment reforms and workforce incentives.
+Sec. 11. Surplus allocation and fiscal safeguards.
+Sec. 12. Administration and governance.
+Sec. 13. Projections and performance metrics.
+Sec. 14. Anti-corruption and enforcement measures.
+Sec. 15. Malpractice reform and patient protections.
+Sec. 16. Non-discrimination and equity provisions.
+Sec. 17. State flexibility and interstate compacts.
+Sec. 18. Galactic Transition Authority.
+Sec. 19. Multiplanetary biological readiness reporting.
+Sec. 20. Policy Simulator and transparency requirements.
+Sec. 21. Independent fiscal impact assessment.
+Sec. 22. Severability.
+Sec. 23. Effective date and sunset reauthorization.
+Sec. 24. Emergency override clause.
+**Section 2. Findings and Purposes**
+(a) Findings.—Congress finds the following:
+(1) The United States spends 18.5 percent of gross domestic product on healthcare in 2025,
+exceeding all peer nations while producing a life expectancy of 78.4 years (versus an average
+of 82.5 among comparable countries) and an infant mortality rate of 5.6 per 1,000 live births
+(more than three times rates in leading peers like Japan and Norway).
+(2) Medical debt is the leading cause of bankruptcy in the United States.
+(3) Administrative inefficiencies and fragmented financing systems increase costs and reduce
+access, with administrative waste accounting for 25–30 percent of spending.
+(4) Biomedical innovation is hindered by misaligned incentives and variable market pricing.
+(5) Future multiplanetary settlement requires advances in human biology, including extended
+healthy lifespan, radiation resilience, and long-duration mission viability.
+(6) Interstellar-range missions require median population lifespans exceeding 120 years and
+radiation countermeasures capable of mitigating exposures exceeding 1 Sievert.
+(7) A unified national health system can reduce expenditures, eliminate medical bankruptcy,
+expand access, and accelerate innovation.
+(b) Purposes.—The purposes of this Act are to:
+(1) Provide universal zero-out-of-pocket healthcare coverage for all qualified individuals.
+(2) Permanently eliminate medical bankruptcy.
+(3) Achieve verifiable average health spending below 7 percent of gross domestic product by
+2045, confirmed annually by the Congressional Budget Office, with interim milestones of 10
+percent by 2040.
+(4) Accelerate the largest medical, longevity, and human-performance innovation boom in
+history.
+(5) Generate fiscal surpluses equivalent to 1–2 percent of gross domestic product annually by
+2040 for debt reduction, infrastructure, education, scientific research, space exploration, and
+direct taxpayer rebates, audited by the Government Accountability Office.
+**CHAPTER 2: DEFINITIONS**
+**Section 3. Definitions**
+In this Act:
+(1) Qualified individual.—Any United States citizen or legal permanent resident. Emergency
+care extends to any person present in the United States.
+(2) Medically necessary services.—Services determined by evidence-based guidelines issued
+by the Galactic Department of Health (formerly the Department of Health and Human Services),
+including services supporting longevity and multiplanetary biological readiness, with verifiable
+longevity interventions defined as those with at least a 75 percent evidence-based probability of
+extending healthspan by 5 or more years per National Institutes of Health guidelines.
+(3) Galactic Department of Health (GDOH).—The independent agency established under
+section 4.
+(4) Policy Simulator.—The public artificial intelligence dashboard required under section 20.
+(5) Galactic Health Innovation Fund (GHIF).—The fund established under section 9.
+(6) Longevity Moonshot Fund.—The fund established under section 9 for advanced longevity
+research.
+(7) Longevity Priority Enterprise.—An entity dedicating at least 50 percent of operations to
+certified longevity or human-performance therapies.
+(8) Determinable outcome metric.—Any key performance indicator trackable via the Policy
+Simulator with less than a 5 percent margin of error.
+(9) Payroll contribution.—The combined employer and employee contributions established
+under section 6(e), calculated as a percentage of—
+(A) all wages, salaries, tips, and other employee compensation subject to taxation under
+chapter 1 of the Internal Revenue Code of 1986; and
+(B) for any trade or business (including pass-through entities), net earnings from
+self-employment and distributive shares of partnership income or S-corporation income, whether
+or not distributed.
+Such contributions shall fully replace and offset the employer and employee portions of taxes
+imposed under sections 3101 and 3111 (Social Security and Medicare) and all private health
+insurance premiums for qualified individuals.
+---
+**TITLE II: ESTABLISHMENT AND COVERAGE**
+**CHAPTER 1: GALACTIC DEPARTMENT OF HEALTH**
+**Section 4. Establishment of the Galactic Department of Health**
+(a) Establishment.—There is established the Galactic Department of Health (GDOH), an
+independent agency operating as a single-payer system for qualified individuals. The GDOH
+shall incorporate the entirety of the Department of Health and Human Services and any
+subsequent programs, consolidating redundant administrations.
+(b) Coverage.—Beginning January 1, 2027, the GDOH shall provide zero-out-of-pocket
+coverage for all medically necessary services, including:
+(1) Hospital inpatient and outpatient care.
+(2) Physician and specialist services.
+(3) Mental health and substance use disorder treatment.
+(4) Dental, vision, and hearing services.
+(5) Prescription drugs and biologics.
+(6) Rehabilitative and habilitative services.
+(7) Preventive and wellness services.
+(8) Maternity, newborn, and fertility care.
+(9) Long-term care and home health services.
+(10) Emergency services, including for non-qualified individuals.
+(11) Evidence-based social-determinants-of-health services, including nutrition assistance when
+prescribed as part of a covered care plan.
+(c) Phased Rollout with State Pilots.—Full national implementation shall commence on January
+1, 2035. Pilot Selection.—States shall be selected by the Secretary of Health and Human
+Services in consultation with the Comptroller General, ensuring that at least 50 percent of
+selected pilots represent bipartisan balance (defined as one Democratic-leaning and one
+Republican-leaning state per region, per the Cook Partisan Voting Index for the most recent
+gubernatorial election). [Retain existing text on funding/anti-rationing.] If fewer than 80 percent
+of metrics (enrollment ≥90 percent, denials <2 percent, spending <13 percent of gross domestic
+product) are achieved across pilots in any fiscal year, as verified quarterly by the Congressional
+Budget Office, the Galactic Department of Health shall provide a federal backstop funding
+equivalent to 0.1 percent of the prior fiscal year’s federal health expenditures, drawn from the
+transitional reinsurance pool under section 6(b)(4), to stabilize provider reimbursements without
+increasing overall Trust Fund outflows. Data from pilots shall inform surpluses via the Policy
+Simulator under section 20, addressing federal overreach concerns while preserving automatic
+enrollment nationwide post-pilot. Full national implementation shall commence on January 1,
+2035, provided that if at least 15 pilots achieve 95 percent of metrics by fiscal year 2032, as
+certified by the Government Accountability Office, such date shall accelerate to January 1, 2033.
+(d) Anti-Rationing Guarantee.—
+(1) The GDOH may not deny or delay any medically necessary service to a qualified individual
+under age 75 that credible peer-reviewed evidence shows has at least a 65 percent probability
+of extending healthy lifespan by 5 or more years or restoring capacity for work or independent
+living. Evidence shall mean randomized controlled trials or meta-analyses published in journals
+indexed by PubMed with impact factor ≥10, as listed annually by NIH guidelines; disputes
+resolved by binding arbitration under Federal Rules of Civil Procedure.
+(2) All such services shall be funded through a dedicated High-Value Care Account that may not
+exceed 5 percent of total annual GDOH expenditures in any fiscal year.
+(3) If demand exceeds limit, prioritize by expected healthy years gained per $1,000 incremental
+cost, using NIH-validated models; top 80% fully covered if pilots under Sec. 4(c) demonstrate
+<5% denial rates.
+(e) Enrollment.—Automatic enrollment for all qualified individuals, with opt-out options under
+section 5.
+(f) Integration of Social Security.—Existing Social Security accounts are grandfathered, with
+benefits payable as under current law. New accounts may be created, but funding shall derive
+from the National Health and Longevity Trust Fund, including payroll contributions and surplus
+dividends allocated under this Act, with a fiscal bridge fund equivalent to 0.1 percent of the prior
+fiscal year's federal health expenditures for the first five years to cover overlaps during payroll
+shifts.
+**CHAPTER 2: OPT-OUT PROVISIONS AND VOUCHER SYSTEM**
+**Section 5. Opt-Out Provisions and Voucher System**
+(a) Opt-Out Eligibility.—Qualified individuals may opt out of GDOH coverage annually, receiving
+a risk-adjusted voucher equivalent to 100 percent of per-capita GDOH spending, scaled by
+CMS risk-adjustment factors for high-risk/older individuals, with annual recoupment of unused
+funds exceeding 10 percent.
+(b) Voucher Use.—Vouchers may fund:
+(1) Private health plans.
+(2) Health savings accounts.
+(3) Direct primary care arrangements.
+(c) Private Plan Restrictions.—Private plans funded by vouchers are limited to 2 percent
+administrative and 8 percent profit margins. Re-enrollment in GDOH is penalty-free. Opt-out
+rates shall be tracked as a determinable outcome metric with a target below 10 percent.
+(d) State Supplements.—States may offer additional benefits without federal preemption.
+---
+**TITLE III: FUNDING AND TRANSITION**
+**CHAPTER 1: FUNDING MECHANISMS AND TRANSITION**
+**Section 6. Funding Mechanisms and Transition**
+(a) National Health and Longevity Trust Fund.—All revenues under this section shall be
+deposited into a dedicated National Health and Longevity Trust Fund.
+(b) Transition Phase (Fiscal Years 2027–2036).—Funding sourced from:
+(1) Redirection of existing federal health expenditures (Medicare, Medicaid, CHIP, VA, ACA,
+Department of Health and Human Services programs).
+(2) Employer and employee health premiums converted to payroll contributions.
+(3) Revenue-neutral tax adjustments to reduce net taxpayer burden, including phase-in of the 1
+percent financial transaction tax on trades exceeding $10 million via reconciliation.
+(4) Temporary high-cost reinsurance pool for claims exceeding 0.05 percent of gross domestic
+product per enrollee per year during the transition phase, funded exclusively by the National
+Health and Longevity Trust Fund and modeled on the Affordable Care Act transitional
+reinsurance program and state 1332 waiver reinsurance programs.
+(5) Disproportionate share hospital and graduate medical education funds following patients to
+ease provider transition.
+(6) Consolidation of nutrition and social determinants programs.—Effective January 1, 2028, the
+Supplemental Nutrition Assistance Program (SNAP), Special Supplemental Nutrition Program
+for Women, Infants, and Children (WIC), school lunch and breakfast programs under the
+Richard B. Russell National School Lunch Act, the Emergency Food Assistance Program, and
+all discretionary and block-grant programs administered by the Department of Health and
+Human Services (other than those already transferred under paragraphs (1)–(5)) shall be
+transferred to and administered by the GDOH as part of the National Health and Longevity Trust
+Fund. Such programs shall be reformed and integrated as evidence-based
+social-determinants-of-health interventions, with eligibility automatically aligned to GDOH
+enrollment and benefits expanded to include preventive nutrition and housing supports where
+demonstrated to reduce total cost of care by at least 5 percent per enrollee cohort, as verified
+annually by the Policy Simulator.
+(c) Ongoing Funding (Phased to Fiscal Year 2047).—Sources include:
+(1) Payroll taxes as specified in subsection (e).
+(2) Federal health program budgets.
+(3) Most-favored-nation-minus-20 percent pricing for pharmaceuticals through GDOH contracts.
+(4) A 1 percent financial transaction tax reallocation on trades exceeding $10 million.
+(5) Reallocated 1 percent of existing excise taxes on luxury goods and unhealthy products. All
+non-payroll sources limited to 20% of Trust Fund inflows, sourced solely from verified
+efficiencies under Sec. 13.
+(6) 12 percent of import tariffs.
+(d) Fiscal Circuit Breakers.—If expenditures exceed 13 percent of gross domestic product, tax
+rates freeze until compliance. Surpluses trigger automatic tax reductions (e.g., 1 percentage
+point cut to top marginal income tax rate per surplus equivalent to 0.6 percent of gross domestic
+product). If surpluses exceed 0.2 percent of gross domestic product, up to 8 percent shall be
+allocated to provider bonuses for improved outcomes.
+(e) Payroll Tax Cap and Allocation.—The total combined payroll tax rate (including employer
+and employee shares) shall be capped at 15 percent. Of this 15 percent, 45 percent shall be
+dedicated to the National Health and Longevity Trust Fund for health, longevity, and integrated
+Social Security purposes, with 27.5 percent allocated to previous federal tax allocations and
+27.5 percent to previous state tax allocations, reduced by the actuarial value of
+employer-sponsored health premiums paid in the prior taxable year. The combined payroll
+contribution shall be reduced dollar-for-dollar by existing sections 3101/3111 taxes and
+prior-year employer premiums, with CBO pre-enactment certification required for neutrality in
+95% of income quintiles; if shortfall >5%, automatic phase-in delay by 1 year. This cap and
+allocation shall be phased in over seven years following the date of enactment, with exemptions
+for income below 0.05 percent of gross domestic product per capita and 50 percent rebates to
+low earners via Earned Income Tax Credit expansion. All sources under subsections (b) and (c)
+shall be pre-scored by the Congressional Budget Office within 90 days of enactment, with
+alternatives triggered if shortfalls exceed 10 percent of projections.
+(f) Escalator and Delay Provisions.—
+(1) Health Inflation Escalator.—If the annual percentage change in the Consumer Price Index
+for All Urban Consumers (CPI-U), as published by the Bureau of Labor Statistics for the Medical
+Care component, exceeds 3 percent in any fiscal year during the phase-in period under
+subsection (e), the combined payroll contribution rate shall automatically increase by 1
+percentage point for the following fiscal year, with such increase allocated proportionally to the
+National Health and Longevity Trust Fund and offset by equivalent reductions in the
+employer-sponsored health premium deductions under subsection (e), as certified neutral by the
+Congressional Budget Office prior to implementation.
+(2) Auto-Delay Mechanism.—Any phase-in delay under subsection (e) due to shortfalls greater
+than 5 percent shall apply exclusively to individuals in the top 20 percent income quintile, as
+determined by Internal Revenue Service adjusted gross income thresholds for the prior taxable
+year, with full implementation maintained for all other quintiles.
+(3) IRS Pre-Audit Requirement.—Prior to the phase-in of any payroll contribution adjustments
+under this section, the Internal Revenue Service, in consultation with the Congressional Budget
+Office, shall conduct and publish a pre-audit of all offsets against sections 3101 and 3111 taxes
+and prior-year employer premiums, ensuring dollar-for-dollar neutrality in at least 95 percent of
+income quintiles. If the audit identifies discrepancies exceeding 2 percent, implementation shall
+be delayed by 6 months, with quarterly updates tracked via the Policy Simulator under section
+20
+**CHAPTER 2: PRIVATE INSURANCE TRANSITION AND SUPPLEMENTAL OPTIONS**
+**Section 7. Private Insurance Transition and Supplemental Options**
+(a) Transition.—No new duplicative private policies may be issued after 540 days
+post-enactment. Existing policies are grandfathered for up to 7 years in cohorts with satisfaction
+rates exceeding 80 percent per Consumer Assessment of Healthcare Providers and Systems
+surveys, with up to 0.2 percent of the prior fiscal year's federal health expenditures allocated as
+a retraining fund for displaced workers.
+(b) Supplemental Insurance.—Unrestricted for non-duplicative benefits. Private carriers may
+contract with GDOH at fees not exceeding 5 percent.
+(c) Employer Plans.—Employers may offer supplemental insurance or contribute to vouchers.
+---
+**TITLE IV: PRICING AND INNOVATION REFORMS**
+**CHAPTER 1: PRICING REFORMS FOR PHARMACEUTICALS AND MEDICAL DEVICES**
+**Section 8. Pricing Reforms for Pharmaceuticals and Medical Devices**
+(a) Galactic Golden Ticket System.—Tiered pricing:
+(1) Tier 1: Most-favored-nation.
+(2) Tier 2: Most-favored-nation-minus-10 percent for high-value innovations.
+(3) Tier 3: For longevity priorities (e.g., Alzheimer’s cures, radiation hardening), 5-year price
+freedom, 100 percent research and development prizes, and government equity options
+(capped at 5 percent per entity). Equity stakes shall be non-voting and automatically distributed
+pro-rata to all American citizens via a sovereign wealth account upon liquidity event, with
+validation required from the National Institutes of Health and the Food and Drug Administration
+for at least 10 percent lifespan extension in Phase III trials.
+(4) Data-Sharing and Clawback Provisions.—Entities receiving Tier 3 benefits shall mandatorily
+share all Phase IV post-market surveillance data, including real-world evidence on efficacy, with
+the Food and Drug Administration and National Institutes of Health via a public API accessible
+through the Policy Simulator under section 20. If such data demonstrates less than a 5 percent
+extension in healthspan or equivalent longevity metric, as verified by NIH epigenetic clock
+models within 24 months of market entry, the Secretary shall impose clawbacks equivalent to
+150 percent of excess revenues above most-favored-nation-minus-20 percent pricing, deposited
+into the Galactic Health Innovation Fund, with disputes resolved by binding arbitration under
+Federal Rules of Civil Procedure.
+(b) Non-Compliance.—Leads to compulsory licensing at generic rates.
+(c) Competition and Transparency Boosts.—All providers and facilities shall mandate
+machine-readable, API-accessible pricing for all Current Procedural Terminology,
+Diagnosis-Related Group, and National Drug Code identifiers, enforced via penalties equivalent
+to 0.5 percent of annual revenue per violation, consistent with Medicare eligibility withholdings
+and 2025 transparency rules. In state pilots under section 4(c), repeal barriers including
+Certificate of Need laws and physician-owned hospital bans to enable direct primary care and
+voucher competition, incorporating site-neutral payments for market efficiencies without eroding
+universal coverage.
+**CHAPTER 2: GALACTIC HEALTH INNOVATION FUND, LONGEVITY MOONSHOT FUND,
+AND INCENTIVES**
+**Section 9. Galactic Health Innovation Fund and Performance-Gated Longevity Prize System**
+(a) Galactic Health Innovation Fund (GHIF).—
+(1) Establishment.—There is established in the Treasury the Galactic Health Innovation Fund.
+(2) Funding source.—Beginning in fiscal year 2028 and each fiscal year thereafter, an amount
+equal to not less than 1 percent and not more than 20 percent of the verified reduction in
+national health expenditures below the pre-enactment baseline (as certified annually by the
+Congressional Budget Office compared to its January 2025 baseline) shall be transferred to the
+GHIF. No transfer shall occur in any year in which national health expenditures equal or exceed
+the pre-enactment baseline.
+(3) Use of funds.—Amounts in the GHIF shall be available without further appropriation solely
+for—
+(A) prize purses under subsection (b);
+(B) advance market commitments and milestone payments for longevity and multiplanetary
+biological readiness technologies; and
+(C) technology prizes open to any domestic or international entity.
+(4) Carryover.—Unobligated balances shall remain available indefinitely and shall not revert to
+the general fund.
+(b) Longevity and Multiplanetary Prize Program.—
+(1) In general.—The Secretary shall use amounts in the GHIF to offer large, pre-announced,
+independently verified prize purses and advance market commitments for achieving specific,
+measurable scientific and clinical milestones that significantly and verifiably extend healthy
+human lifespan or enable increased human immune and physiological fortitude.
+(2) No grants or traditional research funding.—None of the amounts in the Fund may be used
+for grants, cooperative agreements, contracts (other than prize administration contracts), or
+general research appropriations. Money may only be obligated or expended upon independent
+verification that a claimant has fully achieved a pre-announced milestone.
+(3) Milestone categories.—The Secretary shall prioritize (but is not limited to) prizes for:
+(A) Rejuvenation of mammalian (including human) healthspan by 10 percent or more in a
+randomized controlled trial using FDA-recognized biomarkers (Tier 1 prize: not less than
+$100,000,000), scaling to 20 percent or more (Tier 2 prize: not less than $500,000,000);
+(B) Radiation countermeasures permitting healthy survival after cumulative exposure of 1.5
+Sievert with less than 5 percent loss of function (Tier 1: $100,000,000 for 1.0 Sievert threshold,
+scaling to full milestone);
+(C) [Retain existing (C)–(E), with analogous tiering: e.g., 10-year reversal at Tier 1
+($100,000,000), full 15-year at Tier 2 ($1,000,000,000).]
+(F) Stretch goals.—For each milestone category, the Secretary shall establish one or more
+stretch goals exceeding the base threshold by at least 50 percent (e.g., 30 percent healthspan
+rejuvenation), with prize amounts scaled accordingly up to $5,000,000,000, verified under
+paragraph (5).
+(4) Prize size flexibility.—Prizes shall range from $100 million to $5 billion per milestone, scaled
+by NIH-estimated population benefit (e.g., $X per healthy life-year gained), with total annual
+GHIF outlays capped at 5% of verified Sec. 6 surpluses.
+(5) Transparency and verification.—All prize rules, judging criteria, and verification protocols
+shall be published at least 18 months in advance. Verification shall be performed by an
+independent panel appointed jointly by the National Academy of Sciences and the Food and
+Drug Administration.
+(6) Seed Milestone Allocation.—Not more than 20 percent of amounts in the Galactic Health
+Innovation Fund may be allocated annually for seed prizes or advance commitments for
+preliminary milestones (e.g., Phase II trial demonstrations of at least 5 percent healthspan gain),
+provided such milestones are independently verified by a panel appointed jointly by the National
+Academy of Sciences and the Food and Drug Administration, with results published in the
+Federal Register at least 6 months prior to award. Unobligated seed funds shall carry over to
+subsequent fiscal years.
+(c) Rule of Construction.—Nothing in this section shall be construed to authorize any
+appropriation or mandatory spending except from verified savings as provided in subsection
+(a)(2).
+---
+**TITLE V: PROVIDER AND WORKFORCE REFORMS**
+**CHAPTER 1: PROVIDER PAYMENT REFORMS AND WORKFORCE INCENTIVES**
+**Section 10. Provider Payment Reforms and Workforce Incentives**
+(a) Payment Models.—Global budgets for hospitals with 150 percent savings retention if
+outcomes improve by at least 10 percent per Healthcare Effectiveness Data and Information Set
+scores; outcome-based pay for clinicians with up to 5x multipliers.
+(b) Workforce Incentives.—Up to 170 percent funding and loan forgiveness for underserved
+areas; interstate licensing facilitation; and up to 0.1 percent of the prior fiscal year's federal
+health expenditures for artificial intelligence-assisted training targeting a 20 percent increase in
+rural providers by 2032.
+(c) Penalties.—Fines equivalent to 300 percent of the overbilled amount and debarment for
+overbilling or fraud.
+---
+**TITLE VI: FISCAL SAFEGUARDS AND SURPLUSES**
+**CHAPTER 1: SURPLUS ALLOCATION AND FISCAL SAFEGUARDS**
+**Section 11. Surplus Allocation and Fiscal Safeguards**
+(a) Surplus Threshold.—If revenues exceed 102 percent of projected expenditures:
+(1) 10 percent to contingency reserves.
+(2) 70 percent to national debt reduction.
+(3) 10 percent to infrastructure, education, research, and space exploration.
+(4) 10 percent to direct universal health dividends, including 10 percent of savings as automatic
+tax credits deposited every April 15 into every taxpayer’s chosen bank account or federally
+compliant digital wallet or by mailed paper check, echoing 2025 Medicare enhancements such
+as $35/month insulin caps, with 20 percent to multiplanetary research and development.
+(b) Safeguards.—Annual audits and automatic adjustments to prevent deficits, including a
+surplus verifier via Government Accountability Office audit projecting debt paydown trajectory.
+**CHAPTER 2: ADMINISTRATION AND GOVERNANCE**
+**Section 12. Administration and Governance**
+(a) Board.—A 19-member independent board, appointed by the President with Senate
+confirmation, requiring supermajority votes for major decisions, with at least 30 percent from
+state pilot experts. All meetings live-streamed.
+(b) Operations.—GDOH administers coverage, payments, and funds with a maximum 2.5
+percent administrative overhead after the third year.
+---
+**TITLE VII: PERFORMANCE, ENFORCEMENT, AND PROTECTIONS**
+**CHAPTER 1: PROJECTIONS AND PERFORMANCE METRICS**
+**Section 13. Projections and Performance Metrics**
+(a) Projections.—GDOH shall project:
+(1) Health spending below 10 percent of gross domestic product by 2040 and an average below
+7 percent by 2045.
+(2) National debt elimination by 2057.
+(3) Healthy life expectancy exceeding 132 years by 2257, contingent on Longevity Moonshot
+Fund milestones, with interim healthspan targets of 85 years by 2050 modeled via Policy
+Simulator.
+(4) Annual taxpayer savings equivalent to 1–2 percent of per-capita gross domestic product.
+(b) Metrics.—Track all available indicators, including access, outcomes, and innovation rates
+such as infant mortality below 3 per 1,000 live births by 2030 and a 50 percent rise in Food and
+Drug Administration approvals for longevity technologies by 2035. Adaptive thresholds shall
+trigger independent review and adjustments if metrics lag by 10 percent.
+**Section 14. Anti-Corruption and Enforcement Measures**
+(a) Prohibitions.—10-year bans from health-related industries for convicted violators; felony
+charges for bribery or fraud.
+(b) Enforcement.—Dedicated inspector general with whistleblower protections.
+**Section 15. Malpractice Reform and Patient Protections**
+(a) Reforms.—Caps on non-economic damages at $500,000, adjusted for inflation; mandatory
+arbitration options.
+(b) Protections.—Right to appeal denials; transparency in provider outcomes.
+**Section 16. Non-Discrimination, Equity, and Health Justice Provisions**
+(a) Comprehensive Non-Discrimination Requirement.—
+(1) In general.—No qualified individual shall be denied, delayed, or receive inferior coverage or
+care under this Act on the basis of race, color, ethnicity, national origin, tribal affiliation, sex,
+sexual orientation, religion, age, disability, genetic information, socioeconomic status,
+geographic location (including rural or urban residency), criminal history, health status,
+pre-existing conditions, or any other protected characteristic recognized under Federal civil
+rights laws or enumerated in this section.
+(2) Application to providers.—Any provider, facility, contractor, or entity receiving funds or
+participating in the GDOH system shall be prohibited from engaging in any discriminatory
+practice described in paragraph (1).
+(3) Language access.—All services, notices, and materials shall be provided in the preferred
+language of the individual at no cost, with mandatory availability of qualified interpreters
+(in-person, video, or telephonic) meeting or exceeding standards under Title VI of the Civil
+Rights Act of 1964 and Section 1557 of the Patient Protection and Affordable Care Act.
+(b) Affirmative Equity Obligations.—
+(1) Health Equity Investment Fund.—Beginning in fiscal year 2028, GDOH shall allocate 3% of
+expenditures (fixed through 2035) to Health Equity Fund, with outcomes tracked via Policy
+Simulator metrics showing ≥10% disparity reduction annually and excess allocated to surpluses
+under Sec. 11, for:
+(A) eliminating disparities in maternal mortality, infant mortality, life expectancy, and chronic
+disease outcomes, targeting maternal mortality below 20 per 100,000 live births by 2035;
+(B) constructing, expanding, or modernizing healthcare facilities in federally designated Health
+Professional Shortage Areas, Medically Underserved Areas, and rural communities;
+(C) broadband and telehealth infrastructure deployment to achieve 100 percent high-speed
+connection availability in every county by 2032;
+(D) loan repayment, scholarship, and residency programs targeting underrepresented
+minorities and individuals from disadvantaged backgrounds;
+(E) community health worker and navigator programs in high-need areas; and
+(F) culturally and professionally competent mental health and substance-use-disorder services.
+(2) Rural and Frontier Protections.—
+(A) No facility closures or service reductions in counties with population density below 100
+persons per square mile without prior approval through a public hearing process and
+demonstration of zero net loss of access.
+(B) Mandatory site-neutral and distance-based reimbursement enhancements of at least 125
+percent of urban rates for critical access hospitals and rural health clinics.
+(C) Annual “fly-in/fly-out” and mobile clinic funding sufficient to guarantee every rural resident is
+within 60 minutes ground travel or 30 minutes air-medical response time of emergency care.
+(c) Data Collection, Monitoring, and Public Reporting.—
+(1) GDOH shall collect, analyze, and publicly report standardized data on health outcomes,
+access, and quality, disaggregated by every category listed in subsection (a)(1).
+(2) Beginning January 1, 2028, and annually thereafter, the GDOH Office of Health Equity shall
+publish a National Health Disparities and Equity Report Card with letter grades for each state,
+territory, and tribal nation.
+(3) Failure to demonstrate measurable progress toward eliminating disparities for three
+consecutive years shall trigger automatic corrective action plans and potential withholding of up
+to 5 percent of administrative funds until compliance is achieved.
+(d) Tribal Sovereignty and Consultation.—
+(1) Nothing in this Act shall be construed to impair treaty rights, trust responsibilities, or the
+government-to-government relationship between the United States and federally recognized
+Indian Tribes, Alaska Native villages, or Native Hawaiian organizations.
+(2) Tribes may elect to administer GDOH benefits through compacts or contracts under the
+Indian Self-Determination and Education Assistance Act, with 100 percent federal funding and
+no state interference.
+(e) Enforcement and Private Right of Action.—
+(1) Any individual or class of individuals aggrieved by a violation of this section may bring a civil
+action in federal district court.
+(2) Prevailing plaintiffs shall be entitled to reasonable attorney’s fees, expert fees, and
+compensatory damages uncapped for systemic violations, defined as discriminatory practices
+affecting access or outcomes in at least two protected categories under subsection (a)(1) with
+disparities exceeding 10 percent as measured by the National Health Disparities and Equity
+Report Card under subsection (c)(2) (e.g., rural access denials impacting geographic location
+and socioeconomic status); for non-systemic violations, damages shall be capped at $250,000
+per claimant. [Retain class action text.] Class actions exceeding 1,000 members shall require
+Galactic Department of Health certification only if not involving disparities greater than 10
+percent under the Report Card; such certification shall be deemed approved within 90 days
+absent a showing of frivolous claims by clear and convincing evidence.
+(3) The Attorney General and the GDOH Inspector General are authorized to initiate
+enforcement actions independently.
+(4) Legal Aid Funding.—The Galactic Department of Health shall allocate not more than 0.5
+percent of its annual administrative overhead under section 12(b) to a dedicated Plaintiff Legal
+Aid Fund for aggrieved individuals under this subsection, prioritizing low-income and rural
+claimants as verified by Policy Simulator data. Funds shall be administered through grants to
+qualified non-profit legal aid organizations, with annual audits by the Inspector General.
+(f) Severability of Equity Provisions.—If any provision of this section is held invalid with respect
+to any specific class or circumstance, such invalidity shall not affect the remaining applications
+of this section.
+**CHAPTER 2: STATE FLEXIBILITY AND INTERSTATE COMPACTS**
+**Section 17. State Flexibility and Interstate Compacts**
+(a) Flexibility.—States may innovate within federal guidelines, including waivers for alternative
+models and voluntary pilots under section 4(c) to test zero-out-of-pocket coverage subsets
+using redirected Affordable Care Act subsidies, building data for surpluses via the Policy
+Simulator while enforcing anti-rationing and health spending targets below 9 percent of gross
+domestic product, with Section 1332 waivers permitted for hybrid models.
+(b) Compacts.—Facilitates interstate provider licensing and care delivery.
+---
+**TITLE VIII: TRANSITIONAL AND OVERSIGHT PROVISIONS**
+**CHAPTER 1: GALACTIC TRANSITION AUTHORITY AND MULTIPLANETARY
+READINESS**
+**Section 18. Galactic Transition Authority**
+(a) Establishment.—A temporary authority to oversee the transition, sunsetting in fiscal year
+2045.
+(b) Duties.—Coordinate enrollment, funding shifts, and system integration, including a
+contingency reserve equivalent to 0.5 percent of the prior fiscal year's federal health
+expenditures for provider stabilization if payments drop by more than 20 percent.
+**Section 19. Multiplanetary Biological Readiness and Human Performance Research**
+(a) Annual Multiplanetary Biological Readiness Report.—Beginning in fiscal year 2028 and
+every fiscal year thereafter, the GDOH shall submit to Congress and publish publicly a
+comprehensive Multiplanetary Biological Readiness Report assessing the nation’s progress
+toward achieving biological capabilities required for safe, sustained human settlement beyond
+Earth.
+(b) Mandatory Minimum Funding Tied to Gross Domestic Product.—
+(1) In general.—The Galactic Department of Health shall allocate a base amount equal to 0.1
+percent of the prior fiscal year’s nominal gross domestic product, drawn exclusively from
+unobligated carryover balances in the Galactic Health Innovation Fund under section 9(a)(4), if
+and only if the Longevity Moonshot Fund achieves at least one milestone under section 9(b) in
+the prior two fiscal years; such base allocation shall escalate by 0.05 percentage points upon
+verification of any additional milestone via the Policy Simulator under section 20, up to the
+permanent floor of 0.75 percent.
+(A) Extension of maximum healthy human lifespan and healthspan.
+(B) Comprehensive genetic and pharmacological radiation countermeasures capable of
+mitigating cumulative exposures exceeding 1 Sievert without significant loss of function.
+(C) Bone, muscle, cardiovascular, and neurovestibular preservation in reduced-gravity and
+high-radiation environments.
+(D) Closed-loop life-support-compatible immunology and microbiome optimization.
+(E) Reproductive biology and developmental resilience in partial-gravity and elevated-radiation
+conditions.
+(F) Cognitive enhancement and psychological resilience for long-duration isolation during space
+travel and exploration.
+(G) Rapid trauma care and regenerative medicine suitable for austere extraterrestrial
+environments.
+(2) Escalator.—The percentage required under paragraph (1) shall automatically increase by
+0.05 percentage points each fiscal year beginning in 2035 until reaching a permanent floor of
+0.75 percent of the prior fiscal year’s nominal gross domestic product, unless modified by a
+subsequent Act of Congress (domains as specified in subparagraphs (1)(A)-(G)).
+(3) Allocation requirements.—Of the amounts allocated under this subsection:
+(A) Not less than 40 percent shall be awarded through milestone-based prizes and advance
+market commitments open to domestic and international entities. All funding for activities
+described in this section shall be drawn exclusively from the Longevity and Multiplanetary Prize
+Trust established under section 9(b). No separate appropriation or mandatory spending is
+authorized.
+(4) Decoupling from Annual Count.—For purposes of the allocation under paragraph (1),
+milestones shall be assessed on a biennial basis (e.g., fiscal years 2028–2029 as one period),
+with carryover of unmet milestones to the subsequent period if verified within 12 months. No
+allocation shall occur in a biennial period with zero verified milestones, but the base 0.1 percent
+shall remain available as a contingency draw from the National Health and Longevity Trust Fund
+if health expenditures fall below 10 percent of gross domestic product, as certified by the
+Congressional Budget Office.
+**CHAPTER 2: POLICY SIMULATOR, TRANSPARENCY, AND FISCAL ASSESSMENT**
+**Section 20. Policy Simulator and Transparency Requirements**
+(a) Simulator.—A public artificial intelligence dashboard tracking real-time metrics, comparing
+this Act to alternatives, with open-source code and independent audits, incorporating state pilot
+data under section 4(c) to project surpluses, including sensitivity analysis for plus or minus 1
+percent gross domestic product growth and a public application programming interface for
+third-party audits leveraging public AI models like Grok for projections.
+(b) Transparency.—All guidelines, decisions, and data publicly accessible, with a revenue
+dashboard for real-time tracking.
+**Section 21. Independent Fiscal Impact Assessment**
+(a) Requirement.—The Congressional Budget Office, Government Accountability Office, and
+three independent fiscal analysis firms shall publish 10-, 25-, and 50-year projections of the
+Act’s fiscal impacts, including a viability scorecard with at least 90 percent confidence in the
+below-9-percent-of-gross-domestic-product target.
+(b) Public Availability.—All reports shall be publicly posted within 12 months of enactment, with
+pre-enactment 50-year scoring by the Congressional Budget Office projecting net savings
+equivalent to 2–3 percent of gross domestic product annually.
+---
+**TITLE IX: FINAL PROVISIONS**
+**CHAPTER 1: SEVERABILITY, EFFECTIVE DATE, SUNSET, AND EMERGENCY CLAUSE**
+**Section 22. Severability**
+If any provision of this Act is held invalid, the remainder shall not be affected.
+**Section 23. Effective Date and Sunset Reauthorization**
+(a) Effective Date.—This Act takes effect on the date of enactment, with state pilots
+commencing January 1, 2027, vouchers available January 1, 2028, and full national coverage
+beginning January 1, 2035, accelerated if pilots achieve 95 percent of metrics.
+(b) Sunset.—This Act sunsets on December 31, 2047, unless reauthorized by Congress every
+10 years with a Congressional Budget Office gate requiring projected surpluses.
+**Section 24. Limited Emergency Flexibility and Congressional Oversight**
+(a) Temporary Emergency Adjustments Authorized Only by Congress.—During a period in
+which a joint resolution declaring a qualified national health emergency is in effect (pursuant to
+the procedures in subsection (b)), the following temporary modifications to fiscal safeguards in
+this Act are permitted only to the extent expressly authorized by such joint resolution and only
+for the duration specified therein:
+(1) Suspension or modification of the payroll contribution cap under section 6(e) by not more
+than 2 percentage points;
+(2) Temporary increase in the High-Value Care Account limit under section 4(d)(2) from 3.5
+percent to not more than 8 percent of total annual GDOH expenditures;
+(3) One-time delay of up to 24 months in any scheduled sunset or reauthorization requirement
+under section 23.
+(b) Declaration and Termination of Qualified National Health Emergency.—
+(1) A qualified national health emergency may be declared only by a joint resolution enacted by
+Congress and signed by the President (or enacted over the President’s veto).
+(2) Any such joint resolution shall terminate automatically after 730 days unless affirmatively
+reauthorized by a new joint resolution.
+(3) Congress may terminate the emergency at any earlier time by simple majority vote in both
+Houses.
+(c) Strict Limits and Transparency.—
+(1) No emergency declaration or joint resolution may suspend or modify any individual rights,
+coverage guarantees, anti-rationing provisions, opt-out rights, or non-discrimination protections
+in this Act.
+(2) All expenditures made under emergency authority shall be separately tracked and reported
+monthly to Congress and the public via the Policy Simulator required under section 20.
+(d) Rule of Construction.—Nothing in this section authorizes the suspension of any provision of
+the Constitution or any other federal law.

@@ -1,0 +1,131 @@
+{
+  "policy_name": "V1.22 United States Galactic Health Act of 2025",
+  "policy_type": "USGHA",
+  "description": "Generated from PDF extraction - 11 funding mechanisms",
+  "mechanics": {
+    "funding_mechanisms": [
+      {
+        "source_type": "payroll_tax",
+        "description": "15.0% combined payroll tax (~8.0% GDP)",
+        "percentage_rate": 15.0,
+        "percentage_gdp": 7.95
+      },
+      {
+        "source_type": "efficiency_gains",
+        "description": "Efficiency gains (3% GDP)",
+        "percentage_rate": null,
+        "percentage_gdp": 3.0
+      },
+      {
+        "source_type": "transaction_tax",
+        "description": "Financial transaction tax (1%) (~1.0% GDP)",
+        "percentage_rate": 1.0,
+        "percentage_gdp": 1.0
+      },
+      {
+        "source_type": "excise_reallocation",
+        "description": "Excise tax reallocation (1%) (~0.5% GDP)",
+        "percentage_rate": 1.0,
+        "percentage_gdp": 0.5
+      },
+      {
+        "source_type": "import_tariffs",
+        "description": "Import tariff allocation (12%) (~0.24% GDP)",
+        "percentage_rate": 12.0,
+        "percentage_gdp": 0.24
+      },
+      {
+        "source_type": "reinsurance_pool",
+        "description": "Transitional reinsurance pool (~0.2% GDP)",
+        "percentage_rate": null,
+        "percentage_gdp": 0.2
+      },
+      {
+        "source_type": "converted_premiums",
+        "description": "Employer/employee premiums converted to payroll contributions (~5.5% GDP)",
+        "percentage_rate": null,
+        "percentage_gdp": 5.5
+      },
+      {
+        "source_type": "redirected_federal",
+        "description": "Redirected federal health program spending (Medicare, Medicaid, CHIP, VA, ACA) (~3.5% GDP)",
+        "percentage_rate": null,
+        "percentage_gdp": 3.5
+      },
+      {
+        "source_type": "dsh_gme_funds",
+        "description": "Disproportionate share hospital (DSH) and graduate medical education (GME) funds (~0.3% GDP)",
+        "percentage_rate": null,
+        "percentage_gdp": 0.3
+      },
+      {
+        "source_type": "inflation_escalator",
+        "description": "Health inflation escalator (automatic adjustment if medical CPI exceeds 3%)",
+        "percentage_rate": null,
+        "percentage_gdp": null
+      },
+      {
+        "source_type": "eitc_expansion",
+        "description": "Earned Income Tax Credit expansion for low earners",
+        "percentage_rate": null,
+        "percentage_gdp": null
+      }
+    ],
+    "surplus_allocation": {
+      "contingency_reserve_pct": 10.0,
+      "debt_reduction_pct": 70.0,
+      "infrastructure_pct": 10.0,
+      "dividends_pct": 10.0,
+      "other_allocations": {},
+      "trigger_conditions": []
+    },
+    "circuit_breakers": [
+      {
+        "trigger_type": "spending_cap",
+        "threshold_value": 13.0,
+        "threshold_unit": "percent_gdp",
+        "action": "freeze_taxes",
+        "description": "If spending exceeds 13% GDP, freeze tax rates"
+      }
+    ],
+    "innovation_fund": {
+      "funding_min_pct": 1.0,
+      "funding_max_pct": 20.0,
+      "funding_base": "savings_vs_baseline",
+      "prize_min_dollars": 100000000.0,
+      "prize_max_dollars": 5000000000.0,
+      "annual_cap_pct": 5.0
+    },
+    "timeline_milestones": [
+      {
+        "year": 2035,
+        "description": "Coverage Start",
+        "metric_type": "coverage_start",
+        "target_value": null
+      },
+      {
+        "year": 2035,
+        "description": "Full Implementation",
+        "metric_type": "full_implementation",
+        "target_value": null
+      },
+      {
+        "year": 2040,
+        "description": "Achieve 7% GDP spending target",
+        "metric_type": "spending_pct_gdp",
+        "target_value": 7.0
+      },
+      {
+        "year": 2040,
+        "description": "Surplus Target",
+        "metric_type": "surplus_target",
+        "target_value": null
+      }
+    ],
+    "target_spending_pct_gdp": 7.0,
+    "target_spending_year": 2045,
+    "universal_coverage": true,
+    "zero_out_of_pocket": true,
+    "confidence_score": 0.87
+  }
+}

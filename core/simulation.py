@@ -7,6 +7,162 @@ tracking GDP, debt, surplus, and other macroeconomic indicators.
 import pandas as pd
 from tkinter import messagebox
 from core.economics import calculate_revenues_and_outs
+from core.healthcare import PolicyType
+from core.context_aware_healthcare import (
+    calculate_mechanism_based_outcomes,
+    RevenueBreakdown,
+    SpendingBreakdown,
+    SurplusBreakdown
+)
+from typing import Optional
+
+
+def _simulate_with_mechanics(policy, base_gdp: float, initial_debt: float, years: int,
+                            population: float, gdp_growth: float, start_year: int = None,
+                            cbo_data: dict = None) -> pd.DataFrame:
+    """
+    Context-aware simulation using extracted policy mechanics.
+    
+    This function understands WHY revenues and spending change, not just THAT they change.
+    """
+    rows = []
+    current_debt = float(initial_debt)
+    
+    # Baseline healthcare spending
+    baseline_health_pct_gdp = 0.185  # 18.5% GDP (2025 US baseline)
+    
+    # Determine start year
+    timeline = policy.transition_timeline
+    if start_year is None:
+        start_year = timeline.start_year if timeline and timeline.start_year else 2025
+    
+    # Accumulate reserves
+    contingency_reserve_balance = 0.0
+    
+    for i in range(years):
+        year = start_year + i
+        
+        # Calculate current GDP with compounded growth
+        current_gdp = base_gdp * ((1.0 + gdp_growth) ** i)
+        
+        # CONTEXT-AWARE: Calculate outcomes from mechanics
+        outcomes = calculate_mechanism_based_outcomes(
+            mechanics=policy.mechanics,
+            gdp=current_gdp,
+            year=year,
+            start_year=start_year,
+            baseline_spending_pct_gdp=baseline_health_pct_gdp
+        )
+        
+        revenue_breakdown: RevenueBreakdown = outcomes['revenue']
+        spending_breakdown: SpendingBreakdown = outcomes['spending']
+        surplus = outcomes['surplus']
+        surplus_allocation: Optional[SurplusBreakdown] = outcomes['surplus_allocation']
+        circuit_breakers = outcomes['circuit_breakers']
+        
+        # Calculate baseline health spending for comparison
+        baseline_health_spending_this_year = baseline_health_pct_gdp * current_gdp
+        savings_vs_baseline = baseline_health_spending_this_year - spending_breakdown.net_spending
+        
+        # Apply surplus allocation
+        debt_reduction_amount = 0.0
+        infrastructure_allocation = 0.0
+        dividend_pool = 0.0
+        contingency_addition = 0.0
+        
+        if surplus > 0 and surplus_allocation:
+            debt_reduction_amount = surplus_allocation.debt_reduction
+            infrastructure_allocation = surplus_allocation.infrastructure
+            dividend_pool = surplus_allocation.dividends
+            contingency_addition = surplus_allocation.contingency_reserve
+            
+            # Add to contingency reserve
+            contingency_reserve_balance += contingency_addition
+            
+            # Reduce debt
+            current_debt = max(0, current_debt - debt_reduction_amount)
+        elif surplus < 0:
+            # Deficit: may need to draw from reserves or increase debt
+            if contingency_reserve_balance > abs(surplus):
+                contingency_reserve_balance -= abs(surplus)
+            else:
+                current_debt += abs(surplus)
+        
+        # Calculate interest on debt (assume 3.5% average rate)
+        interest_rate = 0.035
+        interest_spending = current_debt * interest_rate
+        
+        # Innovation fund allocation (from policy mechanics if specified)
+        innovation_fund_amount = 0.0
+        if policy.mechanics and policy.mechanics.innovation_fund and savings_vs_baseline > 0:
+            # Fund based on savings percentage
+            fund_pct = policy.mechanics.innovation_fund.funding_min_pct / 100
+            innovation_fund_amount = savings_vs_baseline * fund_pct
+            
+            # Apply annual cap
+            if policy.mechanics.innovation_fund.annual_cap_pct > 0 and surplus > 0:
+                cap = surplus * (policy.mechanics.innovation_fund.annual_cap_pct / 100)
+                innovation_fund_amount = min(innovation_fund_amount, cap)
+        
+        # Per capita metrics
+        per_capita_spending = spending_breakdown.net_spending / population
+        dividend_per_capita = dividend_pool / population if dividend_pool > 0 else 0.0
+        
+        # Circuit breaker status
+        circuit_breaker_triggered = len(circuit_breakers) > 0
+        circuit_breaker_msg = "; ".join([msg for _, msg in circuit_breakers]) if circuit_breaker_triggered else ""
+        
+        # Build row
+        row = {
+            'Year': year,
+            'GDP': current_gdp,
+            'National Debt': current_debt,
+            'Debt % GDP': (current_debt / current_gdp) * 100,
+            
+            # Revenue breakdown
+            'Total Revenue': revenue_breakdown.total,
+            'Payroll Tax Revenue': revenue_breakdown.payroll_tax,
+            'Redirected Federal Revenue': revenue_breakdown.redirected_federal,
+            'Converted Premiums Revenue': revenue_breakdown.converted_premiums,
+            'Efficiency Gains Revenue': revenue_breakdown.efficiency_gains,
+            'Other Revenue': revenue_breakdown.other_sources,
+            
+            # Spending breakdown
+            'Healthcare Spending': spending_breakdown.net_spending,
+            'Healthcare % GDP': (spending_breakdown.net_spending / current_gdp) * 100,
+            'Baseline Health Spending': baseline_health_spending_this_year,
+            'Savings vs Baseline': savings_vs_baseline,
+            'Administrative Savings': spending_breakdown.administrative_savings,
+            'Drug Pricing Savings': spending_breakdown.drug_pricing_savings,
+            'Preventive Care Savings': spending_breakdown.preventive_care_savings,
+            
+            # Fiscal outcomes
+            'Surplus/Deficit': surplus,
+            'Surplus % GDP': (surplus / current_gdp) * 100,
+            'Interest Spending': interest_spending,
+            
+            # Surplus allocation
+            'Contingency Reserve': contingency_reserve_balance,
+            'Debt Reduction': debt_reduction_amount,
+            'Infrastructure Allocation': infrastructure_allocation,
+            'Dividend Pool': dividend_pool,
+            'Dividend Per Capita': dividend_per_capita,
+            
+            # Innovation
+            'Innovation Fund': innovation_fund_amount,
+            
+            # Per capita
+            'Per Capita Spending': per_capita_spending,
+            'Population': population,
+            
+            # Circuit breakers
+            'Circuit Breaker Triggered': circuit_breaker_triggered,
+            'Circuit Breaker Message': circuit_breaker_msg
+        }
+        
+        rows.append(row)
+    
+    return pd.DataFrame(rows)
 
 
 def simulate_years(internal_general, internal_revenues, internal_outs):
@@ -155,12 +311,20 @@ def simulate_healthcare_years(policy, base_gdp: float, initial_debt: float, year
                               population: float = 335e6, gdp_growth: float = 0.025,
                               start_year: int = None, cbo_data: dict = None):
     """
-    Simplified multi-year healthcare-focused simulation.
+    Context-aware multi-year healthcare simulation.
 
-    This function produces a conservative government-ready projection for
-    healthcare spending, innovation fund allocation, savings from negotiation
-    and administrative reforms, and the resulting surpluses used to reduce
-    national debt.
+    Calculates outcomes based on extracted policy mechanics when available,
+    falls back to legacy hard-coded models for backward compatibility.
+
+    CONTEXT-AWARE MODE (policy.mechanics != None):
+    - Revenue calculated from funding mechanisms (payroll, redirected federal, converted premiums, efficiency)
+    - Spending calculated from target trajectory with mechanism attribution
+    - Surplus allocated per policy rules (contingency, debt, infrastructure, dividends)
+    - Circuit breakers enforced (spending caps, surplus triggers)
+
+    LEGACY MODE (policy.mechanics == None):
+    - Uses hard-coded USGHA values and linear interpolation
+    - Maintains backward compatibility with existing policies
 
     Parameters
     - policy: HealthcarePolicyModel (from core.healthcare)
@@ -174,12 +338,31 @@ def simulate_healthcare_years(policy, base_gdp: float, initial_debt: float, year
 
     Returns: pandas.DataFrame with yearly projections
     """
+    # Input validation
+    if population <= 0:
+        raise ValueError("Population must be positive")
+    if base_gdp <= 0:
+        raise ValueError("Base GDP must be positive")
+    if initial_debt < 0:
+        raise ValueError("Initial debt cannot be negative")
+    
+    # CONTEXT-AWARE PATH: Use extracted mechanics if available
+    if hasattr(policy, 'mechanics') and policy.mechanics is not None:
+        return _simulate_with_mechanics(
+            policy, base_gdp, initial_debt, years, population, 
+            gdp_growth, start_year, cbo_data
+        )
+    
+    # LEGACY PATH: Fall back to hard-coded model
     # Defensive imports to avoid circular dependencies at top-level
     from math import isfinite
 
     rows = []
     current_gdp = float(base_gdp)
     current_debt = float(initial_debt)
+
+    # Baseline healthcare spending (January 2025) - $5.7T national healthcare
+    baseline_health_spending = 5.7e12  # $5.7T
 
     # Baseline health spending pct (assume current US baseline if not provided)
     baseline_health_pct = 0.18
@@ -192,31 +375,59 @@ def simulate_healthcare_years(policy, base_gdp: float, initial_debt: float, year
     full_impl_year = timeline.full_implementation_year if timeline and timeline.full_implementation_year else (start_year + 2)
     years_to_target = max(1, full_impl_year - start_year)
 
+    # For USGHA, spending reduction takes 20 years to reach 7% GDP (USGHA Section 2(b)(3))
+    spending_transition_years = 20 if policy.policy_type == PolicyType.USGHA else years_to_target
+
     # Per-year linear change in health spending % toward target
     target_health_pct = float(policy.healthcare_spending_target_gdp)
-    annual_health_pct_delta = (target_health_pct - baseline_health_pct) / float(years_to_target)
+    annual_health_pct_delta = (target_health_pct - baseline_health_pct) / float(spending_transition_years)
 
 
-    # Refined revenue model (absolute USD values)
-    # Use optional labor inputs from the policy (employment_rate, avg_annual_wage)
-    # Payroll revenue = employed_people * avg_wage * payroll_coverage * payroll_tax_rate
-    employment = float(policy.employment_rate) * float(population) if getattr(policy, 'employment_rate', None) is not None else 0.0
-    payroll_tax_rate = float(policy.total_payroll_tax) if getattr(policy, 'total_payroll_tax', None) is not None else 0.0
-    payroll_base = employment * float(policy.avg_annual_wage) * float(policy.payroll_coverage_rate)
-    payroll_revenue = payroll_base * payroll_tax_rate
-    # General revenue: fraction of GDP
-    general_revenue = current_gdp * float(policy.general_revenue_pct)
-    # Other funding sources expressed as fractions of GDP in the policy
-    other_sources_abs = 0.0
-    if policy.other_funding_sources:
-        for _, frac in policy.other_funding_sources.items():
-            try:
-                other_sources_abs += current_gdp * float(frac)
-            except Exception:
-                # skip malformed entries
-                continue
-    # Total revenue is the sum of payroll-derived, general, and other sources
-    revenue = payroll_revenue + general_revenue + other_sources_abs
+    # CORRECTED REVENUE MODEL for USGHA
+    # USGHA consolidates existing federal health spending + converts private premiums
+    # Initial revenues should be ~10-11% GDP ($3T+) to cover transition and generate surpluses
+    
+    # For USGHA: revenues come from consolidated sources as % of GDP
+    # These grow with GDP and include efficiency gains over time
+    if policy.policy_type == PolicyType.USGHA:
+        # USGHA funding model (Section 6): consolidated + converted funding
+        # Year 1: ~$1.6T federal + $1.2T converted premiums + $0.4T other = $3.2T (11% GDP)
+        # Revenues as % GDP remain stable while spending decreases
+        general_revenue = current_gdp * float(policy.general_revenue_pct)  # Redirected federal health
+        
+        # Payroll revenue: minimal direct payroll component (most comes from converted premiums)
+        employment = float(policy.employment_rate) * float(population) if getattr(policy, 'employment_rate', None) is not None else 0.0
+        payroll_tax_rate = float(policy.total_payroll_tax) if getattr(policy, 'total_payroll_tax', None) is not None else 0.0
+        payroll_base = employment * float(policy.avg_annual_wage) * float(policy.payroll_coverage_rate)
+        payroll_revenue = payroll_base * payroll_tax_rate
+        
+        # Other sources: converted premiums + efficiency gains
+        other_sources_abs = 0.0
+        if policy.other_funding_sources:
+            for _, frac in policy.other_funding_sources.items():
+                try:
+                    other_sources_abs += current_gdp * float(frac)
+                except Exception:
+                    continue
+        
+        # Total USGHA revenue: ~10-11% GDP initially, remains stable
+        revenue = payroll_revenue + general_revenue + other_sources_abs
+    else:
+        # Non-USGHA policies: use employment-based payroll model
+        employment = float(policy.employment_rate) * float(population) if getattr(policy, 'employment_rate', None) is not None else 0.0
+        payroll_tax_rate = float(policy.total_payroll_tax) if getattr(policy, 'total_payroll_tax', None) is not None else 0.0
+        payroll_base = employment * float(policy.avg_annual_wage) * float(policy.payroll_coverage_rate)
+        payroll_revenue = payroll_base * payroll_tax_rate
+        general_revenue = current_gdp * float(policy.general_revenue_pct)
+        other_sources_abs = 0.0
+        if policy.other_funding_sources:
+            for _, frac in policy.other_funding_sources.items():
+                try:
+                    other_sources_abs += current_gdp * float(frac)
+                except Exception:
+                    continue
+        revenue = payroll_revenue + general_revenue + other_sources_abs
+    
     # Initialize previous-year revenue trackers (used for tax-freeze behavior)
     prev_payroll_revenue = payroll_revenue
     prev_general_revenue = general_revenue
@@ -225,6 +436,9 @@ def simulate_healthcare_years(policy, base_gdp: float, initial_debt: float, year
     # Iterate years
     for i in range(years):
         year = start_year + i
+
+        # Update GDP FIRST (compounded growth from initial GDP)
+        current_gdp = base_gdp * ((1.0 + gdp_growth) ** i)
 
         # Update health spending percent (linear towards target over transition window)
         if i < years_to_target:
@@ -252,6 +466,25 @@ def simulate_healthcare_years(policy, base_gdp: float, initial_debt: float, year
             
             general_revenue = income_revenue + corporate_revenue
             other_sources_abs = other_revenue
+            revenue = payroll_revenue + general_revenue + other_sources_abs
+        elif policy.policy_type == PolicyType.USGHA:
+            # USGHA: revenues remain stable as % GDP, grow with GDP
+            general_revenue = current_gdp * float(policy.general_revenue_pct)
+            
+            # Payroll component grows with wages (GDP growth proxy)
+            employment = float(policy.employment_rate) * float(population) if getattr(policy, 'employment_rate', None) is not None else 0.0
+            payroll_base = employment * float(policy.avg_annual_wage) * float(policy.payroll_coverage_rate) * ((1.0 + gdp_growth) ** i)
+            payroll_revenue = payroll_base * payroll_tax_rate
+            
+            # Other sources grow with GDP
+            other_sources_abs = 0.0
+            if policy.other_funding_sources:
+                for _, frac in policy.other_funding_sources.items():
+                    try:
+                        other_sources_abs += current_gdp * float(frac)
+                    except Exception:
+                        continue
+            
             revenue = payroll_revenue + general_revenue + other_sources_abs
         else:
             # Use policy percentages (default behavior)
@@ -300,20 +533,28 @@ def simulate_healthcare_years(policy, base_gdp: float, initial_debt: float, year
             pharmacy_spend = category_spending.get('pharmacy', 0.0)
             pharmacy_negotiation = pharmacy_spend * realized_pct
 
-        # Innovation fund allocation
-        innovation_alloc = 0.0
-        if policy.innovation_fund:
-            innovation_alloc = health_spending * policy.innovation_fund.annual_allocation_pct
+        # Innovation fund allocation - MOVED TO SURPLUS ALLOCATION
+        # (No longer added to expenses; allocated from surplus if savings achieved)
+        innovation_alloc = 0.0  # Will be calculated from surplus later
 
     # (revenue already computed above as absolute USD totals)
 
-        # Surplus = revenue - (health_spending + innovation_alloc) + admin & negotiation savings
+        # Surplus = revenue - health_spending + savings (pharmacy negotiation)
+        # CORRECTED: NO innovation_alloc in expenses!
         total_savings = pharmacy_negotiation
-        estimated_expenses = health_spending + innovation_alloc - total_savings
+        estimated_expenses = health_spending - total_savings
         surplus = revenue - estimated_expenses
 
-        # Apply surplus allocation to debt reduction (only portion after contingency/reserve)
+        # Initialize allocation variables
+        contingency_reserve = 0.0
         debt_reduction = 0.0
+        infrastructure_alloc = 0.0
+        dividend_pool = 0.0
+        dividend_per_capita = 0.0
+        savings_vs_baseline = 0.0
+        innovation_alloc = 0.0
+
+        # Apply surplus allocation to debt reduction (only portion after contingency/reserve)
         circuit_breaker_triggered = False
 
         # Check fiscal circuit breaker (spending as % GDP)
@@ -336,17 +577,40 @@ def simulate_healthcare_years(policy, base_gdp: float, initial_debt: float, year
                 health_spending = health_spending * 0.95
 
         if surplus > 0:
-            # Reserve portion
-            reserve_pct = policy.surplus_allocation.contingency_reserve_pct if policy.surplus_allocation else 0.10
-            reserve = surplus * reserve_pct
-            distributable = surplus - reserve
-            # Debt reduction is primary recipient
-            debt_reduction_pct = policy.surplus_allocation.national_debt_reduction_pct if policy.surplus_allocation else 0.50
-            debt_reduction = distributable * debt_reduction_pct
+            # ========== SURPLUS ALLOCATION (Section 11(a)) ==========
+            # Allocate surplus per legislation
+            contingency_reserve = surplus * 0.10
+            remaining_surplus = surplus - contingency_reserve
+            
+            debt_reduction = remaining_surplus * 0.70
+            infrastructure_alloc = remaining_surplus * 0.10
+            dividend_pool = remaining_surplus * 0.10
+            
+            # Apply debt reduction
             current_debt = max(0.0, current_debt - debt_reduction)
+            
+            # Calculate per-capita dividend (April 15 payment)
+            dividend_per_capita = dividend_pool / population if population else 0
+            
+            # ========== INNOVATION FUND ALLOCATION ==========
+            # GHIF from verified savings (Section 9(a)(2))
+            savings_vs_baseline = baseline_health_spending - health_spending
+            if savings_vs_baseline > 0:
+                # Conservative: use 10% of verified savings
+                ghif_allocation_pct = 0.10
+                innovation_alloc = savings_vs_baseline * ghif_allocation_pct
+            else:
+                innovation_alloc = 0.0
         else:
             # Deficit increases debt
             current_debt += abs(surplus)
+            contingency_reserve = 0.0
+            debt_reduction = 0.0
+            infrastructure_alloc = 0.0
+            dividend_pool = 0.0
+            dividend_per_capita = 0.0
+            innovation_alloc = 0.0
+            savings_vs_baseline = 0.0
 
         # Update previous-year revenue trackers for next iteration
         prev_payroll_revenue = payroll_revenue
@@ -366,16 +630,21 @@ def simulate_healthcare_years(policy, base_gdp: float, initial_debt: float, year
             'Payroll Revenue ($)': payroll_revenue,
             'General Revenue ($)': general_revenue,
             'Other Revenues ($)': other_sources_abs,
+            'Baseline Health Spending ($)': baseline_health_spending,
+            'Savings vs Baseline ($)': savings_vs_baseline,
             'Innovation Fund ($)': innovation_alloc,
             'Pharmacy Negotiation Savings ($)': pharmacy_negotiation,
             'Administrative Spending ($)': admin_spending,
             'Surplus ($)': surplus,
+            'Contingency Reserve ($)': contingency_reserve,
             'Debt Reduction ($)': debt_reduction,
+            'Infrastructure Allocation ($)': infrastructure_alloc,
+            'Dividend Pool ($)': dividend_pool,
+            'Dividend Per Capita ($)': dividend_per_capita,
             'Remaining Debt ($)': current_debt,
             'Circuit Breaker Triggered': circuit_breaker_triggered,
         })
 
-        # Update GDP by growth
-        current_gdp = current_gdp * (1.0 + gdp_growth)
+        # GDP already updated at start of loop
 
     return pd.DataFrame(rows)
