@@ -131,10 +131,16 @@ class MedicareModel:
     - Comparison with baseline projections
     """
 
-    def __init__(self, assumptions: Optional[MedicareAssumptions] = None):
+    def __init__(self, assumptions: Optional[MedicareAssumptions] = None, seed: Optional[int] = None):
         """Initialize Medicare model with assumptions."""
         self.assumptions = assumptions or MedicareAssumptions()
         self.baseline_year = 2025
+        self.seed = seed
+        
+        if seed is not None:
+            np.random.seed(seed)
+            logger.info(f"Random seed set to {seed} for reproducibility")
+        
         logger.info("Medicare model initialized with 2025 baseline")
 
     def project_enrollment(
@@ -370,10 +376,16 @@ class MedicaidModel:
     - Policy reform scenarios (eligibility changes, payment rates)
     """
 
-    def __init__(self, assumptions: Optional[MedicaidAssumptions] = None):
+    def __init__(self, assumptions: Optional[MedicaidAssumptions] = None, seed: Optional[int] = None):
         """Initialize Medicaid model with assumptions."""
         self.assumptions = assumptions or MedicaidAssumptions()
         self.baseline_year = 2025
+        self.seed = seed
+        
+        if seed is not None:
+            np.random.seed(seed)
+            logger.info(f"Random seed set to {seed} for reproducibility")
+        
         logger.info("Medicaid model initialized with 2025 baseline")
 
     def project_enrollment(

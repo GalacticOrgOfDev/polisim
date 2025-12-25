@@ -127,9 +127,6 @@ class PolicyMechanicsExtractor:
         mechanics.surplus_allocation = PolicyMechanicsExtractor._extract_surplus_section_11(text)
         mechanics.source_sections["surplus_allocation"] = PolicyMechanicsExtractor._extract_section(text, 11) or ""
         
-        # Mark unfunded if no revenue sources found
-        mechanics.unfunded = len(mechanics.funding_mechanisms) == 0
-
         # Extract circuit breakers (Section 6d)
         mechanics.circuit_breakers = PolicyMechanicsExtractor._extract_circuit_breakers(text)
         mechanics.source_sections["circuit_breakers"] = PolicyMechanicsExtractor._extract_section(text, 6) or ""
@@ -148,8 +145,8 @@ class PolicyMechanicsExtractor:
         # Extract spending targets
         spending_target = PolicyMechanicsExtractor._extract_spending_target(text)
         if spending_target:
-            mechanics.target_spending_pct_gdp = spending_target.get('target_pct')
-            mechanics.target_spending_year = spending_target.get('target_year')
+            mechanics.target_spending_pct_gdp = spending_target.get('target_pct', None)
+            mechanics.target_spending_year = spending_target.get('target_year', None)
         
         # Extract coverage provisions
         mechanics.zero_out_of_pocket = bool(re.search(r'zero[- ]out[- ]of[- ]pocket', text, re.IGNORECASE))
@@ -182,94 +179,11 @@ class PolicyMechanicsExtractor:
 
         spending_target = PolicyMechanicsExtractor._extract_spending_target(text)
         if spending_target:
-            mechanics.target_spending_pct_gdp = spending_target.get("target_pct")
-            mechanics.target_spending_year = spending_target.get("target_year")
+            mechanics.target_spending_pct_gdp = spending_target.get("target_pct", None)
+            mechanics.target_spending_year = spending_target.get("target_year", None)
 
         mechanics.confidence_score = PolicyMechanicsExtractor._calculate_confidence(mechanics)
         return mechanics
-
-
-        def mechanics_from_dict(data: Dict[str, Any], default_name: str = "Uploaded Policy",
-                                default_type: str = "healthcare") -> PolicyMechanics:
-            """Rehydrate PolicyMechanics from a serialized dictionary.
-
-            This is used when loading extracted mechanics from disk (e.g., uploaded
-            policies, saved scenarios) so the context-aware simulator can operate on
-            the full structured object instead of a plain dict.
-            """
-            mechanics = PolicyMechanics(
-                policy_name=data.get("policy_name", default_name),
-                policy_type=data.get("policy_type", default_type)
-            )
-
-            # Core mechanics
-            for fm in data.get("funding_mechanisms", []) or []:
-                mechanics.funding_mechanisms.append(FundingMechanism(
-                    source_type=fm.get("source_type", ""),
-                    percentage_gdp=fm.get("percentage_gdp"),
-                    percentage_rate=fm.get("percentage_rate"),
-                    description=fm.get("description", ""),
-                    phase_in_start=fm.get("phase_in_start"),
-                    phase_in_end=fm.get("phase_in_end"),
-                    conditions=fm.get("conditions", []) or []
-                ))
-
-            alloc = data.get("surplus_allocation") or None
-            if alloc:
-                mechanics.surplus_allocation = SurplusAllocation(
-                    contingency_reserve_pct=alloc.get("contingency_reserve_pct", 0.0),
-                    debt_reduction_pct=alloc.get("debt_reduction_pct", 0.0),
-                    infrastructure_pct=alloc.get("infrastructure_pct", 0.0),
-                    dividends_pct=alloc.get("dividends_pct", 0.0),
-                    other_allocations=alloc.get("other_allocations", {}) or {},
-                    trigger_conditions=alloc.get("trigger_conditions", []) or []
-                )
-
-            for cb in data.get("circuit_breakers", []) or []:
-                mechanics.circuit_breakers.append(CircuitBreaker(
-                    trigger_type=cb.get("trigger_type", ""),
-                    threshold_value=cb.get("threshold_value", 0.0),
-                    threshold_unit=cb.get("threshold_unit", ""),
-                    action=cb.get("action", ""),
-                    description=cb.get("description", "")
-                ))
-
-            innovation = data.get("innovation_fund") or None
-            if innovation:
-                mechanics.innovation_fund = InnovationFundRules(
-                    funding_min_pct=innovation.get("funding_min_pct", 0.0),
-                    funding_max_pct=innovation.get("funding_max_pct", 0.0),
-                    funding_base=innovation.get("funding_base", ""),
-                    prize_min_dollars=innovation.get("prize_min_dollars", 0.0),
-                    prize_max_dollars=innovation.get("prize_max_dollars", 0.0),
-                    annual_cap_pct=innovation.get("annual_cap_pct", 0.0),
-                    annual_cap_base=innovation.get("annual_cap_base", ""),
-                    eligible_categories=innovation.get("eligible_categories", []) or []
-                )
-
-            for mile in data.get("timeline_milestones", []) or []:
-                try:
-                    mechanics.timeline_milestones.append(TimelineMilestone(
-                        year=int(mile.get("year")),
-                        description=mile.get("description", ""),
-                        metric_type=mile.get("metric_type", ""),
-                        target_value=mile.get("target_value")
-                    ))
-                except Exception:
-                    continue
-
-            # Policy targets and flags
-            mechanics.target_spending_pct_gdp = data.get("target_spending_pct_gdp")
-            mechanics.target_spending_year = data.get("target_spending_year")
-            mechanics.zero_out_of_pocket = bool(data.get("zero_out_of_pocket", False))
-            mechanics.universal_coverage = bool(data.get("universal_coverage", False))
-
-            # Optional metadata
-            mechanics.source_sections = data.get("source_sections", {}) or {}
-            mechanics.confidence_score = float(data.get("confidence_score", 0.0)) if data.get("confidence_score") is not None else 0.0
-
-            return mechanics
-
 
     @staticmethod
     def mechanics_from_dict(data: Dict[str, Any], default_name: str = "Uploaded Policy",
@@ -284,11 +198,11 @@ class PolicyMechanicsExtractor:
         for fm in data.get("funding_mechanisms", []) or []:
             mechanics.funding_mechanisms.append(FundingMechanism(
                 source_type=fm.get("source_type", ""),
-                percentage_gdp=fm.get("percentage_gdp"),
-                percentage_rate=fm.get("percentage_rate"),
+                percentage_gdp=fm.get("percentage_gdp", None),
+                percentage_rate=fm.get("percentage_rate", None),
                 description=fm.get("description", ""),
-                phase_in_start=fm.get("phase_in_start"),
-                phase_in_end=fm.get("phase_in_end"),
+                phase_in_start=fm.get("phase_in_start", None),
+                phase_in_end=fm.get("phase_in_end", None),
                 conditions=fm.get("conditions", []) or []
             ))
 

@@ -5,6 +5,9 @@ comparing policies using CBO-style analysis.
 """
 
 import pandas as pd
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def compute_policy_metrics(df):
@@ -21,7 +24,8 @@ def compute_policy_metrics(df):
     """
     try:
         import pandas as _pd  # local import to avoid issues if pandas is missing
-    except Exception:  # pragma: no cover - should already be imported at top
+    except Exception as e:  # pragma: no cover - should already be imported at top
+        logger.warning(f"Failed to import pandas: {e}")
         _pd = None
 
     if df is None or _pd is None:
@@ -29,7 +33,8 @@ def compute_policy_metrics(df):
     try:
         if getattr(df, "empty", True):  # handles non-DataFrame inputs safely
             return {}
-    except Exception:
+    except Exception as e:
+        logger.warning(f"Failed to check if DataFrame is empty: {e}")
         return {}
 
     metrics = {}
@@ -37,7 +42,8 @@ def compute_policy_metrics(df):
     # Basic horizon information
     try:
         metrics['Simulation years'] = int(len(df))
-    except Exception:
+    except Exception as e:
+        logger.warning(f"Failed to compute simulation years: {e}")
         pass
 
     # Surplus-related metrics
@@ -47,12 +53,17 @@ def compute_policy_metrics(df):
             avg_surplus = float(df['Total Surplus'].mean())
             metrics['Cumulative total surplus (T$)'] = round(total_surplus, 2)
             metrics['Average annual surplus (T$/yr)'] = round(avg_surplus, 2)
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Failed to compute surplus metrics: {e}")
             pass
 
     # Debt and debt-to-GDP metrics
     if 'Remaining Debt' in df.columns and 'GDP' in df.columns:
         try:
+            if df.empty:
+                logger.warning("DataFrame is empty, skipping debt metrics")
+                return metrics
+            
             final_debt = float(df['Remaining Debt'].iloc[-1])
             start_debt = float(df['Remaining Debt'].iloc[0])
             metrics['Final year debt (T$)'] = round(final_debt, 2)
@@ -74,7 +85,8 @@ def compute_policy_metrics(df):
                 metrics['Year debt fully paid off (<=0 T$)'] = int(zero_debt_rows['Year'].iloc[0])
             else:
                 metrics['Year debt fully paid off (<=0 T$)'] = "Not within horizon"
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Failed to compute debt metrics: {e}")
             pass
 
     return metrics
@@ -108,7 +120,8 @@ def calculate_cbo_summary(df_current, df_proposed):
         if isinstance(cur_val, (int, float)) and isinstance(prop_val, (int, float)):
             try:
                 diff = round(prop_val - cur_val, 2)
-            except Exception:
+            except Exception as e:
+                logger.warning(f"Failed to compute difference for metric '{key}': {e}")
                 diff = None
         rows.append({
             'Metric': key,

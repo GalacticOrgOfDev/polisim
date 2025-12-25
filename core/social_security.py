@@ -20,6 +20,13 @@ from enum import Enum
 
 logger = logging.getLogger(__name__)
 
+# Constants for Social Security calculations
+POPULATION_CONVERSION_TO_MILLIONS = 1_000  # Convert population to millions
+MONTHS_PER_YEAR = 12  # Months in a year
+WORKING_YEARS_SPAN = 45  # Years between age 20 and 65
+OASI_SHARE_OF_PAYROLL = 0.85  # OASI receives 85% of Social Security payroll tax
+DI_SHARE_OF_PAYROLL = 0.15  # DI receives 15% of Social Security payroll tax
+
 
 class BenefitType(Enum):
     """Social Security benefit types."""
@@ -104,6 +111,9 @@ class TrustFundAssumptions:
     # Payroll tax parameters
     payroll_tax_rate: float = 0.124  # 12.4% combined rate
     payroll_tax_cap: float = 168_600.0  # 2025 cap
+    
+    # Trust fund interest rate
+    trust_fund_interest_rate: float = 0.035  # 3.5% average treasury rate
 
     # Initial beneficiary counts (millions)
     oasi_beneficiaries: float = 45.5
@@ -127,6 +137,7 @@ class SocialSecurityModel:
         benefit_formula: Optional[BenefitFormula] = None,
         trust_fund: Optional[TrustFundAssumptions] = None,
         start_year: int = 2025,
+        seed: Optional[int] = None,
     ):
         """Initialize Social Security model with assumptions."""
         self.demographics = demographics or DemographicAssumptions.ssa_2024_trustees()
@@ -135,6 +146,23 @@ class SocialSecurityModel:
         )
         self.trust_fund = trust_fund or TrustFundAssumptions.ssa_2024_trustees()
         self.start_year = start_year
+        self.seed = seed
+        
+        # Input validation
+        if self.demographics.total_fertility_rate < 0 or self.demographics.total_fertility_rate > 10:
+            raise ValueError(f"Fertility rate {self.demographics.total_fertility_rate} outside reasonable range [0, 10]")
+        if self.demographics.net_immigration_annual < -10_000_000 or self.demographics.net_immigration_annual > 10_000_000:
+            raise ValueError(f"Immigration {self.demographics.net_immigration_annual} outside reasonable range [-10M, 10M]")
+        if self.trust_fund.oasi_beginning_balance < 0:
+            raise ValueError(f"OASI balance cannot be negative: {self.trust_fund.oasi_beginning_balance}")
+        if self.trust_fund.di_beginning_balance < 0:
+            raise ValueError(f"DI balance cannot be negative: {self.trust_fund.di_beginning_balance}")
+        if not 0 <= self.trust_fund.trust_fund_interest_rate <= 1:
+            raise ValueError(f"Interest rate {self.trust_fund.trust_fund_interest_rate:.2%} outside reasonable range [0%, 100%]")
+        
+        if seed is not None:
+            np.random.seed(seed)
+            logger.info(f"Random seed set to {seed} for reproducibility")
 
         logger.info(
             f"Social Security Model initialized for {start_year} "
@@ -164,6 +192,9 @@ class SocialSecurityModel:
         base_pop = np.array([1_000_000] * 101)  # Simplified uniform
 
         for it in range(iterations):
+            if it % 1000 == 0 and it > 0:
+                logger.info(f"  Population projection: {it}/{iterations} iterations ({it/iterations*100:.1f}%)")
+            
             # Sample demographic parameters with uncertainty
             mortality_factor = np.random.normal(
                 1.0, self.demographics.mortality_uncertainty_std
@@ -178,15 +209,23 @@ class SocialSecurityModel:
             pop = base_pop.copy()
 
             for year in range(years):
-                # Project births
-                births = pop[15:50].sum() * self.demographics.total_fertility_rate * fertility_factor / 1_000
+                # Project births (with validation to prevent division by zero)
+                population_15_50 = pop[15:50].sum()
+                if population_15_50 > 0 and self.demographics.total_fertility_rate > 0:
+                    births = population_15_50 * self.demographics.total_fertility_rate * fertility_factor / POPULATION_CONVERSION_TO_MILLIONS
+                else:
+                    births = 0
+                    if year == 0:  # Only warn once per iteration
+                        logger.warning(f"Iteration {it}: Childbearing population or fertility rate is zero")
                 results["births"][year, it] = births
 
                 # Project deaths
                 deaths = pop.sum() * 0.01 * mortality_factor  # Simplified
                 results["deaths"][year, it] = deaths
 
-                # Age population
+                # Age population (validate array shape)
+                if len(pop) != 101:
+                    raise ValueError(f"Population array must be length 101, got {len(pop)}")
                 new_pop = np.zeros(101)
                 new_pop[0] = births + self.demographics.net_immigration_annual * immigration_factor
                 new_pop[1:] = pop[:-1]
@@ -264,25 +303,38 @@ class SocialSecurityModel:
                 )
 
                 # Interest income on trust fund balance
-                interest_rate = 0.035
+                interest_rate = self.trust_fund.trust_fund_interest_rate
                 interest_income = oasi_balance * interest_rate
 
-                # Benefit outgo (millions per month × 12 months, convert to billions)
+                # Benefit outgo (millions per month × MONTHS_PER_YEAR, convert to billions)
                 benefit_payments = (
                     (oasi_beneficiaries + di_beneficiaries)
                     * avg_benefit
-                    * 12
-                    / 1_000
+                    * MONTHS_PER_YEAR
+                    / POPULATION_CONVERSION_TO_MILLIONS
                 )
 
                 # Administrative expenses (~1% of outgo)
                 admin_expenses = benefit_payments * 0.01
 
-                # Update trust fund balances
-                oasi_balance = (
-                    oasi_balance + payroll_tax_income + interest_income - benefit_payments
-                )
-                di_balance = max(di_balance, 0)  # DI fund stays positive
+                # Update trust fund balances with depletion handling
+                oasi_balance_new = oasi_balance + payroll_tax_income + interest_income - benefit_payments - admin_expenses
+                if oasi_balance_new < 0:
+                    # Trust fund depleted - benefits reduced to match income (current law deficit)
+                    logger.warning(f"Year {year}, Iteration {iteration}: OASI trust fund depleted, applying benefit cuts")
+                    shortfall_pct = abs(oasi_balance_new) / benefit_payments if benefit_payments > 0 else 0
+                    benefit_payments *= (1 - shortfall_pct)
+                    oasi_balance = 0
+                else:
+                    oasi_balance = oasi_balance_new
+                
+                di_balance_new = di_balance + payroll_tax_income * 0.15 + interest_income * 0.15 - (benefit_payments * 0.15) - (admin_expenses * 0.15)
+                if di_balance_new < 0:
+                    # DI trust fund depleted
+                    logger.warning(f"Year {year}, Iteration {iteration}: DI trust fund depleted, applying benefit cuts")
+                    di_balance = 0
+                else:
+                    di_balance = di_balance_new
 
                 # Record projection
                 results.append(
@@ -340,13 +392,20 @@ class SocialSecurityModel:
                     depletion_years.append(depletion_year)
 
             if depletion_years:
+                unique_iterations = len(projections["iteration"].unique())
+                if unique_iterations > 0:
+                    probability_depleted = float(len(depletion_years) / unique_iterations)
+                else:
+                    probability_depleted = 0.0
+                    logger.warning(f"{fund.upper()}: No iterations found in projections DataFrame")
+                
                 results[fund.upper()] = {
                     "depletion_year_mean": float(np.mean(depletion_years)),
                     "depletion_year_median": float(np.median(depletion_years)),
                     "depletion_year_std": float(np.std(depletion_years)),
                     "depletion_year_10pct": float(np.percentile(depletion_years, 10)),
                     "depletion_year_90pct": float(np.percentile(depletion_years, 90)),
-                    "probability_depleted": float(len(depletion_years) / len(projections["iteration"].unique())),
+                    "probability_depleted": probability_depleted,
                 }
             else:
                 results[fund.upper()] = {

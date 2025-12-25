@@ -3,15 +3,66 @@ __pycache__/
 *$py.class
 *.so
 .Python
+
+# Virtual environments
 env/
 venv/
+.venv/
 ENV/
+
+# Data files
 *.csv
+*.xlsx
 *.log
+
+# OS files
 .DS_Store
+Thumbs.db
+
+# IDE and editor files
 .vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Python distribution
 *.egg-info/
 dist/
 build/
+*.egg
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+*.cover
+.hypothesis/
+
+# MCP config (local only)
+.claude_mcp_config.json
+mcp_config.json
+
+# Reports and outputs
+reports/generated/
+reports/test_outputs/
+reports/charts/
+reports/package/
+reports/*.xlsx
+
+# Test temporary files
+tests/extracted_mechanics_test.json
+tests/section6_temp.txt
+tests/__pycache__/
+
+# Config files with local paths
+config.yaml
+
 # Local copilot instructions
 .github/copilot-instructions.md
+
+# Project guidelines (internal only)
+project guidelines/
+
+# Streamlit
+.streamlit/

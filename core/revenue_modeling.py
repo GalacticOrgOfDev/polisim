@@ -18,6 +18,12 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Constants for revenue modeling calculations
+STANDARD_DEVIATION_TAX_REVENUE = 0.02  # 2% standard deviation for tax revenue uncertainty
+CORPORATE_PROFIT_GDP_ELASTICITY = 2.0  # Corporate profits grow 2x GDP growth rate
+SOCIAL_SECURITY_SHARE_OF_PAYROLL = 0.55  # SS receives 55% of payroll taxes
+MEDICARE_SHARE_OF_PAYROLL = 0.45  # Medicare receives 45% of payroll taxes
+
 
 @dataclass
 class IndividualIncomeTaxAssumptions:
@@ -124,12 +130,28 @@ class FederalRevenueModel:
         corporate_income_tax: Optional[CorporateIncomeTaxAssumptions] = None,
         start_year: int = 2025,
         baseline_revenues_billions: Optional[Dict[str, float]] = None,
+        seed: Optional[int] = None,
     ):
         """Initialize revenue model."""
         self.iit = individual_income_tax or IndividualIncomeTaxAssumptions.cbo_2025_baseline()
         self.payroll = payroll_taxes or PayrollTaxAssumptions.ssa_2024_trustees()
         self.corporate = corporate_income_tax or CorporateIncomeTaxAssumptions.cbo_2025_baseline()
         self.start_year = start_year
+        self.seed = seed
+        
+        # Input validation
+        if self.iit.tax_brackets and len(self.iit.tax_brackets) > 0:
+            top_rate = self.iit.tax_brackets[-1][1]  # Get rate from last bracket
+            if not 0 <= top_rate <= 1:
+                raise ValueError(f"Top marginal tax rate {top_rate:.1%} outside reasonable range [0%, 100%]")
+        if not 0 <= self.payroll.wage_growth_rate <= 0.5:
+            raise ValueError(f"Wage growth {self.payroll.wage_growth_rate:.1%} outside reasonable range [0%, 50%]")
+        if not 0 <= self.corporate.marginal_tax_rate <= 1:
+            raise ValueError(f"Corporate tax rate {self.corporate.marginal_tax_rate:.1%} outside reasonable range [0%, 100%]")
+        
+        if seed is not None:
+            np.random.seed(seed)
+            logger.info(f"Random seed set to {seed} for reproducibility")
 
         # 2025 baseline revenue estimates (billions)
         self.baseline_revenues = baseline_revenues_billions or {
@@ -169,8 +191,8 @@ class FederalRevenueModel:
         effective_rates = np.zeros((years, iterations))
 
         for it in range(iterations):
-            if it % 1000 == 0:
-                logger.debug(f"  Iteration {it}/{iterations}")
+            if it % 1000 == 0 and it > 0:
+                logger.info(f"  Individual income tax projection: {it}/{iterations} iterations ({it/iterations*100:.1f}%)")
 
             revenue = self.baseline_revenues["individual_income_tax"]
 
@@ -191,7 +213,16 @@ class FederalRevenueModel:
                 revenue = revenue * tax_base_growth * growth_noise
 
                 # Effective tax rate (for reference)
-                effective_rate = revenue / (self.baseline_revenues["individual_income_tax"] / 0.08)
+                # Protect against division by zero with nested division check
+                baseline_iit = self.baseline_revenues.get("individual_income_tax", 0.0)
+                if baseline_iit > 0:
+                    tax_base = baseline_iit / 0.08
+                    if tax_base > 0:
+                        effective_rate = revenue / tax_base
+                    else:
+                        effective_rate = 0.08  # Fallback to default rate
+                else:
+                    effective_rate = 0.08  # Fallback to default rate
 
                 revenues[year, it] = revenue
                 effective_rates[year, it] = effective_rate
@@ -228,11 +259,11 @@ class FederalRevenueModel:
         medicare_revenues = np.zeros((years, iterations))
 
         for it in range(iterations):
-            if it % 1000 == 0:
-                logger.debug(f"  Iteration {it}/{iterations}")
+            if it % 1000 == 0 and it > 0:
+                logger.info(f"  Payroll tax projection: {it}/{iterations} iterations ({it/iterations*100:.1f}%)")
 
-            ss_revenue = self.baseline_revenues["payroll_taxes"] * 0.55  # ~55% of payroll tax
-            medicare_revenue = self.baseline_revenues["payroll_taxes"] * 0.45
+            ss_revenue = self.baseline_revenues["payroll_taxes"] * SOCIAL_SECURITY_SHARE_OF_PAYROLL
+            medicare_revenue = self.baseline_revenues["payroll_taxes"] * MEDICARE_SHARE_OF_PAYROLL
 
             for year in range(years):
                 # Wage base growth
@@ -286,15 +317,15 @@ class FederalRevenueModel:
         revenues = np.zeros((years, iterations))
 
         for it in range(iterations):
-            if it % 1000 == 0:
-                logger.debug(f"  Iteration {it}/{iterations}")
+            if it % 1000 == 0 and it > 0:
+                logger.info(f"  Corporate income tax projection: {it}/{iterations} iterations ({it/iterations*100:.1f}%)")
 
             revenue = self.baseline_revenues["corporate_income_tax"]
 
             for year in range(years):
                 # Corporate profits highly sensitive to GDP growth
                 # Elasticity ~2.0 (1% GDP growth → 2% profit growth)
-                profit_growth = (1 + gdp_growth[year] * 2.0) ** (year + 1)
+                profit_growth = (1 + gdp_growth[year] * CORPORATE_PROFIT_GDP_ELASTICITY) ** (year + 1)
 
                 # Add profit volatility (recession risk)
                 recession_risk = 1.0

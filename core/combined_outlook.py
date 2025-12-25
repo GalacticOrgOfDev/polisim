@@ -12,6 +12,7 @@ Provides:
 import numpy as np
 import pandas as pd
 from typing import Dict, Tuple, Optional
+import logging
 
 from core.revenue_modeling import FederalRevenueModel
 from core.social_security import SocialSecurityModel
@@ -19,6 +20,8 @@ from core.medicare_medicaid import MedicareModel, MedicaidModel
 from core.healthcare import get_policy_by_type, PolicyType
 from core.discretionary_spending import DiscretionarySpendingModel
 from core.interest_spending import InterestOnDebtModel
+
+logger = logging.getLogger(__name__)
 
 
 class CombinedFiscalOutlookModel:
@@ -82,9 +85,11 @@ class CombinedFiscalOutlookModel:
         revenue_billions = np.ones(years) * 5000 + np.cumsum(revenue_gdp_growth * 50)  # ~$5T baseline
         
         # Healthcare spending
-        # For Phase 1, use simplified projection
-        # TODO: Integrate actual healthcare module when available in Streamlit
-        healthcare_spending = np.ones(years) * 500  # Placeholder: ~$500B/year
+        # Using baseline healthcare growth model (4-5% annual growth from ~$4.5T base)
+        # This represents total national health expenditure (NHE) projections
+        base_healthcare = 4500  # ~$4.5T baseline NHE
+        healthcare_growth_rates = np.linspace(0.04, 0.05, years)  # 4-5% annual growth
+        healthcare_spending = base_healthcare * np.cumprod(1 + healthcare_growth_rates)
         
         # Social Security
         ss_df = self._get_ss_spending(years, iterations, ss_scenario)
@@ -105,6 +110,24 @@ class CombinedFiscalOutlookModel:
             years, iterations, interest_rate_scenario=interest_scenario
         )
         
+        # Helper function to safely extract spending arrays
+        def _safe_extract_spending(df, column, years, default_value=0):
+            """Extract spending column with proper shape handling."""
+            if df.empty or column not in df.columns:
+                logger.warning(f"DataFrame empty or missing '{column}', using default {default_value}")
+                return np.full(years, default_value)
+            values = df[column].values
+            if len(values) == years:
+                return values
+            elif len(values) < years:
+                # Extrapolate using last value
+                logger.warning(f"Column '{column}' has {len(values)} values, extrapolating to {years}")
+                return np.pad(values, (0, years - len(values)), mode='edge')
+            else:
+                # Truncate
+                logger.warning(f"Column '{column}' has {len(values)} values, truncating to {years}")
+                return values[:years]
+        
         # Combine into unified budget
         unified = pd.DataFrame({
             "year": year_array,
@@ -112,11 +135,11 @@ class CombinedFiscalOutlookModel:
             "total_revenue": revenue_billions,
             # Spending
             "healthcare_spending": healthcare_spending,
-            "social_security_spending": ss_df["spending"].values if len(ss_df) == years else np.mean(ss_df["spending"]) * np.ones(years),
-            "medicare_spending": medicare_df["spending"].values if len(medicare_df) == years else np.mean(medicare_df["spending"]) * np.ones(years),
-            "medicaid_spending": medicaid_df["spending"].values if len(medicaid_df) == years else np.mean(medicaid_df["spending"]) * np.ones(years),
-            "discretionary_spending": discret_df["total_mean"].values,
-            "interest_spending": interest_df["interest_billions"].values,
+            "social_security_spending": _safe_extract_spending(ss_df, "spending", years),
+            "medicare_spending": _safe_extract_spending(medicare_df, "spending", years),
+            "medicaid_spending": _safe_extract_spending(medicaid_df, "spending", years),
+            "discretionary_spending": _safe_extract_spending(discret_df, "total_mean", years),
+            "interest_spending": _safe_extract_spending(interest_df, "interest_billions", years),
         })
         
         # Calculate totals

@@ -11,8 +11,11 @@ Components:
 
 import numpy as np
 import pandas as pd
+import logging
 from dataclasses import dataclass
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple, List, Optional
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -43,8 +46,13 @@ class DiscretionaryAssumptions:
 class DiscretionarySpendingModel:
     """Projects federal discretionary spending under different scenarios."""
     
-    def __init__(self, assumptions: DiscretionaryAssumptions = None):
+    def __init__(self, assumptions: DiscretionaryAssumptions = None, seed: Optional[int] = None):
         self.assumptions = assumptions or DiscretionaryAssumptions()
+        self.seed = seed
+        
+        if seed is not None:
+            np.random.seed(seed)
+            logger.info(f"Random seed set to {seed} for reproducibility")
     
     def project_defense(
         self,
@@ -84,6 +92,9 @@ class DiscretionarySpendingModel:
         projections = np.zeros((iterations, years))
         
         for i in range(iterations):
+            if i % 1000 == 0 and i > 0:
+                logger.info(f"  Defense spending projection: {i}/{iterations} iterations ({i/iterations*100:.1f}%)")
+            
             # Add stochastic variation to growth rates (±1%)
             stochastic_rate = growth_rate + np.random.normal(0, 0.01)
             

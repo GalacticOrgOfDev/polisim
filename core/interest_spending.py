@@ -11,8 +11,11 @@ Handles:
 
 import numpy as np
 import pandas as pd
+import logging
 from dataclasses import dataclass
-from typing import Dict
+from typing import Dict, Optional
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -46,8 +49,13 @@ class DebtAssumptions:
 class InterestOnDebtModel:
     """Projects federal interest expenses under different scenarios."""
     
-    def __init__(self, assumptions: DebtAssumptions = None):
+    def __init__(self, assumptions: DebtAssumptions = None, seed: Optional[int] = None):
         self.assumptions = assumptions or DebtAssumptions()
+        self.seed = seed
+        
+        if seed is not None:
+            np.random.seed(seed)
+            logger.info(f"Random seed set to {seed} for reproducibility")
     
     def calculate_current_interest_rate(self) -> float:
         """Calculate weighted average current interest rate on debt."""

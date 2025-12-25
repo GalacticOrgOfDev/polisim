@@ -4,8 +4,14 @@ This module handles multi-year simulations of economic policies,
 tracking GDP, debt, surplus, and other macroeconomic indicators.
 """
 
+from typing import Optional
+import logging
+
 import pandas as pd
 from tkinter import messagebox
+
+logger = logging.getLogger(__name__)
+
 from core.economics import calculate_revenues_and_outs
 from core.healthcare import PolicyType
 from core.context_aware_healthcare import (
@@ -14,7 +20,6 @@ from core.context_aware_healthcare import (
     SpendingBreakdown,
     SurplusBreakdown
 )
-from typing import Optional
 
 
 def _simulate_with_mechanics(policy, base_gdp: float, initial_debt: float, years: int,
@@ -104,9 +109,14 @@ def _simulate_with_mechanics(policy, base_gdp: float, initial_debt: float, years
                 cap = surplus * (policy.mechanics.innovation_fund.annual_cap_pct / 100)
                 innovation_fund_amount = min(innovation_fund_amount, cap)
         
-        # Per capita metrics
-        per_capita_spending = spending_breakdown.net_spending / population
-        dividend_per_capita = dividend_pool / population if dividend_pool > 0 else 0.0
+        # Per capita metrics (with validation to prevent division by zero)
+        if population > 0:
+            per_capita_spending = spending_breakdown.net_spending / population
+            dividend_per_capita = dividend_pool / population if dividend_pool > 0 else 0.0
+        else:
+            per_capita_spending = 0.0
+            dividend_per_capita = 0.0
+            logger.error(f"Year {year}: Population is zero or negative, cannot calculate per-capita metrics")
         
         # Circuit breaker status
         circuit_breaker_triggered = len(circuit_breakers) > 0
@@ -404,10 +414,11 @@ def simulate_healthcare_years(policy, base_gdp: float, initial_debt: float, year
         # Other sources: converted premiums + efficiency gains
         other_sources_abs = 0.0
         if policy.other_funding_sources:
-            for _, frac in policy.other_funding_sources.items():
+            for source_name, frac in policy.other_funding_sources.items():
                 try:
                     other_sources_abs += current_gdp * float(frac)
-                except Exception:
+                except Exception as e:
+                    logger.warning(f"Failed to process USGHA funding source '{source_name}': {e}")
                     continue
         
         # Total USGHA revenue: ~10-11% GDP initially, remains stable
@@ -421,10 +432,11 @@ def simulate_healthcare_years(policy, base_gdp: float, initial_debt: float, year
         general_revenue = current_gdp * float(policy.general_revenue_pct)
         other_sources_abs = 0.0
         if policy.other_funding_sources:
-            for _, frac in policy.other_funding_sources.items():
+            for source_name, frac in policy.other_funding_sources.items():
                 try:
                     other_sources_abs += current_gdp * float(frac)
-                except Exception:
+                except Exception as e:
+                    logger.warning(f"Failed to process funding source '{source_name}': {e}")
                     continue
         revenue = payroll_revenue + general_revenue + other_sources_abs
     
@@ -479,10 +491,11 @@ def simulate_healthcare_years(policy, base_gdp: float, initial_debt: float, year
             # Other sources grow with GDP
             other_sources_abs = 0.0
             if policy.other_funding_sources:
-                for _, frac in policy.other_funding_sources.items():
+                for source_name, frac in policy.other_funding_sources.items():
                     try:
                         other_sources_abs += current_gdp * float(frac)
-                    except Exception:
+                    except Exception as e:
+                        logger.warning(f"Year {year}: Failed to process funding source '{source_name}': {e}")
                         continue
             
             revenue = payroll_revenue + general_revenue + other_sources_abs
@@ -496,10 +509,11 @@ def simulate_healthcare_years(policy, base_gdp: float, initial_debt: float, year
             # Other funding sources grow with GDP
             other_sources_abs = 0.0
             if policy.other_funding_sources:
-                for _, frac in policy.other_funding_sources.items():
+                for source_name, frac in policy.other_funding_sources.items():
                     try:
                         other_sources_abs += current_gdp * float(frac)
-                    except Exception:
+                    except Exception as e:
+                        logger.warning(f"Year {year}: Failed to process funding source '{source_name}': {e}")
                         continue
             # Total revenue = sum of all sources
             revenue = payroll_revenue + general_revenue + other_sources_abs
@@ -517,7 +531,7 @@ def simulate_healthcare_years(policy, base_gdp: float, initial_debt: float, year
             category_spending[key] = health_spending * share * reduction_factor
 
         # Administrative savings: compute baseline admin share and new admin share
-        admin_cat = policy.categories.get('administrative')
+        admin_cat = policy.categories.get('administrative', None)
         admin_share = admin_cat.current_spending_pct if admin_cat else 0.16
         admin_reduction_target = admin_cat.reduction_target if admin_cat else 0.0
         # Linear admin % reduction
@@ -525,7 +539,7 @@ def simulate_healthcare_years(policy, base_gdp: float, initial_debt: float, year
         admin_spending = health_spending * (admin_pct_now / total_cat_share) if total_cat_share > 0 else 0.0
 
         # Negotiation savings (pharmacy)
-        pharmacy_cat = policy.categories.get('pharmacy')
+        pharmacy_cat = policy.categories.get('pharmacy', None)
         pharmacy_negotiation = 0.0
         if pharmacy_cat:
             # Savings realized proportional to negotiation potential and time
@@ -572,8 +586,9 @@ def simulate_healthcare_years(policy, base_gdp: float, initial_debt: float, year
             cut_pct = getattr(policy.circuit_breaker, 'spending_cut_pct', 0.05)
             try:
                 health_spending = health_spending * (1.0 - float(cut_pct))
-            except Exception:
+            except Exception as e:
                 # if malformed, default to 5% cut
+                logger.warning(f"Year {year}: Failed to parse spending_cut_pct: {e}. Using default 5% cut")
                 health_spending = health_spending * 0.95
 
         if surplus > 0:

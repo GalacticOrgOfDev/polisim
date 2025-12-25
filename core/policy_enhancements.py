@@ -310,6 +310,10 @@ class PolicyImpactCalculator:
             )
             
             # 10-year totals
+            if impact_df.empty:
+                logger.warning(f"Impact DataFrame for {scenario_name} is empty, skipping")
+                continue
+            
             total_deficit = impact_df["deficit"].sum()
             total_savings = impact_df["cumulative_savings"].iloc[-1]
             avg_annual_deficit = impact_df["deficit"].mean()

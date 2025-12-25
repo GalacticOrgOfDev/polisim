@@ -5,8 +5,11 @@ and applies overrides from the scenario file so the resulting object is
 compatible with `simulate_healthcare_years`.
 """
 import json
+import logging
 from typing import Any
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 from core.healthcare import HealthcarePolicyFactory, HealthcarePolicyModel, TransitionTimeline
 from core.policy_mechanics_extractor import PolicyMechanicsExtractor
@@ -36,16 +39,18 @@ def load_scenario(path: str) -> HealthcarePolicyModel:
             if pct > 1:
                 pct = pct / 100.0
             policy.healthcare_spending_target_gdp = pct
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Failed to parse health_spending_percent_gdp: {e}")
             pass
 
     # Fiscal
     fiscal = scen.get('fiscal', {})
     # store target year as debt_elimination_year if present
-    if fiscal.get('fiscal_surplus_target_year'):
+    if fiscal.get('fiscal_surplus_target_year', None):
         try:
             policy.debt_elimination_year = int(fiscal['fiscal_surplus_target_year'])
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Failed to parse fiscal_surplus_target_year: {e}")
             pass
 
     # Goals
@@ -57,11 +62,12 @@ def load_scenario(path: str) -> HealthcarePolicyModel:
     # Transition timeline: use provided years_mentioned or simulation settings
     years = scen.get('years_mentioned', [])
     sim_set = scen.get('simulation_settings', {})
-    start_year = sim_set.get('start_year') or (min(years) if years else 2025)
-    within = scen.get('targets', {}).get('target_within_years') or 2
+    start_year = sim_set.get('start_year', None) or (min(years) if years else 2025)
+    within = scen.get('targets', {}).get('target_within_years', 2) or 2
     try:
         start_year = int(start_year)
-    except Exception:
+    except Exception as e:
+        logger.warning(f"Failed to parse start_year '{start_year}': {e}. Using default 2025")
         start_year = 2025
     full_impl = start_year + int(within)
 
@@ -85,7 +91,8 @@ def load_scenario(path: str) -> HealthcarePolicyModel:
 
             if policy.mechanics.target_spending_pct_gdp:
                 policy.healthcare_spending_target_gdp = float(policy.mechanics.target_spending_pct_gdp) / 100.0
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Failed to extract structured mechanics: {e}")
             policy.mechanics = None
 
     # Attach excerpts to description for traceability

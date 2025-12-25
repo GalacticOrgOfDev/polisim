@@ -1,10 +1,10 @@
-"""Simple runner for healthcare simulation.
+r"""Simple runner for healthcare simulation.
 
 Runs a healthcare policy simulation with Monte Carlo uncertainty quantification.
 Generates CSV output with year-by-year projections, revenue, spending, and outcomes.
 
 Usage (PowerShell):
-    cd "e:\\AI Projects\\polisim"
+    cd "e:\AI Projects\polisim"
     python run_health_sim.py [--scenario path/to/scenario.json] [--years 22] [--verbose]
 
 Arguments:
@@ -133,7 +133,7 @@ def main():
             logger.error(f"Failed to write output file: {e}")
             sys.exit(1)
         
-        logger.info('✓ Healthcare simulation completed successfully')
+        logger.info('Healthcare simulation completed successfully')
         return 0
         
     except KeyboardInterrupt:
