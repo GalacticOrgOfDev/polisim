@@ -126,11 +126,11 @@ def _simulate_with_mechanics(policy, base_gdp: float, initial_debt: float, years
         row = {
             'Year': year,
             'GDP': current_gdp,
-            'National Debt': current_debt,
+            'Remaining Debt ($)': current_debt,
             'Debt % GDP': (current_debt / current_gdp) * 100,
             
             # Revenue breakdown
-            'Total Revenue': revenue_breakdown.total,
+            'Revenue ($)': revenue_breakdown.total,
             'Payroll Tax Revenue': revenue_breakdown.payroll_tax,
             'Redirected Federal Revenue': revenue_breakdown.redirected_federal,
             'Converted Premiums Revenue': revenue_breakdown.converted_premiums,
@@ -138,8 +138,8 @@ def _simulate_with_mechanics(policy, base_gdp: float, initial_debt: float, years
             'Other Revenue': revenue_breakdown.other_sources,
             
             # Spending breakdown
-            'Healthcare Spending': spending_breakdown.net_spending,
-            'Healthcare % GDP': (spending_breakdown.net_spending / current_gdp) * 100,
+            'Health Spending ($)': spending_breakdown.net_spending,
+            'Health % GDP': (spending_breakdown.net_spending / current_gdp) * 100,
             'Baseline Health Spending': baseline_health_spending_this_year,
             'Savings vs Baseline': savings_vs_baseline,
             'Administrative Savings': spending_breakdown.administrative_savings,
@@ -147,7 +147,7 @@ def _simulate_with_mechanics(policy, base_gdp: float, initial_debt: float, years
             'Preventive Care Savings': spending_breakdown.preventive_care_savings,
             
             # Fiscal outcomes
-            'Surplus/Deficit': surplus,
+            'Surplus ($)': surplus,
             'Surplus % GDP': (surplus / current_gdp) * 100,
             'Interest Spending': interest_spending,
             
@@ -162,7 +162,7 @@ def _simulate_with_mechanics(policy, base_gdp: float, initial_debt: float, years
             'Innovation Fund': innovation_fund_amount,
             
             # Per capita
-            'Per Capita Spending': per_capita_spending,
+            'Per Capita Health ($)': per_capita_spending,
             'Population': population,
             
             # Circuit breakers

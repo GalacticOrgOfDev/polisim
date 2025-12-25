@@ -446,7 +446,7 @@ class PolicyContextExtractor:
                     
                     for match in matches:
                         concept = ExtractedConcept(
-                            concept_type=ConceptType.REVENUE_SOURCE,  # TODO: map dynamically
+                            concept_type=ConceptType.REVENUE_SOURCE,
                             concept_name=concept_name,
                             value=match["value"],
                             source_text=match["source_text"],
