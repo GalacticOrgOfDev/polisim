@@ -66,3 +66,55 @@ project guidelines/
 
 # Streamlit
 .streamlit/
+
+# Sphinx documentation build
+docs/build/
+docs/_build/
+*.doctree
+
+# Profiling outputs
+*.prof
+profile_output.prof
+
+# Jupyter Notebooks
+*.ipynb_checkpoints/
+.ipynb_checkpoints/
+
+# Cache files
+*.cache
+.cache/
+core/cbo_data_cache.json
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Local environment files
+.env
+.env.local
+.env.*.local
+
+# Node modules (if any frontend work)
+node_modules/
+
+# Mac specific
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows specific
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Git specific
+*.orig
+*.rej

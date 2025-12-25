@@ -35,4 +35,9 @@ for key, occurrences in result['concepts'].items():
     if occurrences:
         print(f"  {key}: {len(occurrences)} occurrences")
         for occ in occurrences[:2]:  # First 2
-            print(f"    - {occ[:80]}...")
+            # Handle both dict and string occurrences
+            if isinstance(occ, dict):
+                text = occ.get('text', str(occ))
+            else:
+                text = str(occ)
+            print(f"    - {text[:80]}...")

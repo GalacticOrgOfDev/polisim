@@ -21,7 +21,7 @@ try:
     from pathlib import Path
     import json
     
-    from core.social_security import SocialSecurityModel, SocialSecurityReforms
+    from core.social_security import SocialSecurityModel, SocialSecurityReforms, TrustFundAssumptions, BenefitFormula
     from core.revenue_modeling import FederalRevenueModel, TaxReforms
     from core.medicare_medicaid import MedicareModel, MedicaidModel
     from core.discretionary_spending import DiscretionarySpendingModel
@@ -46,6 +46,48 @@ try:
     HAS_STREAMLIT = True
 except ImportError:
     HAS_STREAMLIT = False
+
+
+def initialize_settings():
+    """Initialize app settings in session state."""
+    if 'settings' not in st.session_state:
+        st.session_state.settings = {
+            'tooltips_enabled': True,
+            'show_advanced_options': False,
+            'decimal_places': 1,
+            'chart_theme': 'plotly_white'
+        }
+
+def get_tooltip(term, definition):
+    """Return tooltip help text if enabled, otherwise empty string."""
+    if st.session_state.get('settings', {}).get('tooltips_enabled', True):
+        return definition
+    return None
+
+
+def get_column_safe(df: pd.DataFrame, primary: str, fallback: str) -> str:
+    """
+    Get column name with fallback support for legacy data compatibility.
+    
+    M1 Fix: Standardized column name resolution across all dashboard pages.
+    
+    Args:
+        df: DataFrame to check
+        primary: Preferred column name (modern convention)
+        fallback: Legacy column name to use if primary not found
+        
+    Returns:
+        Column name that exists in the DataFrame
+        
+    Raises:
+        KeyError: If neither primary nor fallback exist
+    """
+    if primary in df.columns:
+        return primary
+    elif fallback in df.columns:
+        return fallback
+    else:
+        raise KeyError(f"Column not found. Tried '{primary}' and '{fallback}'")
 
 
 def load_ss_scenarios():
@@ -75,6 +117,97 @@ def get_policy_library_policies(policy_type=None):
     else:
         return library.list_policies(), library
 
+
+def page_settings():
+    """Application settings page."""
+    st.title("⚙️ Settings")
+    
+    # M6: initialize_settings() now called globally in main()
+    
+    st.markdown("### Display Preferences")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("Tooltips")
+        tooltips_enabled = st.toggle(
+            "Enable Educational Tooltips",
+            value=st.session_state.settings['tooltips_enabled'],
+            help="Show helpful explanations when hovering over technical terms"
+        )
+        st.session_state.settings['tooltips_enabled'] = tooltips_enabled
+        
+        if tooltips_enabled:
+            st.success("✓ Tooltips enabled - hover over terms for explanations")
+        else:
+            st.info("ℹ️ Tooltips disabled - technical terms will not show explanations")
+        
+        st.markdown("---")
+        
+        decimal_places = st.slider(
+            "Decimal Places for Numbers",
+            min_value=0,
+            max_value=3,
+            value=st.session_state.settings['decimal_places'],
+            help="Number of decimal places to display in results"
+        )
+        st.session_state.settings['decimal_places'] = decimal_places
+    
+    with col2:
+        st.subheader("Advanced Options")
+        show_advanced = st.toggle(
+            "Show Advanced Options",
+            value=st.session_state.settings['show_advanced_options'],
+            help="Display advanced configuration options in analysis pages"
+        )
+        st.session_state.settings['show_advanced_options'] = show_advanced
+        
+        st.markdown("---")
+        
+        chart_theme = st.selectbox(
+            "Chart Theme",
+            options=['plotly_white', 'plotly_dark', 'seaborn', 'simple_white'],
+            index=['plotly_white', 'plotly_dark', 'seaborn', 'simple_white'].index(
+                st.session_state.settings['chart_theme']
+            ),
+            help="Visual theme for all charts and graphs"
+        )
+        st.session_state.settings['chart_theme'] = chart_theme
+    
+    st.markdown("---")
+    st.markdown("### Glossary of Terms")
+    
+    with st.expander("📚 Social Security Terms", expanded=False):
+        st.markdown("""
+        - **COLA (Cost of Living Adjustment)**: Annual increase in Social Security benefits to account for inflation, typically based on the Consumer Price Index (CPI-W).
+        - **FRA (Full Retirement Age)**: The age at which a person can claim full Social Security retirement benefits without reduction (currently 67 for those born 1960+).
+        - **OASI (Old-Age and Survivors Insurance)**: The largest Social Security trust fund, providing retirement and survivor benefits.
+        - **DI (Disability Insurance)**: Trust fund providing benefits to disabled workers and their families.
+        - **Payroll Tax Rate**: The combined employer and employee Social Security tax rate (currently 12.4% total).
+        - **Wage Cap**: Maximum amount of earnings subject to Social Security payroll tax (2025: $168,600).
+        - **Trust Fund Depletion**: Year when the trust fund reserves are exhausted and can only pay benefits from incoming revenue (~77% of scheduled benefits).
+        - **Monte Carlo Simulation**: Statistical method running thousands of scenarios with different assumptions to quantify uncertainty.
+        """)
+    
+    with st.expander("📚 Economic Terms", expanded=False):
+        st.markdown("""
+        - **GDP (Gross Domestic Product)**: Total value of all goods and services produced in the economy.
+        - **CPI (Consumer Price Index)**: Measure of inflation tracking changes in prices consumers pay for goods and services.
+        - **Baseline Scenario**: Projection under current law with no policy changes.
+        - **Fiscal Outlook**: Long-term projection of government revenues, spending, deficits, and debt.
+        - **Actuarial Balance**: Measure of Social Security's long-term financial status as percentage of taxable payroll.
+        """)
+    
+    with st.expander("📚 Healthcare Terms", expanded=False):
+        st.markdown("""
+        - **Medicare Part A**: Hospital insurance covering inpatient care.
+        - **Medicare Part B**: Medical insurance covering doctor visits and outpatient care.
+        - **Medicare Part D**: Prescription drug coverage.
+        - **Medicaid**: Joint federal-state program providing health coverage to low-income individuals.
+        - **USGHA (United States Guaranteed Healthcare Act)**: Proposed comprehensive healthcare reform.
+        """)
+    
+    st.success("Settings saved automatically!")
 
 def page_overview():
     """Main overview page."""
@@ -281,35 +414,56 @@ def page_healthcare():
                 except Exception as e:
                     st.warning(f"Could not fetch CBO data: {str(e)}. Using defaults.")
             
-            with st.spinner(f"Running {policy.policy_name} simulation..."):
-                results = simulate_healthcare_years(
-                    policy=policy,
-                    base_gdp=base_gdp,
-                    initial_debt=initial_debt,
-                    years=years,
-                    population=335e6,
-                    gdp_growth=0.025,
-                    start_year=2025,
-                    cbo_data=cbo_data  # Pass CBO data if available
-                )
-            
-            if results is None or len(results) == 0:
-                st.error("Simulation produced no results")
+            # M5 Fix: Comprehensive error handling with user-friendly messages
+            try:
+                with st.spinner(f"Running {policy.policy_name} simulation..."):
+                    results = simulate_healthcare_years(
+                        policy=policy,
+                        base_gdp=base_gdp,
+                        initial_debt=initial_debt,
+                        years=years,
+                        population=335e6,
+                        gdp_growth=0.025,
+                        start_year=2025,
+                        cbo_data=cbo_data  # Pass CBO data if available
+                    )
+            except ValueError as e:
+                st.error(f"❌ Invalid simulation parameters: {str(e)}")
+                st.info("💡 Please check your input values and try again.")
+                return
+            except TypeError as e:
+                st.error(f"❌ Data type error in simulation: {str(e)}")
+                st.info("💡 This might be due to incompatible policy parameters.")
+                return
+            except Exception as e:
+                st.error(f"❌ Simulation failed: {str(e)}")
+                st.info("💡 Please try a different policy or adjust parameters.")
+                st.exception(e)  # Show full traceback in debug mode
                 return
             
-            st.success(f"Simulation completed: {len(results)} years")
+            if results is None or len(results) == 0:
+                st.error("❌ Simulation produced no results.")
+                st.info("💡 Try reducing projection years or adjusting policy parameters.")
+                return
+            
+            # Check for partial results
+            if len(results) < years:
+                st.warning(f"⚠️ Simulation completed only {len(results)} of {years} years. Showing partial results.")
+            else:
+                st.success(f"✅ Simulation completed: {len(results)} years")
             
             # Summary metrics with legacy + context-aware column support
             st.subheader("Key Metrics")
             col1, col2, col3, col4 = st.columns(4)
 
             # Column fallbacks
-            spend_col = 'Health Spending ($)' if 'Health Spending ($)' in results.columns else 'Healthcare Spending'
-            rev_col = 'Revenue ($)' if 'Revenue ($)' in results.columns else 'Total Revenue'
-            surplus_col = 'Surplus ($)' if 'Surplus ($)' in results.columns else 'Surplus/Deficit'
-            debt_red_col = 'Debt Reduction ($)' if 'Debt Reduction ($)' in results.columns else 'Debt Reduction'
-            debt_col = 'Remaining Debt ($)' if 'Remaining Debt ($)' in results.columns else 'National Debt'
-            per_cap_col = 'Per Capita Health ($)' if 'Per Capita Health ($)' in results.columns else 'Per Capita Spending'
+            # M1 Fix: Use standardized column resolution
+            spend_col = get_column_safe(results, 'Health Spending ($)', 'Healthcare Spending')
+            rev_col = get_column_safe(results, 'Revenue ($)', 'Total Revenue')
+            surplus_col = get_column_safe(results, 'Surplus ($)', 'Surplus/Deficit')
+            debt_red_col = get_column_safe(results, 'Debt Reduction ($)', 'Debt Reduction')
+            debt_col = get_column_safe(results, 'Remaining Debt ($)', 'National Debt')
+            per_cap_col = get_column_safe(results, 'Per Capita Health ($)', 'Per Capita Spending')
 
             with col1:
                 total_spending = results[spend_col].sum()
@@ -488,92 +642,393 @@ def page_social_security():
     """Social Security analysis page."""
     st.title("📊 Social Security Trust Fund Projections")
     
-    ss_scenarios = load_ss_scenarios()
-    scenario_names = list(ss_scenarios["scenarios"].keys())
+    # M6: initialize_settings() now called globally in main()
     
-    col1, col2 = st.columns(2)
-    with col1:
-        selected_scenario = st.selectbox(
-            "Select reform scenario:",
-            ["Current Law (Baseline)"] + scenario_names
-        )
-    with col2:
-        years = st.slider("Projection years:", 10, 75, 30)
+    st.info("💡 This page uses Phase 2 Social Security Monte Carlo engine with full uncertainty quantification.")
     
-    iterations = st.slider("Monte Carlo iterations:", 1000, 50000, 10000, step=1000)
+    # Initialize session state for results
+    if 'ss_projections' not in st.session_state:
+        st.session_state.ss_projections = None
+    if 'ss_solvency' not in st.session_state:
+        st.session_state.ss_solvency = None
+    if 'ss_reform_name' not in st.session_state:
+        st.session_state.ss_reform_name = None
+    if 'ss_params_display' not in st.session_state:
+        st.session_state.ss_params_display = None
     
-    if st.button("Run Social Security Projection"):
-        model = SocialSecurityModel()
+    # Create tabs for scenario selection vs custom parameters
+    tab1, tab2 = st.tabs(["📋 Quick Scenarios", "🔧 Custom Parameters"])
+    
+    with tab1:
+        st.markdown("### Pre-configured Reform Scenarios")
         
-        with st.spinner("Running Social Security projections..."):
-            if selected_scenario == "Current Law (Baseline)":
-                projections = model.project_trust_funds(years=years, iterations=iterations)
-                solvency = model.estimate_solvency_dates(projections)
-                reform_name = "Current Law"
-            else:
-                reforms_dict = {
-                    "raise_payroll_tax": SocialSecurityReforms.raise_payroll_tax_rate(new_rate=0.145),
-                    "remove_wage_cap": SocialSecurityReforms.remove_social_security_wage_cap(),
-                    "raise_full_retirement_age": SocialSecurityReforms.raise_full_retirement_age(new_fra=70),
-                    "reduce_benefits": SocialSecurityReforms.reduce_benefits(reduction_percent=0.17),
-                    "combined_reform_package": SocialSecurityReforms.combined_reform(),
-                }
-                
-                baseline = model.project_trust_funds(years=years, iterations=iterations)
-                reforms = reforms_dict[selected_scenario]
-                projections = model.apply_policy_reform(reforms["reforms"], baseline)
-                solvency = model.estimate_solvency_dates(projections)
-                reform_name = ss_scenarios["scenarios"][selected_scenario].get("name", selected_scenario)
-        
-        # Display results
-        col1, col2, col3 = st.columns(3)
+        col1, col2 = st.columns(2)
         with col1:
-            st.metric(
-                "OASI Depletion Year",
-                f"{int(solvency['OASI_depletion_year'])}",
-                delta=f"P10: {int(solvency.get('OASI_depletion_p10', np.nan))}"
+            selected_scenario = st.selectbox(
+                "Select reform scenario:",
+                ["Current Law (Baseline)", "Raise Payroll Tax", "Remove Wage Cap", "Raise Retirement Age", "Combined Reform"],
+                help=get_tooltip("Reform Scenario", "Compare different Social Security reform proposals to see their impact on trust fund solvency")
             )
         with col2:
-            st.metric(
-                "DI Solvency Through",
-                f"{int(solvency['DI_solvency_through_year'])}",
-                delta="Disability Insurance"
-            )
-        with col3:
-            st.metric(
-                "75-Year Solvency",
-                "Yes" if solvency.get("OASI_depletion_year", 2100) > 2100 else "No",
-                delta=f"P90: {int(solvency.get('OASI_depletion_p90', np.nan))}"
+            years = st.slider(
+                "Projection years:", 
+                10, 50, 30, 
+                key="quick_years",
+                help=get_tooltip("Projection Years", "Number of years to project into the future (Social Security typically uses 75-year window)")
             )
         
-        # Chart
-        if len(projections) > 0:
-            latest_year = projections[projections['year'] == projections['year'].max()]
+        iterations = st.slider(
+            "Monte Carlo iterations:", 
+            100, 5000, 1000, 
+            step=100, 
+            key="quick_iterations",
+            help=get_tooltip("Monte Carlo Iterations", "Number of simulation runs with varying assumptions to capture uncertainty (more iterations = more accurate but slower)")
+        )
+        
+        run_quick = st.button("Run Quick Scenario", type="primary", key="run_quick")
+    
+    with tab2:
+        st.markdown("### Customize Parameters")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("**Trust Fund Parameters**")
+            custom_tax_rate = st.number_input(
+                "Payroll Tax Rate (%)", 
+                min_value=10.0, max_value=20.0, value=12.4, step=0.1,
+                help=get_tooltip("Payroll Tax Rate", "Combined employer + employee Social Security tax rate. Current law: 12.4% (6.2% each)")
+            ) / 100
+            custom_tax_cap = st.number_input(
+                "Payroll Tax Cap ($)", 
+                min_value=0, max_value=1000000, value=168600, step=1000,
+                help=get_tooltip("Payroll Tax Cap", "Maximum annual earnings subject to Social Security tax. 2025 cap: $168,600. Earnings above this are not taxed.")
+            )
+            use_no_cap = st.checkbox(
+                "Remove wage cap (override value above)",
+                help=get_tooltip("Remove Wage Cap", "Eliminate the earnings cap so all wages are taxed for Social Security, increasing revenue by ~20%")
+            )
+            custom_interest = st.number_input(
+                "Trust Fund Interest Rate (%)", 
+                min_value=0.0, max_value=10.0, value=3.5, step=0.1,
+                help=get_tooltip("Interest Rate", "Annual interest rate earned on trust fund reserves invested in special Treasury securities")
+            ) / 100
+        
+        with col2:
+            st.markdown("**Benefit Formula Parameters**")
+            custom_fra = st.number_input(
+                "Full Retirement Age", 
+                min_value=62, max_value=75, value=67, step=1,
+                help=get_tooltip("Full Retirement Age (FRA)", "Age at which workers can claim full retirement benefits without reduction. Currently 67 for those born 1960+. Raising FRA reduces costs by ~6.7% per year.")
+            )
+            custom_cola = st.number_input(
+                "Annual COLA (%)", 
+                min_value=0.0, max_value=10.0, value=3.2, step=0.1,
+                help=get_tooltip("COLA", "Cost of Living Adjustment - annual increase in benefits to account for inflation. Based on CPI-W (Consumer Price Index for Urban Wage Earners).")
+            ) / 100
+            benefit_reduction = st.slider(
+                "Benefit Reduction (%)", 
+                0, 50, 0, step=5,
+                help=get_tooltip("Benefit Reduction", "Across-the-board percentage reduction in all Social Security benefits. A painful but direct way to reduce costs.")
+            )
+        
+        col3, col4 = st.columns(2)
+        with col3:
+            custom_years = st.slider("Projection years:", 10, 50, 30, key="custom_years")
+        with col4:
+            custom_iterations = st.slider("Monte Carlo iterations:", 100, 5000, 1000, step=100, key="custom_iterations")
+        
+        run_custom = st.button("Run Custom Scenario", type="primary", key="run_custom")
+    
+    # Determine which scenario to run
+    if run_quick:
+        with st.spinner("Running Social Security projections..."):
+            try:
+                # Initialize model with reform parameters
+                params_display = {}
+                if selected_scenario == "Current Law (Baseline)":
+                    model = SocialSecurityModel()
+                    reform_name = "Current Law"
+                    params_display = {
+                        "Payroll Tax Rate": "12.4%",
+                        "Payroll Tax Cap": "$168,600",
+                        "Full Retirement Age": "67",
+                        "COLA": "3.2%"
+                    }
+                elif selected_scenario == "Raise Payroll Tax":
+                    trust_fund = TrustFundAssumptions()
+                    trust_fund.payroll_tax_rate = 0.145
+                    model = SocialSecurityModel(trust_fund=trust_fund)
+                    reform_name = "Raise Payroll Tax to 14.5%"
+                    params_display = {
+                        "Payroll Tax Rate": "14.5% ⬆️",
+                        "Payroll Tax Cap": "$168,600",
+                        "Full Retirement Age": "67",
+                        "COLA": "3.2%"
+                    }
+                elif selected_scenario == "Remove Wage Cap":
+                    trust_fund = TrustFundAssumptions()
+                    trust_fund.payroll_tax_cap = None
+                    model = SocialSecurityModel(trust_fund=trust_fund)
+                    reform_name = "Remove Wage Cap"
+                    params_display = {
+                        "Payroll Tax Rate": "12.4%",
+                        "Payroll Tax Cap": "No Cap ⬆️",
+                        "Full Retirement Age": "67",
+                        "COLA": "3.2%"
+                    }
+                elif selected_scenario == "Raise Retirement Age":
+                    benefit_formula = BenefitFormula()
+                    benefit_formula.full_retirement_age = 69
+                    model = SocialSecurityModel(benefit_formula=benefit_formula)
+                    reform_name = "Raise Retirement Age to 69"
+                    params_display = {
+                        "Payroll Tax Rate": "12.4%",
+                        "Payroll Tax Cap": "$168,600",
+                        "Full Retirement Age": "69 ⬆️",
+                        "COLA": "3.2%"
+                    }
+                elif selected_scenario == "Combined Reform":
+                    trust_fund = TrustFundAssumptions()
+                    trust_fund.payroll_tax_rate = 0.135
+                    benefit_formula = BenefitFormula()
+                    benefit_formula.full_retirement_age = 68
+                    model = SocialSecurityModel(trust_fund=trust_fund, benefit_formula=benefit_formula)
+                    reform_name = "Combined Reform Package"
+                    params_display = {
+                        "Payroll Tax Rate": "13.5% ⬆️",
+                        "Payroll Tax Cap": "$168,600",
+                        "Full Retirement Age": "68 ⬆️",
+                        "COLA": "3.2%"
+                    }
+                else:
+                    model = SocialSecurityModel()
+                    reform_name = "Unknown"
+                    params_display = {}
+                
+                # Run projection
+                projections = model.project_trust_funds(years=years, iterations=iterations)
+                solvency = model.estimate_solvency_dates(projections)
+                
+                # Store in session state
+                st.session_state.ss_projections = projections
+                st.session_state.ss_solvency = solvency
+                st.session_state.ss_reform_name = reform_name
+                st.session_state.ss_params_display = params_display
+                st.success(f"✅ Completed {iterations:,} iterations over {years} years")
+                
+            except ValueError as e:
+                st.error(f"❌ Invalid projection parameters: {str(e)}")
+                st.info("💡 Check tax rates, interest rates, and benefit parameters.")
+                return
+            except TypeError as e:
+                st.error(f"❌ Data type error: {str(e)}")
+                st.info("💡 Ensure all numeric parameters are valid numbers.")
+                return
+            except Exception as e:
+                st.error(f"❌ Projection failed: {str(e)}")
+                st.info("💡 Try reducing iterations or projection years.")
+                st.exception(e)
+                return
+    
+    elif run_custom:
+        should_run = True
+        with st.spinner("Running custom Social Security projections..."):
+            try:
+                # Build custom model
+                trust_fund = TrustFundAssumptions()
+                trust_fund.payroll_tax_rate = custom_tax_rate
+                trust_fund.payroll_tax_cap = None if use_no_cap else custom_tax_cap
+                trust_fund.trust_fund_interest_rate = custom_interest
+                
+                benefit_formula = BenefitFormula()
+                benefit_formula.full_retirement_age = custom_fra
+                benefit_formula.annual_cola = custom_cola
+                if benefit_reduction > 0:
+                    benefit_formula.primary_insurance_amount_avg_2025 *= (1 - benefit_reduction / 100)
+                
+                model = SocialSecurityModel(trust_fund=trust_fund, benefit_formula=benefit_formula)
+                reform_name = "Custom Parameters"
+                
+                params_display = {
+                    "Payroll Tax Rate": f"{custom_tax_rate*100:.1f}%",
+                    "Payroll Tax Cap": "No Cap" if use_no_cap else f"${custom_tax_cap:,}",
+                    "Full Retirement Age": str(custom_fra),
+                    "COLA": f"{custom_cola*100:.1f}%",
+                    "Interest Rate": f"{custom_interest*100:.1f}%",
+                    "Benefit Reduction": f"{benefit_reduction}%" if benefit_reduction > 0 else "None"
+                }
+                
+                # Run projection
+                projections = model.project_trust_funds(years=custom_years, iterations=custom_iterations)
+                
+                if projections is None or len(projections) == 0:
+                    st.error("❌ Projection produced no results.")
+                    st.info("💡 Try different parameters or reduce projection years.")
+                    return
+                
+                solvency = model.estimate_solvency_dates(projections)
+                
+                # Store in session state
+                st.session_state.ss_projections = projections
+                st.session_state.ss_solvency = solvency
+                st.session_state.ss_reform_name = reform_name
+                st.session_state.ss_params_display = params_display
+                st.success(f"✅ Completed {custom_iterations:,} iterations over {custom_years} years")
+                
+            except ValueError as e:
+                st.error(f"❌ Invalid custom parameters: {str(e)}")
+                st.info("💡 Check that all values are within reasonable ranges.")
+                return
+            except TypeError as e:
+                st.error(f"❌ Data type error: {str(e)}")
+                st.info("💡 Ensure all parameters are valid numbers.")
+                return
+            except Exception as e:
+                st.error(f"❌ Custom projection failed: {str(e)}")
+                st.info("💡 Try simpler parameters or contact support.")
+                st.exception(e)
+                return
+    
+    # Display results if available
+    if st.session_state.ss_projections is not None:
+        st.markdown("---")
+        st.subheader(f"Results: {st.session_state.ss_reform_name}")
+        
+        # Show parameters used
+        if st.session_state.ss_params_display:
+            with st.expander("📋 Parameters Used", expanded=False):
+                param_cols = st.columns(len(st.session_state.ss_params_display))
+                for idx, (key, val) in enumerate(st.session_state.ss_params_display.items()):
+                    with param_cols[idx]:
+                        st.metric(key, val)
+        
+        projections = st.session_state.ss_projections
+        solvency = st.session_state.ss_solvency
+        reform_name = st.session_state.ss_reform_name
+        projections = st.session_state.ss_projections
+        solvency = st.session_state.ss_solvency
+        reform_name = st.session_state.ss_reform_name
+        
+        # Display solvency metrics
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            oasi_data = solvency.get('OASI', {})
+            depl_year = oasi_data.get('depletion_year_mean')
+            prob_depl = oasi_data.get('probability_depleted', 0)
             
+            if depl_year and not np.isnan(depl_year):
+                st.metric(
+                    "OASI Depletion Year",
+                    f"{int(depl_year)}",
+                    delta=f"{prob_depl*100:.0f}% prob",
+                    delta_color="inverse"
+                )
+            else:
+                st.metric("OASI Status", "✅ Solvent", delta="No depletion")
+        
+        with col2:
+            di_data = solvency.get('DI', {})
+            di_depl = di_data.get('depletion_year_mean')
+            di_prob = di_data.get('probability_depleted', 0)
+            
+            if di_depl and not np.isnan(di_depl):
+                st.metric(
+                    "DI Depletion Year",
+                    f"{int(di_depl)}",
+                    delta=f"{di_prob*100:.0f}% prob",
+                    delta_color="inverse"
+                )
+            else:
+                st.metric("DI Status", "✅ Solvent", delta="No depletion")
+        
+        with col3:
+            combined_data = solvency.get('Combined', {})
+            comb_depl = combined_data.get('depletion_year_mean')
+            
+            if comb_depl and not np.isnan(comb_depl):
+                st.metric("Combined Depletion", f"{int(comb_depl)}", delta_color="inverse")
+            else:
+                st.metric("Combined Status", "✅ Solvent")
+        
+        # Chart with corrected column names
+        if len(projections) > 0:
             fig = go.Figure()
+            
+            # M1 Fix: Use standardized column resolution with fallbacks
+            oasi_balance_col = get_column_safe(projections, 'oasi_balance_billions', 'OASI Balance')
+            di_balance_col = get_column_safe(projections, 'di_balance_billions', 'DI Balance')
+            
+            # OASI Balance
+            oasi_mean = projections.groupby('year')[oasi_balance_col].mean()
+            oasi_std = projections.groupby('year')[oasi_balance_col].std()
+            years_arr = oasi_mean.index
+            
             fig.add_trace(go.Scatter(
-                x=projections['year'].unique(),
-                y=projections.groupby('year')['oasi_balance'].mean(),
+                x=years_arr,
+                y=oasi_mean,
                 mode='lines',
                 name='OASI Balance (Mean)',
                 line=dict(color='#1f77b4', width=3)
             ))
             
+            # Confidence band
+            fig.add_trace(go.Scatter(
+                x=list(years_arr) + list(years_arr)[::-1],
+                y=list(oasi_mean + oasi_std) + list(oasi_mean - oasi_std)[::-1],
+                fill='toself',
+                fillcolor='rgba(31, 119, 180, 0.2)',
+                line=dict(color='rgba(255,255,255,0)'),
+                name='±1 Std Dev',
+                showlegend=True
+            ))
+            
+            # DI Balance
+            di_mean = projections.groupby('year')[di_balance_col].mean()
+            fig.add_trace(go.Scatter(
+                x=years_arr,
+                y=di_mean,
+                mode='lines',
+                name='DI Balance (Mean)',
+                line=dict(color='#ff7f0e', width=2, dash='dash')
+            ))
+            
             fig.update_layout(
-                title=f"OASI Trust Fund Balance - {reform_name}",
+                title=f"Social Security Trust Fund Balances - {reform_name}",
                 xaxis_title="Year",
                 yaxis_title="Balance ($ Billions)",
                 hovermode='x unified',
-                template="plotly_white"
+                template="plotly_white",
+                height=500
             )
             
             st.plotly_chart(fig, use_container_width=True)
-        
-        # Show scenario details
-        with st.expander("Scenario Details"):
-            if selected_scenario != "Current Law (Baseline)":
-                scenario_details = ss_scenarios["scenarios"][selected_scenario]
-                st.json(scenario_details["expected_outcomes"])
+            
+            # Summary statistics
+            st.subheader("Projection Summary")
+            final_year = projections['year'].max()
+            final_oasi = oasi_mean.iloc[-1]
+            final_di = di_mean.iloc[-1]
+            
+            summary_data = {
+                "Metric": [
+                    "Monte Carlo Iterations",
+                    "Years Projected",
+                    f"Final OASI Balance ({int(final_year)})",
+                    f"Final DI Balance ({int(final_year)})",
+                    "OASI Depletion Risk",
+                    "DI Depletion Risk"
+                ],
+                "Value": [
+                    f"{len(projections['iteration'].unique()):,}",
+                    f"{int(final_year - projections['year'].min())} years",
+                    f"${final_oasi:,.1f}B" if final_oasi > 0 else f"-${abs(final_oasi):,.1f}B (depleted)",
+                    f"${final_di:,.1f}B" if final_di > 0 else f"-${abs(final_di):,.1f}B (depleted)",
+                    f"{prob_depl*100:.0f}%" if not np.isnan(depl_year or 0) else "0%",
+                    f"{di_prob*100:.0f}%" if not np.isnan(di_depl or 0) else "0%"
+                ]
+            }
+            st.dataframe(pd.DataFrame(summary_data), hide_index=True, use_container_width=True)
 
 
 def page_federal_revenues():
@@ -587,12 +1042,21 @@ def page_federal_revenues():
     with col1:
         selected_scenario = st.selectbox(
             "Select economic scenario:",
-            scenario_names
+            scenario_names,
+            help=get_tooltip("Economic Scenario", "Pre-defined combinations of GDP growth, wage growth, and other economic assumptions that affect revenue projections")
         )
     with col2:
-        years = st.slider("Projection years:", 5, 30, 10)
+        years = st.slider(
+            "Projection years:", 
+            5, 30, 10,
+            help=get_tooltip("Projection Years", "Number of years into the future to project federal revenues. CBO typically uses 10-year budget window")
+        )
     
-    iterations = st.slider("Monte Carlo iterations:", 1000, 50000, 10000, step=1000)
+    iterations = st.slider(
+        "Monte Carlo iterations:", 
+        1000, 50000, 10000, step=1000,
+        help=get_tooltip("Monte Carlo Iterations", "Number of simulation runs with varying economic assumptions to capture uncertainty. More iterations = more accurate confidence intervals but slower")
+    )
     
     if st.button("Project Federal Revenues"):
         model = FederalRevenueModel()
@@ -664,8 +1128,19 @@ def page_medicare_medicaid():
     with tab1:
         st.subheader("Medicare Parts A/B/D Projections")
         
-        years = st.slider("Medicare projection years:", 5, 30, 10, key="medicare_years")
-        iterations = st.slider("Medicare iterations:", 1000, 30000, 10000, step=1000, key="medicare_iter")
+        years = st.slider(
+            "Medicare projection years:", 
+            5, 30, 10, 
+            key="medicare_years",
+            help=get_tooltip("Projection Years", "Number of years to project Medicare spending. Trustees report uses 75-year window but 10-30 years is typical for budget analysis")
+        )
+        iterations = st.slider(
+            "Medicare iterations:", 
+            1000, 30000, 10000, 
+            step=1000, 
+            key="medicare_iter",
+            help=get_tooltip("Monte Carlo Iterations", "Number of simulation runs with varying assumptions (enrollment growth, cost trends, etc.). More iterations = smoother confidence bands")
+        )
         
         if st.button("Project Medicare"):
             model = MedicareModel()
@@ -704,8 +1179,19 @@ def page_medicare_medicaid():
     with tab2:
         st.subheader("Medicaid Spending Projections")
         
-        years = st.slider("Medicaid projection years:", 5, 30, 10, key="medicaid_years")
-        iterations = st.slider("Medicaid iterations:", 1000, 30000, 10000, step=1000, key="medicaid_iter")
+        years = st.slider(
+            "Medicaid projection years:", 
+            5, 30, 10, 
+            key="medicaid_years",
+            help=get_tooltip("Projection Years", "Number of years to project Medicaid spending. Medicaid is jointly funded by federal and state governments")
+        )
+        iterations = st.slider(
+            "Medicaid iterations:", 
+            1000, 30000, 10000, 
+            step=1000, 
+            key="medicaid_iter",
+            help=get_tooltip("Monte Carlo Iterations", "Number of simulation runs with varying assumptions about enrollment and per-capita costs. Medicaid enrollment is more volatile than Medicare")
+        )
         
         if st.button("Project Medicaid"):
             model = MedicaidModel()
@@ -750,18 +1236,29 @@ def page_discretionary_spending():
         defense_scenario = st.selectbox(
             "Defense Scenario:",
             ["baseline", "growth", "reduction"],
-            help="baseline=inflation only, growth=+3.5%, reduction=+1.5%"
+            help=get_tooltip("Defense Scenario", "baseline=inflation only (~2%), growth=+3.5% annually, reduction=+1.5% annually. Defense is ~50% of discretionary spending")
         )
     with col2:
         nondefense_scenario = st.selectbox(
             "Non-Defense Scenario:",
             ["baseline", "growth", "reduction", "infrastructure"],
-            help="Infrastructure=4% growth focus"
+            help=get_tooltip("Non-Defense Scenario", "Includes education, transportation, science, etc. Infrastructure scenario adds 4% growth for targeted investments")
         )
     with col3:
-        years = st.slider("Projection years:", 5, 30, 10, key="discret_years")
+        years = st.slider(
+            "Projection years:", 
+            5, 30, 10, 
+            key="discret_years",
+            help=get_tooltip("Projection Years", "Discretionary spending requires annual Congressional appropriations, making long-term projections uncertain")
+        )
     
-    iterations = st.slider("Monte Carlo iterations:", 1000, 50000, 10000, step=1000, key="discret_iter")
+    iterations = st.slider(
+        "Monte Carlo iterations:", 
+        1000, 50000, 10000, 
+        step=1000, 
+        key="discret_iter",
+        help=get_tooltip("Monte Carlo Iterations", "Number of simulation runs. Discretionary spending has high variance due to policy changes and emergencies")
+    )
     
     if st.button("Project Discretionary Spending"):
         model = DiscretionarySpendingModel()
@@ -2629,6 +3126,9 @@ def main():
         initial_sidebar_state="expanded"
     )
     
+    # M6 Fix: Initialize settings globally for all pages
+    initialize_settings()
+    
     # Sidebar navigation
     page = st.sidebar.radio(
         "Navigation",
@@ -2651,7 +3151,9 @@ def main():
             "Custom Policy Builder",
             "Policy Library Manager",
             "Real Data Dashboard",
-            "Policy Upload"
+            "Policy Upload",
+            "---",
+            "⚙️ Settings"
         ]
     )
     
@@ -2689,6 +3191,8 @@ def main():
         page_real_data_dashboard()
     elif page == "Policy Upload":
         page_policy_upload()
+    elif page == "⚙️ Settings":
+        page_settings()
 
 
 if __name__ == "__main__":

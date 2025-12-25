@@ -21,6 +21,14 @@ from core.context_aware_healthcare import (
     SurplusBreakdown
 )
 
+# L2 Fix: Extract simulation magic numbers to named constants
+# Category reduction bounds
+REDUCTION_FACTOR_MIN = 0.5  # Minimum spending level (50% reduction max)
+REDUCTION_FACTOR_MAX = 1.5  # Maximum spending level (50% increase max for growth categories)
+
+# Baseline healthcare metrics
+BASELINE_HEALTH_PCT_GDP = 0.185  # 18.5% GDP (2025 US baseline)
+
 
 def _simulate_with_mechanics(policy, base_gdp: float, initial_debt: float, years: int,
                             population: float, gdp_growth: float, start_year: int = None,
@@ -34,7 +42,7 @@ def _simulate_with_mechanics(policy, base_gdp: float, initial_debt: float, years
     current_debt = float(initial_debt)
     
     # Baseline healthcare spending
-    baseline_health_pct_gdp = 0.185  # 18.5% GDP (2025 US baseline)
+    baseline_health_pct_gdp = BASELINE_HEALTH_PCT_GDP
     
     # Determine start year
     timeline = policy.transition_timeline
@@ -417,8 +425,8 @@ def simulate_healthcare_years(policy, base_gdp: float, initial_debt: float, year
             for source_name, frac in policy.other_funding_sources.items():
                 try:
                     other_sources_abs += current_gdp * float(frac)
-                except Exception as e:
-                    logger.warning(f"Failed to process USGHA funding source '{source_name}': {e}")
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"Failed to process USGHA funding source '{source_name}' with value '{frac}': {e}")
                     continue
         
         # Total USGHA revenue: ~10-11% GDP initially, remains stable
@@ -435,8 +443,8 @@ def simulate_healthcare_years(policy, base_gdp: float, initial_debt: float, year
             for source_name, frac in policy.other_funding_sources.items():
                 try:
                     other_sources_abs += current_gdp * float(frac)
-                except Exception as e:
-                    logger.warning(f"Failed to process funding source '{source_name}': {e}")
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"Failed to process funding source '{source_name}' with value '{frac}': {e}")
                     continue
         revenue = payroll_revenue + general_revenue + other_sources_abs
     
@@ -523,10 +531,23 @@ def simulate_healthcare_years(policy, base_gdp: float, initial_debt: float, year
         total_cat_share = sum([c.current_spending_pct for c in policy.categories.values()])
         for key, cat in policy.categories.items():
             share = cat.current_spending_pct / total_cat_share if total_cat_share > 0 else 0.0
-            # Apply reduction target gradually over transition years
+            
+            # H3 Fix: Apply reduction target gradually over transition years
+            # reduction_target is the TOTAL reduction desired (e.g., 0.25 = 25% reduction)
+            # We apply it proportionally over the transition period
             reduction_years = years_to_target
-            per_year_reduction = cat.reduction_target / reduction_years if reduction_years > 0 else 0.0
-            reduction_factor = 1.0 + per_year_reduction * min(i, reduction_years)
+            if reduction_years > 0:
+                years_elapsed = min(i, reduction_years)
+                progress = years_elapsed / reduction_years
+                actual_reduction = cat.reduction_target * progress  # 0 to reduction_target over time
+                reduction_factor = 1.0 - actual_reduction  # SUBTRACT to reduce spending
+            else:
+                reduction_factor = 1.0 - cat.reduction_target  # Immediate reduction if no transition
+            
+            # Clamp reduction_factor to reasonable range
+            # Allow 50% max reduction or 50% increase for growth categories
+            reduction_factor = max(REDUCTION_FACTOR_MIN, min(REDUCTION_FACTOR_MAX, reduction_factor))
+            
             # Spending for category
             category_spending[key] = health_spending * share * reduction_factor
 
@@ -586,9 +607,9 @@ def simulate_healthcare_years(policy, base_gdp: float, initial_debt: float, year
             cut_pct = getattr(policy.circuit_breaker, 'spending_cut_pct', 0.05)
             try:
                 health_spending = health_spending * (1.0 - float(cut_pct))
-            except Exception as e:
+            except (ValueError, TypeError) as e:
                 # if malformed, default to 5% cut
-                logger.warning(f"Year {year}: Failed to parse spending_cut_pct: {e}. Using default 5% cut")
+                logger.warning(f"Year {year}: Failed to parse spending_cut_pct '{cut_pct}': {e}. Using default 5% cut")
                 health_spending = health_spending * 0.95
 
         if surplus > 0:

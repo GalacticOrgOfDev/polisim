@@ -96,9 +96,10 @@ def calculate_cbo_summary(df_current, df_proposed):
     """Calculate CBO-style summary metrics comparing current vs proposed policy.
 
     Returns (summary_text, summary_table_df).
+    
     - summary_text: human-readable multi-line string for the UI
     - summary_table_df: pandas DataFrame suitable for export, with columns:
-        [Metric, Current Policy, Proposed Policy, Difference (Proposed - Current)]
+      [Metric, Current Policy, Proposed Policy, Difference (Proposed - Current)]
     
     Args:
         df_current: pandas DataFrame with current policy simulation results

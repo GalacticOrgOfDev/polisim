@@ -24,6 +24,23 @@ CORPORATE_PROFIT_GDP_ELASTICITY = 2.0  # Corporate profits grow 2x GDP growth ra
 SOCIAL_SECURITY_SHARE_OF_PAYROLL = 0.55  # SS receives 55% of payroll taxes
 MEDICARE_SHARE_OF_PAYROLL = 0.45  # Medicare receives 45% of payroll taxes
 
+# Default growth assumptions
+DEFAULT_GDP_GROWTH = 0.02  # 2% baseline GDP growth
+DEFAULT_WAGE_GROWTH = 0.03  # 3% baseline wage growth
+DEFAULT_INFLATION = 0.025  # 2.5% baseline inflation
+
+# Uncertainty parameters
+GDP_GROWTH_UNCERTAINTY = 0.02  # 2% std dev for GDP growth
+WAGE_GROWTH_UNCERTAINTY = 0.02  # 2% std dev for wage growth
+EXCISE_OTHER_REVENUE_UNCERTAINTY = 0.03  # 3% std dev for excise/other revenues
+
+# Tax reform impact factors
+CAP_REMOVAL_IMPACT_FACTOR = 0.15  # 15% revenue increase from removing SS cap
+CORPORATE_RATE_BEHAVIORAL_RESPONSE = 0.8  # 80% static revenue estimate due to behavioral response
+
+# Log thresholds
+LOG_ITERATION_INTERVAL = 1000  # Log every N iterations
+
 
 @dataclass
 class IndividualIncomeTaxAssumptions:
@@ -313,6 +330,15 @@ class FederalRevenueModel:
             Dictionary with revenue projections
         """
         logger.info(f"Projecting CIT for {years} years with {iterations} iterations")
+        
+        # H2 Fix: Validate GDP growth rates
+        if not isinstance(gdp_growth, np.ndarray):
+            raise TypeError(f"GDP growth must be numpy array, got {type(gdp_growth)}")
+        if len(gdp_growth) != years:
+            raise ValueError(f"GDP growth array length ({len(gdp_growth)}) must match years ({years})")
+        if np.any(gdp_growth < -0.10) or np.any(gdp_growth > 0.15):
+            invalid_values = gdp_growth[(gdp_growth < -0.10) | (gdp_growth > 0.15)]
+            raise ValueError(f"GDP growth rates outside reasonable bounds (-10% to +15%): {invalid_values}")
 
         revenues = np.zeros((years, iterations))
 
@@ -321,16 +347,40 @@ class FederalRevenueModel:
                 logger.info(f"  Corporate income tax projection: {it}/{iterations} iterations ({it/iterations*100:.1f}%)")
 
             revenue = self.baseline_revenues["corporate_income_tax"]
+            
+            # M3 Enhancement: Track recession state for loss carryforward logic
+            in_recession = False
+            years_since_recession = 0
 
             for year in range(years):
                 # Corporate profits highly sensitive to GDP growth
                 # Elasticity ~2.0 (1% GDP growth → 2% profit growth)
                 profit_growth = (1 + gdp_growth[year] * CORPORATE_PROFIT_GDP_ELASTICITY) ** (year + 1)
 
-                # Add profit volatility (recession risk)
-                recession_risk = 1.0
-                if np.random.random() < 0.15:  # 15% chance of profit decline
-                    recession_risk = 0.90
+                # M3 Enhancement: Improved recession handling with multi-year effects
+                # Recession defined as GDP growth < -2%
+                is_recession_year = gdp_growth[year] < -0.02
+                
+                if is_recession_year:
+                    in_recession = True
+                    years_since_recession = 0
+                    # During recession: profit decline + loss carryforwards reduce tax revenue
+                    recession_impact = 0.75  # 25% revenue reduction from losses
+                    logger.debug(f"Iteration {it}, Year {year}: Recession detected (GDP: {gdp_growth[year]:.1%})")
+                elif in_recession and years_since_recession < 3:
+                    # Post-recession recovery: loss carryforwards still reducing revenue
+                    years_since_recession += 1
+                    # Gradual recovery: 15% -> 10% -> 5% reduction over 3 years
+                    carryforward_reduction = 0.15 - (years_since_recession * 0.05)
+                    recession_impact = 1.0 - carryforward_reduction
+                    logger.debug(f"Iteration {it}, Year {year}: Post-recession year {years_since_recession}, carryforward reduction: {carryforward_reduction:.1%}")
+                    if years_since_recession >= 3:
+                        in_recession = False
+                else:
+                    # Normal years: mild profit volatility only
+                    recession_impact = 1.0
+                    if np.random.random() < 0.10:  # 10% chance of mild profit decline
+                        recession_impact = 0.95  # 5% decline
 
                 # Tax avoidance effects
                 tax_avoidance = np.random.normal(
@@ -343,7 +393,7 @@ class FederalRevenueModel:
                 revenue = (
                     revenue
                     * profit_growth
-                    * recession_risk
+                    * recession_impact
                     * tax_avoidance
                     * noise
                 )
@@ -377,9 +427,9 @@ class FederalRevenueModel:
         """
         # Default growth assumptions if not provided
         if gdp_growth is None:
-            gdp_growth = np.full(years, 0.02)
+            gdp_growth = np.full(years, DEFAULT_GDP_GROWTH)
         if wage_growth is None:
-            wage_growth = np.full(years, 0.03)
+            wage_growth = np.full(years, DEFAULT_WAGE_GROWTH)
 
         logger.info(f"Projecting all revenues for {years} years with {iterations} iterations")
 
@@ -404,7 +454,7 @@ class FederalRevenueModel:
 
             for year in range(years):
                 growth_factor = (1 + gdp_growth[year]) ** (year + 1)
-                noise = np.random.normal(1.0, 0.03)
+                noise = np.random.normal(1.0, EXCISE_OTHER_REVENUE_UNCERTAINTY)
 
                 excise_revenues[year, it] = excise_rev * growth_factor * noise
                 other_revenues[year, it] = other_rev * growth_factor * noise
@@ -475,7 +525,7 @@ class FederalRevenueModel:
             new_rate = reform["corporate_tax_rate"]
             old_rate = self.corporate.marginal_tax_rate
             rate_change = (new_rate - old_rate) / old_rate
-            additional_revenue = self.baseline_revenues["corporate_income_tax"] * rate_change * 0.8
+            additional_revenue = self.baseline_revenues["corporate_income_tax"] * rate_change * CORPORATE_RATE_BEHAVIORAL_RESPONSE
             impact["cit_additional_revenue"] = additional_revenue
             logger.debug(f"  CIT rate: {old_rate:.0%} → {new_rate:.0%}, +${additional_revenue:.0f}B")
 
@@ -487,7 +537,9 @@ class FederalRevenueModel:
 
         if "eliminate_cap" in reform and reform["eliminate_cap"]:
             # Removing SS cap affects ~15% of workers above cap
-            cap_effect_revenue = self.baseline_revenues["social_security_tax"] * 0.15
+            # Use payroll_taxes baseline since there's no separate social_security_tax key
+            ss_baseline = self.baseline_revenues.get("social_security_tax") or self.baseline_revenues["payroll_taxes"] * SOCIAL_SECURITY_SHARE_OF_PAYROLL
+            cap_effect_revenue = ss_baseline * CAP_REMOVAL_IMPACT_FACTOR
             impact["ss_cap_elimination_revenue"] = cap_effect_revenue
             logger.debug(f"  Remove SS cap: +${cap_effect_revenue:.0f}B")
 
@@ -538,3 +590,26 @@ class TaxReforms:
             "description": "Remove Social Security payroll tax cap",
             "reforms": {"eliminate_cap": True},
         }
+    
+    # Aliases for test compatibility
+    @staticmethod
+    def increase_individual_income_tax_rate(new_rate: float = 0.42) -> Dict[str, Any]:
+        """Alias for increase_top_rate() for test compatibility."""
+        return TaxReforms.increase_top_rate(increase_pct=new_rate - 0.37)  # Current top rate is 37%
+    
+    @staticmethod
+    def increase_corporate_income_tax_rate(new_rate: float = 0.25) -> Dict[str, Any]:
+        """Alias for increase_corporate_rate() for test compatibility."""
+        return TaxReforms.increase_corporate_rate(new_rate=new_rate)
+    
+    @staticmethod
+    def remove_social_security_wage_cap() -> Dict[str, Any]:
+        """Alias for remove_ss_cap() for test compatibility."""
+        return TaxReforms.remove_ss_cap()
+    
+    @staticmethod
+    def increase_payroll_tax_rate(new_rate: float = 0.145) -> Dict[str, Any]:
+        """Alias for increase_payroll_tax() calculating increase from current rate."""
+        current_rate = 0.124  # Current combined SS+Medicare rate
+        increase = new_rate - current_rate
+        return TaxReforms.increase_payroll_tax(increase_pct=increase)
