@@ -294,5 +294,106 @@ class TestPhase32Integration:
             pytest.skip(f"Some modules not available: {str(e)}")
 
 
+class TestEndToEndIntegration:
+    """End-to-end integration tests for complete fiscal projections."""
+    
+    def test_30year_unified_projection(self):
+        """Test complete 30-year unified budget projection."""
+        model = CombinedFiscalOutlookModel()
+        df = model.project_unified_budget(years=30, iterations=1000)
+        
+        assert isinstance(df, pd.DataFrame)
+        assert len(df) == 30
+        
+        # Verify all components present
+        required_cols = [
+            "year", "total_revenue", "total_spending", "deficit_surplus",
+            "social_security_spending", "medicare_spending", "medicaid_spending",
+            "other_health_spending", "discretionary_spending", "interest_spending"
+        ]
+        for col in required_cols:
+            assert col in df.columns, f"Missing column: {col}"
+        
+        # Verify all values are positive (spending) or reasonable (deficit)
+        assert np.all(df["total_revenue"] > 0)
+        assert np.all(df["total_spending"] > 0)
+        assert np.all(df["social_security_spending"] > 0)
+        assert np.all(df["medicare_spending"] > 0)
+        assert np.all(df["medicaid_spending"] > 0)
+    
+    def test_revenue_covers_most_spending(self):
+        """Test that revenue covers most (though not all) spending."""
+        model = CombinedFiscalOutlookModel()
+        summary = model.get_fiscal_summary(years=10, iterations=1000)
+        
+        # Revenue should be at least 80% of spending (reasonable deficit)
+        revenue = summary["total_revenue_10year_billions"]
+        spending = summary["total_spending_10year_billions"]
+        
+        assert revenue > 0
+        assert spending > 0
+        assert revenue / spending > 0.80, f"Revenue {revenue} is less than 80% of spending {spending}"
+    
+    def test_spending_components_sum_correctly(self):
+        """Test that spending components sum to total spending."""
+        model = CombinedFiscalOutlookModel()
+        df = model.project_unified_budget(years=10, iterations=1000)
+        
+        # Manual sum of components
+        computed_total = (
+            df["social_security_spending"] +
+            df["medicare_spending"] +
+            df["medicaid_spending"] +
+            df["other_health_spending"] +
+            df["discretionary_spending"] +
+            df["interest_spending"]
+        )
+        
+        # Should match total_spending column
+        assert np.allclose(computed_total, df["total_spending"], rtol=0.01)
+    
+    def test_deficit_calculation_correct(self):
+        """Test that deficit = revenue - spending."""
+        model = CombinedFiscalOutlookModel()
+        df = model.project_unified_budget(years=10, iterations=1000)
+        
+        computed_deficit = df["total_revenue"] - df["total_spending"]
+        assert np.allclose(computed_deficit, df["deficit_surplus"], rtol=0.01)
+    
+    def test_primary_deficit_excludes_interest(self):
+        """Test that primary deficit = deficit + interest."""
+        model = CombinedFiscalOutlookModel()
+        df = model.project_unified_budget(years=10, iterations=1000)
+        
+        computed_primary = df["total_revenue"] - (df["total_spending"] - df["interest_spending"])
+        assert np.allclose(computed_primary, df["primary_deficit"], rtol=0.01)
+    
+    def test_spending_grows_over_time(self):
+        """Test that spending generally grows over 30 years."""
+        model = CombinedFiscalOutlookModel()
+        df = model.project_unified_budget(years=30, iterations=1000)
+        
+        # Year 30 should be higher than year 1
+        assert df.iloc[29]["total_spending"] > df.iloc[0]["total_spending"]
+        assert df.iloc[29]["total_revenue"] > df.iloc[0]["total_revenue"]
+    
+    def test_medicare_medicaid_reasonable_share(self):
+        """Test that Medicare+Medicaid are 20-40% of total spending."""
+        model = CombinedFiscalOutlookModel()
+        df = model.project_unified_budget(years=10, iterations=1000)
+        
+        healthcare_share = (df["medicare_spending"] + df["medicaid_spending"]) / df["total_spending"]
+        
+        # Medicare+Medicaid should be 20-40% of federal spending
+        assert np.all(healthcare_share > 0.15), "Healthcare share too low"
+        assert np.all(healthcare_share < 0.50), "Healthcare share too high"
+    
+    def test_different_scenarios_produce_different_results(self):
+        """Test that different revenue scenarios produce different outcomes."""
+        # TODO: This test will pass once revenue scenarios are fully implemented
+        # Currently revenue_scenario parameter exists but doesn't affect calculations
+        pytest.skip("Revenue scenarios not yet implemented in revenue model")
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

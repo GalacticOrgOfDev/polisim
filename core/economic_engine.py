@@ -36,7 +36,8 @@ class EconomicParameters:
     surplus_redirect_post_debt: float = 0.0  # %
     surplus_redirect_target: str = "federal"
     stop_on_debt_explosion: bool = True
-    debt_drag_factor: float = 0.1  # GDP drag per 10% debt/GDP
+    debt_drag_factor: float = 0.01  # GDP drag per 1 point of debt/GDP above 60%
+                                     # E.g., at 100% debt/GDP: drag = 0.01 * 0.4 = 0.4% growth reduction
 
     def validate(self) -> None:
         """Validate parameter ranges."""
@@ -302,8 +303,10 @@ class MonteCarloEngine:
         for year_idx in range(1, n_years):
             # GDP growth with debt drag
             debt_to_gdp = debt[year_idx - 1] / gdp[year_idx - 1] if gdp[year_idx - 1] > 0 else 0
-            debt_drag = params.debt_drag_factor * max(0, (debt_to_gdp - 0.6) / 0.1)  # Drag if >60% debt/GDP
-            adjusted_growth = params.gdp_growth_rate - debt_drag
+            # Drag increases linearly: 0.1% drag per 10 percentage points above 60% debt/GDP
+            # E.g., at 100% debt/GDP: drag = 0.1 * (1.0 - 0.6) = 0.04 (4% drag)
+            debt_drag = params.debt_drag_factor * max(0, debt_to_gdp - 0.6)
+            adjusted_growth = max(params.gdp_growth_rate - debt_drag, -0.10)  # Floor at -10% growth
             gdp[year_idx] = gdp[year_idx - 1] * (1 + adjusted_growth)
             
             # Calculate revenues (% of GDP or fixed)

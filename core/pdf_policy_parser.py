@@ -17,6 +17,8 @@ from typing import Dict, List, Tuple, Optional, Any
 from dataclasses import dataclass
 from enum import Enum
 
+from core.validation import InputValidator, ValidationError
+
 
 @dataclass
 class PolicyExtraction:
@@ -225,6 +227,12 @@ class PolicyPDFProcessor:
         For now, assumes text-based PDFs can be read.
         """
         try:
+            # Validate file size (Safety #1)
+            try:
+                InputValidator.validate_file_size(file_path)
+            except ValidationError as e:
+                return f"[PDF file size validation failed: {str(e)}]"
+            
             # Try pdfplumber first
             try:
                 import pdfplumber

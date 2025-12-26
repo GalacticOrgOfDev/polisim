@@ -7,13 +7,18 @@ Provides:
 - Deficit/surplus calculations
 - 75-year sustainability metrics
 - Debt trajectory and fiscal gap analysis
+- Performance optimization with caching (Performance #2)
 """
 
 import numpy as np
 import pandas as pd
 from typing import Dict, Tuple, Optional
 import logging
+import hashlib
+import pickle
+from functools import lru_cache
 
+from core.validation import InputValidator, ValidationError, validate_projection_params
 from core.revenue_modeling import FederalRevenueModel
 from core.social_security import SocialSecurityModel
 from core.medicare_medicaid import MedicareModel, MedicaidModel
@@ -41,16 +46,63 @@ class CombinedFiscalOutlookModel:
     - Medicaid (Phase 3.1)
     - Discretionary spending (Phase 3.2)
     - Interest on debt (Phase 3.2)
+    
+    Performance Optimization:
+    - Component-level caching reduces redundant calculations (Performance #2)
+    - Vectorized Medicare projections for 42% speedup (Performance #1)
     """
     
-    def __init__(self):
-        """Initialize all sub-models."""
+    def __init__(self, enable_cache: bool = True):
+        """
+        Initialize all sub-models.
+        
+        Args:
+            enable_cache: Enable result caching for repeated projections (default: True)
+        """
         self.revenue_model = FederalRevenueModel()
         self.ss_model = SocialSecurityModel()
         self.medicare_model = MedicareModel()
         self.medicaid_model = MedicaidModel()
         self.discretionary_model = DiscretionarySpendingModel()
         self.interest_model = InterestOnDebtModel()
+        self.enable_cache = enable_cache
+        self._cache = {}  # Manual cache for component results
+        
+        logger.info(f"CombinedFiscalOutlookModel initialized (caching: {'enabled' if enable_cache else 'disabled'})")
+    
+    def clear_cache(self):
+        """Clear all cached results."""
+        self._cache.clear()
+        logger.info("Cache cleared")
+    
+    def _get_cache_key(self, component: str, **kwargs) -> str:
+        """Generate cache key from component name and parameters."""
+        # Create deterministic hash of parameters
+        param_str = f"{component}:" + ":".join(f"{k}={v}" for k, v in sorted(kwargs.items()))
+        return hashlib.md5(param_str.encode()).hexdigest()[:16]
+    
+    def _get_cached(self, component: str, **kwargs) -> Optional[pd.DataFrame]:
+        """Get cached result if available."""
+        if not self.enable_cache:
+            return None
+        
+        cache_key = self._get_cache_key(component, **kwargs)
+        if cache_key in self._cache:
+            logger.debug(f"Cache hit for {component} ({cache_key})")
+            return self._cache[cache_key].copy()  # Return copy to prevent mutation
+        
+        logger.debug(f"Cache miss for {component} ({cache_key})")
+        return None
+    
+    def _set_cached(self, component: str, result: pd.DataFrame, **kwargs):
+        """Store result in cache."""
+        if not self.enable_cache:
+            return
+        
+        cache_key = self._get_cache_key(component, **kwargs)
+        self._cache[cache_key] = result.copy()
+        logger.debug(f"Cached {component} ({cache_key}): {len(result)} records")
+
     
     def project_unified_budget(
         self,
@@ -66,8 +118,8 @@ class CombinedFiscalOutlookModel:
         Project complete federal budget (all revenue and spending).
         
         Parameters:
-            years: Projection years (default 30)
-            iterations: Monte Carlo iterations
+            years: Projection years (default 30, range 1-75)
+            iterations: Monte Carlo iterations (default 10000, range 100-50000)
             revenue_scenario: 'baseline', 'recession', 'strong_growth', 'demographic_challenge'
             ss_scenario: 'baseline' or reform name
             healthcare_policy: 'usgha', 'current_law', etc.
@@ -76,20 +128,44 @@ class CombinedFiscalOutlookModel:
         
         Returns:
             DataFrame with all revenue and spending components
+            
+        Raises:
+            ValidationError: If parameters are out of valid ranges
         """
+        # Validate projection parameters (Safety #2)
+        validate_projection_params(years, iterations)
+        
+        # Validate scenario names
+        valid_revenue = ['baseline', 'recession', 'strong_growth', 'demographic_challenge']
+        valid_discretionary = ['baseline', 'growth', 'reduction']
+        valid_interest = ['baseline', 'rising', 'falling', 'spike']
+        
+        InputValidator.validate_scenario_name(revenue_scenario, valid_revenue, 'revenue_scenario')
+        InputValidator.validate_scenario_name(discretionary_scenario, valid_discretionary, 'discretionary_scenario')
+        InputValidator.validate_scenario_name(interest_scenario, valid_interest, 'interest_scenario')
+        
         year_array = np.arange(years) + 2026
         
         # Project each component
-        # Revenue - use simple GDP-based projection for now
-        revenue_gdp_growth = np.linspace(0.02, 0.03, years)  # 2-3% GDP growth baseline
-        revenue_billions = np.ones(years) * 5000 + np.cumsum(revenue_gdp_growth * 50)  # ~$5T baseline
+        # Revenue projection using FederalRevenueModel
+        revenue_df = self.revenue_model.project_all_revenues(
+            years=years,
+            gdp_growth=None,  # Uses default 2% baseline
+            wage_growth=None,  # Uses default 3% baseline
+            iterations=iterations
+        )
+        # Group by year and calculate mean across iterations
+        revenue_by_year = revenue_df.groupby('year').agg({
+            'total_revenues': 'mean'
+        }).reset_index()
+        revenue_billions = revenue_by_year['total_revenues'].values
         
-        # Healthcare spending
-        # Using baseline healthcare growth model (4-5% annual growth from ~$4.5T base)
-        # This represents total national health expenditure (NHE) projections
-        base_healthcare = 4500  # ~$4.5T baseline NHE
-        healthcare_growth_rates = np.linspace(0.04, 0.05, years)  # 4-5% annual growth
-        healthcare_spending = base_healthcare * np.cumprod(1 + healthcare_growth_rates)
+        # Other federal healthcare spending (VA, CHIP, ACA, Public Health, etc.)
+        # Baseline ~$350B/year (2025), grows with healthcare inflation
+        # Separate from Medicare/Medicaid which are modeled explicitly
+        base_other_health = 350  # Billions: VA (~$300B) + CHIP (~$20B) + ACA subsidies (~$30B)
+        other_health_growth = 0.055  # 5.5% annual growth (healthcare inflation)
+        healthcare_spending = base_other_health * np.power(1 + other_health_growth, np.arange(years))
         
         # Social Security
         ss_df = self._get_ss_spending(years, iterations, ss_scenario)
@@ -134,7 +210,7 @@ class CombinedFiscalOutlookModel:
             # Revenue
             "total_revenue": revenue_billions,
             # Spending
-            "healthcare_spending": healthcare_spending,
+            "other_health_spending": healthcare_spending,  # VA, CHIP, ACA, Public Health
             "social_security_spending": _safe_extract_spending(ss_df, "spending", years),
             "medicare_spending": _safe_extract_spending(medicare_df, "spending", years),
             "medicaid_spending": _safe_extract_spending(medicaid_df, "spending", years),
@@ -143,11 +219,10 @@ class CombinedFiscalOutlookModel:
         })
         
         # Calculate totals
-        mandatory_cols = ["social_security_spending", "medicare_spending", "medicaid_spending"]
+        mandatory_cols = ["social_security_spending", "medicare_spending", "medicaid_spending", "other_health_spending"]
         unified["mandatory_spending"] = unified[mandatory_cols].sum(axis=1)
         
         unified["total_spending"] = (
-            unified["healthcare_spending"] +
             unified["mandatory_spending"] +
             unified["discretionary_spending"] +
             unified["interest_spending"]
@@ -188,14 +263,14 @@ class CombinedFiscalOutlookModel:
         primary_balance_10yr = df.head(10)["primary_deficit"].sum()
         
         return {
-            "total_revenue_10year_billions": total_revenue_10yr,
-            "total_spending_10year_billions": total_spending_10yr,
-            "total_deficit_10year_billions": total_deficit_10yr,
-            "avg_annual_revenue_billions": avg_annual_revenue,
-            "avg_annual_spending_billions": avg_annual_spending,
-            "avg_annual_deficit_billions": avg_annual_deficit,
-            "primary_balance_10year_billions": primary_balance_10yr,
-            "sustainable": primary_balance_10yr > 0,
+            "total_revenue_10year_billions": float(total_revenue_10yr),
+            "total_spending_10year_billions": float(total_spending_10yr),
+            "total_deficit_10year_billions": float(total_deficit_10yr),
+            "avg_annual_revenue_billions": float(avg_annual_revenue),
+            "avg_annual_spending_billions": float(avg_annual_spending),
+            "avg_annual_deficit_billions": float(avg_annual_deficit),
+            "primary_balance_10year_billions": float(primary_balance_10yr),
+            "sustainable": bool(primary_balance_10yr > 0),
         }
     
     def calculate_fiscal_gap(
@@ -218,41 +293,78 @@ class CombinedFiscalOutlookModel:
         return 1.5  # Placeholder: 1.5% of GDP gap
     
     def _get_ss_spending(self, years: int, iterations: int, scenario: str) -> pd.DataFrame:
-        """Get Social Security spending projections."""
+        """Get Social Security spending projections with caching."""
+        # Check cache first (Performance #2)
+        cached = self._get_cached("ss_spending", years=years, iterations=iterations, scenario=scenario)
+        if cached is not None:
+            return cached
+        
+        # Compute if not cached
         ss_proj = self.ss_model.project_trust_funds(years, iterations)
         
-        # Extract spending (OASI + DI benefit payments)
-        spending = ss_proj.mean(axis=0)[:years] * 1.5  # Rough conversion to spending basis
+        # Group by year and calculate mean benefit payments across iterations
+        yearly_spending = ss_proj.groupby('year').agg({
+            'benefit_payments_billions': 'mean'
+        }).reset_index()
         
-        return pd.DataFrame({
-            "year": np.arange(years) + 2026,
-            "spending": spending,
+        result = pd.DataFrame({
+            "year": yearly_spending["year"],
+            "spending": yearly_spending["benefit_payments_billions"],
         })
+        
+        # Cache the result
+        self._set_cached("ss_spending", result, years=years, iterations=iterations, scenario=scenario)
+        return result
     
     def _get_medicare_spending(self, years: int, iterations: int) -> pd.DataFrame:
-        """Get Medicare spending projections."""
+        """Get Medicare spending projections with caching."""
+        # Check cache first (Performance #2)
+        cached = self._get_cached("medicare_spending", years=years, iterations=iterations)
+        if cached is not None:
+            return cached
+        
+        # Compute if not cached (using optimized vectorized projection - Performance #1)
         medicare_proj = self.medicare_model.project_all_parts(years, iterations)
         
-        # Sum Parts A, B, D
-        total_spending = (
-            medicare_proj["Part A"].mean() +
-            medicare_proj["Part B"].mean() +
-            medicare_proj["Part D"].mean()
-        )
+        # Group by year and calculate mean across iterations
+        yearly_spending = medicare_proj.groupby('year').agg({
+            'part_a_spending': 'mean',
+            'part_b_spending': 'mean',
+            'part_d_spending': 'mean',
+            'total_spending': 'mean'
+        }).reset_index()
         
-        return pd.DataFrame({
-            "year": np.arange(years) + 2026,
-            "spending": total_spending,
+        # Convert from dollars to billions
+        result = pd.DataFrame({
+            "year": yearly_spending["year"],
+            "spending": yearly_spending["total_spending"] / 1e9,
         })
+        
+        # Cache the result
+        self._set_cached("medicare_spending", result, years=years, iterations=iterations)
+        return result
     
     def _get_medicaid_spending(self, years: int, iterations: int) -> pd.DataFrame:
-        """Get Medicaid spending projections."""
+        """Get Medicaid spending projections with caching."""
+        # Check cache first (Performance #2)
+        cached = self._get_cached("medicaid_spending", years=years, iterations=iterations)
+        if cached is not None:
+            return cached
+        
+        # Compute if not cached
         medicaid_proj = self.medicaid_model.project_spending(years, iterations)
         
-        # Total spending
-        total_spending = medicaid_proj["spending"].mean()
+        # Group by year and calculate mean across iterations
+        yearly_spending = medicaid_proj.groupby('year').agg({
+            'total_spending': 'mean'
+        }).reset_index()
         
-        return pd.DataFrame({
-            "year": np.arange(years) + 2026,
-            "spending": total_spending,
+        # Convert from thousands to billions
+        result = pd.DataFrame({
+            "year": yearly_spending["year"],
+            "spending": yearly_spending["total_spending"] / 1e3,
         })
+        
+        # Cache the result
+        self._set_cached("medicaid_spending", result, years=years, iterations=iterations)
+        return result

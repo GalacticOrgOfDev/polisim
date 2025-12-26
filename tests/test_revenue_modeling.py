@@ -265,10 +265,13 @@ class TestAllRevenuesProjection:
         )
 
         baseline = model.baseline_revenues["total"]
-        projected = result["total_revenues"]
-
+        
+        # Check final year (2034) projections
+        final_year = result[result["year"] == 2034]
+        mean_projected = final_year["total_revenues"].mean()
+        
         # 10-year projections should be 20-50% higher than 2025 baseline
-        mean_projected = projected.mean()
+        # Expected: (1.025)^10 ≈ 1.28x baseline
         assert baseline * 1.2 < mean_projected < baseline * 1.5
 
 

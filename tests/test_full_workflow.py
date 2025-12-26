@@ -184,11 +184,11 @@ def test_simulation():
     for idx, row in results.iterrows():
         year = int(row['Year'])
         gdp = row['GDP'] / 1e12
-        spending = row['Health Spending ($)'] / 1e12
+        spending = row['Healthcare Spending'] / 1e12
         spending_pct = row['Health % GDP']
-        revenue = row['Revenue ($)'] / 1e12
-        surplus = row['Surplus ($)'] / 1e12
-        debt = row['Remaining Debt ($)'] / 1e12
+        revenue = row['Total Revenue'] / 1e12
+        surplus = row['Surplus/Deficit'] / 1e12
+        debt = row['National Debt'] / 1e12
         
         print(f"Year {year}: GDP ${gdp:.1f}T | Spending ${spending:.2f}T ({spending_pct:.1%}) | "
               f"Revenue ${revenue:.2f}T | Surplus ${surplus:.2f}T | Debt ${debt:.1f}T")

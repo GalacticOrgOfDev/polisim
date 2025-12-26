@@ -130,23 +130,23 @@ def _simulate_with_mechanics(policy, base_gdp: float, initial_debt: float, years
         circuit_breaker_triggered = len(circuit_breakers) > 0
         circuit_breaker_msg = "; ".join([msg for _, msg in circuit_breakers]) if circuit_breaker_triggered else ""
         
-        # Build row
+        # Build row with context-aware column names
         row = {
             'Year': year,
             'GDP': current_gdp,
-            'Remaining Debt ($)': current_debt,
+            'National Debt': current_debt,
             'Debt % GDP': (current_debt / current_gdp) * 100,
             
-            # Revenue breakdown
-            'Revenue ($)': revenue_breakdown.total,
+            # Revenue breakdown (context-aware names)
+            'Total Revenue': revenue_breakdown.total,
             'Payroll Tax Revenue': revenue_breakdown.payroll_tax,
             'Redirected Federal Revenue': revenue_breakdown.redirected_federal,
             'Converted Premiums Revenue': revenue_breakdown.converted_premiums,
             'Efficiency Gains Revenue': revenue_breakdown.efficiency_gains,
             'Other Revenue': revenue_breakdown.other_sources,
             
-            # Spending breakdown
-            'Health Spending ($)': spending_breakdown.net_spending,
+            # Spending breakdown (context-aware names)
+            'Healthcare Spending': spending_breakdown.net_spending,
             'Health % GDP': (spending_breakdown.net_spending / current_gdp) * 100,
             'Baseline Health Spending': baseline_health_spending_this_year,
             'Savings vs Baseline': savings_vs_baseline,
@@ -154,8 +154,8 @@ def _simulate_with_mechanics(policy, base_gdp: float, initial_debt: float, years
             'Drug Pricing Savings': spending_breakdown.drug_pricing_savings,
             'Preventive Care Savings': spending_breakdown.preventive_care_savings,
             
-            # Fiscal outcomes
-            'Surplus ($)': surplus,
+            # Fiscal outcomes (context-aware names)
+            'Surplus/Deficit': surplus,
             'Surplus % GDP': (surplus / current_gdp) * 100,
             'Interest Spending': interest_spending,
             

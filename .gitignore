@@ -49,6 +49,9 @@ reports/test_outputs/
 reports/charts/
 reports/package/
 reports/*.xlsx
+reports/*.html
+reports/*.png
+reports/*.pdf
 
 # Test temporary files
 tests/extracted_mechanics_test.json
@@ -75,6 +78,8 @@ docs/_build/
 # Profiling outputs
 *.prof
 profile_output.prof
+*_profile.txt
+*.pstats
 
 # Jupyter Notebooks
 *.ipynb_checkpoints/
@@ -84,17 +89,29 @@ profile_output.prof
 *.cache
 .cache/
 core/cbo_data_cache.json
+*.pyc
 
 # Temporary files
 *.tmp
 *.temp
 tmp/
 temp/
+extracted_pdf_text_debug.txt
+*_debug.txt
+*_temp.txt
 
 # Backup files
 *.bak
 *.backup
 *~
+
+# Test regenerated files (local testing only)
+policies/test_*_regenerated.json
+policies/test_*_with_*.json
+
+# Policy uploads (user content, not versioned)
+policies/uploads/
+policies/custom_policies/*.json
 
 # Local environment files
 .env

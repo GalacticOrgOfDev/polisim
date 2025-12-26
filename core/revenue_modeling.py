@@ -214,19 +214,19 @@ class FederalRevenueModel:
             revenue = self.baseline_revenues["individual_income_tax"]
 
             for year in range(years):
-                # Wage growth impact
-                wage_factor = (1 + wage_growth[year]) ** (year + 1)
+                # Wage growth impact (year-over-year, not cumulative)
+                wage_factor = 1 + wage_growth[year]
 
                 # Number of filers growth (~0.5% per year)
-                filer_growth = (1.005) ** (year + 1)
+                filer_growth = 1.005
 
-                # Tax base growth
+                # Tax base growth (year-over-year)
                 tax_base_growth = wage_factor * filer_growth
 
                 # Add Monte Carlo noise to growth
-                growth_noise = np.random.normal(1.0, 0.02)  # 2% std dev
+                growth_noise = np.random.normal(1.0, 0.03)  # 3% std dev
 
-                # Adjusted revenue projection
+                # Adjusted revenue projection (simple compounding)
                 revenue = revenue * tax_base_growth * growth_noise
 
                 # Effective tax rate (for reference)
@@ -283,17 +283,18 @@ class FederalRevenueModel:
             medicare_revenue = self.baseline_revenues["payroll_taxes"] * MEDICARE_SHARE_OF_PAYROLL
 
             for year in range(years):
-                # Wage base growth
-                wage_factor = (1 + wage_growth[year]) ** (year + 1)
+                # Wage base growth (year-over-year, not cumulative)
+                wage_factor = 1 + wage_growth[year]
                 employment_factor = employment[year] if year < len(employment) else 1.0
 
-                # Social Security taxable payroll hits cap
-                ss_cap_effect = 0.95 + (0.05 * year / years)  # Cap becomes more binding
+                # Social Security cap becomes more binding over time as wages grow
+                # Starts at 100% effective, decreases to 95% by end (5% of payroll escapes cap)
+                ss_cap_effect = 1.0 - (0.05 * year / years)
 
                 # Add Monte Carlo noise
-                noise = np.random.normal(1.0, 0.015)  # 1.5% std dev
+                noise = np.random.normal(1.0, 0.025)  # 2.5% std dev
 
-                # Project revenues
+                # Project revenues (simple compounding)
                 ss_revenue = ss_revenue * wage_factor * employment_factor * ss_cap_effect * noise
                 medicare_revenue = medicare_revenue * wage_factor * employment_factor * noise
 
@@ -355,7 +356,7 @@ class FederalRevenueModel:
             for year in range(years):
                 # Corporate profits highly sensitive to GDP growth
                 # Elasticity ~2.0 (1% GDP growth → 2% profit growth)
-                profit_growth = (1 + gdp_growth[year] * CORPORATE_PROFIT_GDP_ELASTICITY) ** (year + 1)
+                profit_growth = 1 + (gdp_growth[year] * CORPORATE_PROFIT_GDP_ELASTICITY)
 
                 # M3 Enhancement: Improved recession handling with multi-year effects
                 # Recession defined as GDP growth < -2%
@@ -453,11 +454,13 @@ class FederalRevenueModel:
             other_rev = self.baseline_revenues["other_revenues"]
 
             for year in range(years):
-                growth_factor = (1 + gdp_growth[year]) ** (year + 1)
+                growth_factor = 1 + gdp_growth[year]
                 noise = np.random.normal(1.0, EXCISE_OTHER_REVENUE_UNCERTAINTY)
 
-                excise_revenues[year, it] = excise_rev * growth_factor * noise
-                other_revenues[year, it] = other_rev * growth_factor * noise
+                excise_rev = excise_rev * growth_factor * noise
+                other_rev = other_rev * growth_factor * noise
+                excise_revenues[year, it] = excise_rev
+                other_revenues[year, it] = other_rev
 
         # Compile results
         results = []

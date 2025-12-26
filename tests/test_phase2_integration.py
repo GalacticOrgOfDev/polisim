@@ -249,9 +249,9 @@ class TestRevenueScenarios:
         yearly_avg = revenues.groupby('year')['total_revenues'].mean()
         total = yearly_avg.sum()
         
-        # Model produces ~2x the config value - likely due to different baseline assumptions
-        # Adjust expectation to match actual model behavior (around 100-120T for 10 years)
-        assert 90000 < total < 130000, f"10-year total {total} outside reasonable range"
+        # After fixing compounding bugs, model produces ~60T for 10 years, closer to CBO baseline of 52T
+        # Allow 20-50% range above baseline to account for baseline year differences
+        assert 50000 < total < 80000, f"10-year total {total} outside reasonable range"
 
     def test_recession_scenario(self):
         """Test recession scenario."""
@@ -272,8 +272,8 @@ class TestRevenueScenarios:
         yearly_avg = revenues.groupby('year')['total_revenues'].mean()
         total = yearly_avg.sum()
         
-        # Recession should produce lower revenues than baseline (~90-100T)
-        baseline_total = 110000  # From baseline scenario actual output
+        # Recession should produce lower revenues than baseline (~60T)
+        baseline_total = 60000  # From baseline scenario actual output after bug fixes
         assert total < baseline_total, f"Recession total {total} not less than baseline {baseline_total}"
 
     def test_strong_growth_scenario(self):
@@ -392,9 +392,9 @@ class TestPhase2Validation:
         yearly_avg = revenues.groupby('year')['total_revenues'].mean()
         total = yearly_avg.sum()
         
-        # CBO baseline: ~$52 trillion over 10 years (config), but model produces ~110T
-        # Adjust range to match actual model output
-        assert 90000 < total < 130000, f"10-year total {total} outside reasonable range"
+        # After fixing compounding bugs, model produces ~60T for 10 years, closer to CBO baseline of 52T
+        # Allow 20-50% range above baseline to account for baseline year differences
+        assert 50000 < total < 80000, f"10-year total {total} outside reasonable range"
 
 
 if __name__ == "__main__":

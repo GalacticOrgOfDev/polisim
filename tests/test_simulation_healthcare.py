@@ -73,8 +73,8 @@ class TestBasicSimulation:
         
         # Validate expected columns
         expected_columns = [
-            'Year', 'GDP', 'Health Spending ($)', 'Health % GDP',
-            'Per Capita Health ($)', 'Revenue ($)', 'Surplus ($)', 'Remaining Debt ($)'
+            'Year', 'GDP', 'Healthcare Spending', 'Health % GDP',
+            'Per Capita Health ($)', 'Total Revenue', 'Surplus/Deficit', 'National Debt'
         ]
         for col in expected_columns:
             assert col in df.columns, f"Missing column: {col}"
@@ -95,7 +95,7 @@ class TestBasicSimulation:
         )
         
         # No NaNs in critical columns
-        critical_cols = ['Year', 'GDP', 'Health Spending ($)', 'Revenue ($)']
+        critical_cols = ['Year', 'GDP', 'Healthcare Spending', 'Total Revenue']
         for col in critical_cols:
             assert df[col].notna().all(), f"Column {col} has NaN values"
         
@@ -103,7 +103,7 @@ class TestBasicSimulation:
         assert (df['GDP'] > 0).all(), "GDP should be positive"
         
         # Health spending should be less than GDP (sanity check)
-        assert (df['Health Spending ($)'] < df['GDP']).all(), "Health spending should be < GDP"
+        assert (df['Healthcare Spending'] < df['GDP']).all(), "Health spending should be < GDP"
         
         logger.info("Output data integrity validated")
     
@@ -142,8 +142,8 @@ class TestEdgeCases:
         )
         
         assert isinstance(df, pd.DataFrame), "Should handle high debt"
-        assert (df['Remaining Debt ($)'] >= 0).all(), "Debt should be non-negative"
-        assert all(df['Remaining Debt ($)'].apply(lambda x: x < float('inf'))), "Debt should not explode to infinity"
+        assert (df['National Debt'] >= 0).all(), "Debt should be non-negative"
+        assert all(df['National Debt'].apply(lambda x: x < float('inf'))), "Debt should not explode to infinity"
         logger.info("High debt scenario handled correctly")
     
     def test_zero_growth_scenario(self):
