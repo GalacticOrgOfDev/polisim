@@ -236,6 +236,7 @@ polisim/
 **Reference:**
 - [Changelog](documentation/CHANGELOG.md) - Version history
 - [Project Phases](documentation/PHASES.md) - Roadmap
+- [Validation Report](documentation/VALIDATION_REPORT_DEC26.md) - System health (A+ grade, 417/419 tests passing)
 
 ---
 

@@ -22,11 +22,11 @@
   - Dec 24, 2025 - Phase 1 complete, all 18 bugs fixed
   - All major releases and bug fixes documented
 
-- **[debug.md](debug.md)** - Current debug status and quality audit
-  - **Status:** ✅ 100% Complete (14/14 issues resolved)
-  - **Grade:** A+ (100/100) - Gold standard achieved
-  - Comprehensive audit of 6,264 lines across 5 core files
-  - Production-ready with full test coverage
+- **[debug.md](debug.md)** - Agent workspace for granular analysis and debugging
+  - **Purpose:** Working document for AI agents to document analysis findings
+  - **Usage:** Agents log step-by-step debugging walkthroughs to avoid losing progress
+  - **Lifecycle:** Emptied by user after completion when findings are moved to permanent docs
+  - **Current Status:** Empty (last analysis completed Dec 26, 2025 - see VALIDATION_REPORT_DEC26.md)
 
 ### Development Guides
 - **[EXHAUSTIVE_INSTRUCTION_MANUAL.md](EXHAUSTIVE_INSTRUCTION_MANUAL.md)** - Complete development roadmap
@@ -85,7 +85,15 @@
 **Policy:** Delete outdated files instead of archiving. Keep only current, relevant documentation.
 - Historical information goes in CHANGELOG.md
 - Phase status goes in PHASES.md
-- Debug history goes in debug.md
+- Agent analysis findings are moved from debug.md to permanent docs when complete
+
+### debug.md Special Usage
+**debug.md is NOT permanent documentation.** It's a workspace for AI agents:
+- Agents document step-by-step analysis and debugging findings
+- Prevents losing progress during complex debugging sessions
+- After completion testing and verification, findings are moved to appropriate permanent docs (VALIDATION_REPORT, CHANGELOG, etc.)
+- File is then emptied by the userfor next analysis session
+- Think of it as a "scratch pad" or "lab notebook" for agent work with user verifications for completion
 
 ### Current Documentation Standards
 - **Markdown format** for all documentation
@@ -101,17 +109,19 @@
 
 ### By Topic
 - **Getting Started:** 00_START_HERE.md, QUICK_REFERENCE.md
-- **Bug Fixes:** debug.md, CHANGELOG.md
+- **Validation & Quality:** VALIDATION_REPORT_DEC26.md, CHANGELOG.md
 - **Phase Planning:** PHASES.md, EXHAUSTIVE_INSTRUCTION_MANUAL.md
 - **Code Standards:** NAMING_CONVENTIONS.md, TYPE_HINTS_GUIDE.md
 - **Policy Extraction:** CONTEXT_FRAMEWORK.md, CONTEXT_FRAMEWORK_INDEX.md
 - **UI Features:** TOOLTIP_SYSTEM.md, DEMO_SCRIPT_USAGE.md
+- **Agent Workspace:** debug.md (working document, emptied when complete)
 
 ### By Audience
 - **New Developers:** 00_START_HERE.md → QUICK_REFERENCE.md → PHASES.md
-- **Contributors:** NAMING_CONVENTIONS.md → TYPE_HINTS_GUIDE.md → debug.md
+- **Contributors:** NAMING_CONVENTIONS.md → TYPE_HINTS_GUIDE.md → VALIDATION_REPORT_DEC26.md
 - **Users:** README.md → TOOLTIP_SYSTEM.md → DEMO_SCRIPT_USAGE.md
 - **Researchers:** CONTEXT_FRAMEWORK.md → PHASES.md
+- **AI Agents:** debug.md (workspace for analysis sessions)
 
 ---
 

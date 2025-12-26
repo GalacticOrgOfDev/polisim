@@ -18,7 +18,8 @@ It contains:
 - **New to PoliSim?** → [00_START_HERE.md](00_START_HERE.md)
 - **Need API reference?** → [QUICK_REFERENCE.md](QUICK_REFERENCE.md)
 - **Looking for recent changes?** → [CHANGELOG.md](CHANGELOG.md)
-- **Want to see bug fixes?** → [debug.md](debug.md)
+- **Want to see validation results?** → [VALIDATION_REPORT_DEC26.md](VALIDATION_REPORT_DEC26.md)
+- **Agent workspace (internal)?** → [debug.md](debug.md)
 - **Planning development work?** → [EXHAUSTIVE_INSTRUCTION_MANUAL.md](EXHAUSTIVE_INSTRUCTION_MANUAL.md)
 
 ## Documentation Structure
@@ -28,7 +29,7 @@ documentation/
 ├── INDEX.md                          # 👈 START HERE - Central navigation
 ├── 00_START_HERE.md                  # Project overview and quick start
 ├── CHANGELOG.md                      # Complete project history
-├── debug.md                          # Current debug status (A+ grade!)
+├── debug.md                          # Agent workspace (emptied when complete)
 ├── QUICK_REFERENCE.md                # API and usage examples
 ├── PHASES.md                         # Phase 1-5 roadmap and status
 ├── EXHAUSTIVE_INSTRUCTION_MANUAL.md  # Development guide
