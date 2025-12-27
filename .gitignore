@@ -71,6 +71,7 @@ project guidelines/
 
 # Streamlit
 .streamlit/
+.polisim/
 
 # Sphinx documentation build
 docs/build/
