@@ -11,14 +11,13 @@ Features:
 - Policy comparison and sensitivity analysis
 - Report generation
 """
-# mypy: ignore-errors
 
 try:
     import streamlit as st
-    import pandas as pd  # type: ignore[import-untyped]
+    import pandas as pd
     import numpy as np
-    import plotly.graph_objects as go  # type: ignore[import-untyped]
-    import plotly.express as px  # type: ignore[import-untyped]
+    import plotly.graph_objects as go
+    import plotly.express as px
     from pathlib import Path
     import json
     
@@ -43,181 +42,26 @@ try:
         PolicySensitivityAnalyzer,
         StressTestAnalyzer,
     )
-    from ui.auth import StreamlitAuth, show_user_profile_page
-    from ui.themes import apply_theme, get_theme_list, preview_theme, customize_theme_colors, apply_plotly_theme
-    from ui.animations import apply_animation
-    from ui.tooltip_registry import get_tooltip as registry_get_tooltip
     
     HAS_STREAMLIT = True
 except ImportError:
     HAS_STREAMLIT = False
 
 
-# Centralized default settings for Streamlit UI
-DEFAULT_SETTINGS = {
-    'tooltips_enabled': True,
-    'show_advanced_options': False,
-    'decimal_places': 1,
-    'chart_theme': 'plotly_dark',
-    'theme': 'light',
-    'animation_enabled': False,
-    'animation_speed': 'normal',
-    'bg_opacity': 0.6,
-    'content_opacity': 0.8,
-    'sidebar_opacity': 0.9,
-    'header_opacity': 1.0,
-    'matrix_font_size': 16,
-    'custom_theme_enabled': False,
-    'custom_theme_config': None,
-    'language': 'English (US)',
-    'timezone': 'UTC',
-    'date_format': 'YYYY-MM-DD',
-    'currency_symbol': '$',
-    'number_format': '1,234,567.89',
-    'abbreviation_style': 'Billions',
-    'policy_cache_ttl_hours': 24,
-    'chart_cache_ttl_minutes': 30,
-    'auto_refresh_data': False,
-    'debug_mode': False,
-    'experimental_features': False,
-    'max_monte_carlo_iterations': 100000,
-}
-
-
 def initialize_settings():
     """Initialize app settings in session state."""
-    from ui.auth import StreamlitAuth
-    import requests
-    from pathlib import Path
-    import json
-    
-    if 'settings' in st.session_state:
-        return
-
-    # Try to load from local file first
-    settings_file = Path.home() / '.polisim' / 'settings.json'
-    local_settings = None
-    if settings_file.exists():
-        try:
-            with open(settings_file, 'r') as f:
-                local_settings = json.load(f)
-                st.session_state.settings = {**DEFAULT_SETTINGS, **local_settings}
-        except Exception:
-            pass
-
-    # Sprint 5.4: Load from API if authenticated (overrides local file)
-    if StreamlitAuth.is_authenticated():
-        try:
-            response = requests.get(
-                f"{StreamlitAuth.API_BASE}/api/users/preferences",
-                headers=StreamlitAuth.get_auth_header(),
-                timeout=5
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                prefs = data.get('preferences', {})
-                
-                # Merge API preferences with defaults (or local settings)
-                current = st.session_state.settings if local_settings else DEFAULT_SETTINGS
-                st.session_state.settings = {**current, **prefs}
-            else:
-                if not local_settings:
-                    st.session_state.settings = dict(DEFAULT_SETTINGS)
-        except Exception:
-            # Fallback to local or defaults if API call fails
-            if not local_settings:
-                st.session_state.settings = dict(DEFAULT_SETTINGS)
-    else:
-        if not local_settings:
-            st.session_state.settings = dict(DEFAULT_SETTINGS)
-
-
-def save_settings():
-    """Save current settings to API if authenticated and to local file."""
-    from ui.auth import StreamlitAuth
-    import requests
-    from pathlib import Path
-    import json
-    
-    # Save to local file first
-    settings_file = Path.home() / '.polisim' / 'settings.json'
-    try:
-        settings_file.parent.mkdir(parents=True, exist_ok=True)
-        with open(settings_file, 'w') as f:
-            json.dump(st.session_state.settings, f, indent=2)
-        local_save_success = True
-    except Exception as e:
-        local_save_success = False
-        local_error = str(e)
-    
-    if StreamlitAuth.is_authenticated():
-        try:
-            response = requests.put(
-                f"{StreamlitAuth.API_BASE}/api/users/preferences",
-                headers=StreamlitAuth.get_auth_header(),
-                json=st.session_state.settings,
-                timeout=5
-            )
-            
-            if response.status_code == 200:
-                return True, "Settings saved successfully (local + cloud)!"
-            else:
-                if local_save_success:
-                    return True, f"Settings saved locally (API error: {response.json().get('error', 'Unknown')})"
-                else:
-                    return False, f"Failed to save: API error and local save failed"
-        except Exception as e:
-            # If API fails, still indicate local save status
-            if local_save_success:
-                return True, f"Settings saved locally (API unavailable: {str(e)[:50]}...)"
-            else:
-                return False, f"Failed to save locally and to API"
-    else:
-        # Not authenticated - local file only
-        if local_save_success:
-            return True, "Settings saved locally (login to sync across devices)"
-        else:
-            return False, f"Failed to save settings: {local_error}"
-
-
-def reset_settings():
-    """Reset settings to defaults locally and in the API when available."""
-    from ui.auth import StreamlitAuth
-    import requests
-    from pathlib import Path
-    import json
-
-    # Reset in session
-    st.session_state.settings = dict(DEFAULT_SETTINGS)
-
-    # Reset local file
-    settings_file = Path.home() / '.polisim' / 'settings.json'
-    try:
-        settings_file.parent.mkdir(parents=True, exist_ok=True)
-        with open(settings_file, 'w') as f:
-            json.dump(st.session_state.settings, f, indent=2)
-    except Exception:
-        pass
-
-    # Reset in API if authenticated
-    if StreamlitAuth.is_authenticated():
-        try:
-            requests.post(
-                f"{StreamlitAuth.API_BASE}/api/users/preferences/reset",
-                headers=StreamlitAuth.get_auth_header(),
-                timeout=5,
-            )
-        except Exception:
-            # Swallow API errors; local reset already applied
-            pass
-
-    return True, "Settings reset to defaults"
+    if 'settings' not in st.session_state:
+        st.session_state.settings = {
+            'tooltips_enabled': True,
+            'show_advanced_options': False,
+            'decimal_places': 1,
+            'chart_theme': 'plotly_white'
+        }
 
 def get_tooltip(term, definition):
-    """Return tooltip if tooltips are enabled in settings."""
+    """Return tooltip help text if enabled, otherwise empty string."""
     if st.session_state.get('settings', {}).get('tooltips_enabled', True):
-        return registry_get_tooltip(term, definition)
+        return definition
     return None
 
 
@@ -278,359 +122,90 @@ def page_settings():
     """Application settings page."""
     st.title("⚙️ Settings")
     
-    # Prepare theme lists once for tab use
-    themes = get_theme_list()
-    theme_names = [t['name'] for t in themes]
-    theme_ids = [t['id'] for t in themes]
-    current_theme = st.session_state.settings.get('theme', 'light')
-    current_index = theme_ids.index(current_theme) if current_theme in theme_ids else 0
-
-    tabs = st.tabs(["General", "Display", "Themes", "Performance", "Advanced", "Account"])
-
-    with tabs[0]:
-        st.subheader("General Preferences")
-        language = st.selectbox(
-            "Language",
-            ["English (US)", "English (UK)", "Spanish (beta)", "French (beta)"],
-            index=["English (US)", "English (UK)", "Spanish (beta)", "French (beta)"].index(
-                st.session_state.settings.get('language', 'English (US)')
-            ),
-            help="Choose your preferred language for labels and reports",
-        )
-        timezone = st.selectbox(
-            "Timezone",
-            ["UTC", "US/Eastern", "US/Central", "US/Mountain", "US/Pacific"],
-            index=["UTC", "US/Eastern", "US/Central", "US/Mountain", "US/Pacific"].index(
-                st.session_state.settings.get('timezone', 'UTC')
-            ),
-            help="Set timezone for timestamps and report generation",
-        )
-        date_format = st.selectbox(
-            "Date Format",
-            ["YYYY-MM-DD", "MM/DD/YYYY", "DD/MM/YYYY"],
-            index=["YYYY-MM-DD", "MM/DD/YYYY", "DD/MM/YYYY"].index(
-                st.session_state.settings.get('date_format', 'YYYY-MM-DD')
-            ),
-            help="Preferred display format for dates",
-        )
-        currency_symbol = st.selectbox(
-            "Currency Symbol",
-            ["$", "€", "£", "¥"],
-            index=["$", "€", "£", "¥"].index(
-                st.session_state.settings.get('currency_symbol', '$')
-            ),
-            help="Default currency indicator for reports and charts",
-        )
-        st.session_state.settings.update({
-            'language': language,
-            'timezone': timezone,
-            'date_format': date_format,
-            'currency_symbol': currency_symbol,
-        })
-
-    with tabs[1]:
-        st.subheader("Display & Numbers")
+    # M6: initialize_settings() now called globally in main()
+    
+    st.markdown("### Display Preferences")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("Tooltips")
         tooltips_enabled = st.toggle(
             "Enable Educational Tooltips",
-            value=st.session_state.settings.get('tooltips_enabled', True),
-            help="Show helpful explanations when hovering over technical terms",
+            value=st.session_state.settings['tooltips_enabled'],
+            help="Show helpful explanations when hovering over technical terms"
         )
         st.session_state.settings['tooltips_enabled'] = tooltips_enabled
-
+        
+        if tooltips_enabled:
+            st.success("✓ Tooltips enabled - hover over terms for explanations")
+        else:
+            st.info("ℹ️ Tooltips disabled - technical terms will not show explanations")
+        
+        st.markdown("---")
+        
         decimal_places = st.slider(
             "Decimal Places for Numbers",
             min_value=0,
             max_value=3,
-            value=st.session_state.settings.get('decimal_places', 1),
-            help="Number of decimal places to display in results",
+            value=st.session_state.settings['decimal_places'],
+            help="Number of decimal places to display in results"
         )
         st.session_state.settings['decimal_places'] = decimal_places
-
-        number_format = st.selectbox(
-            "Number Format",
-            ["1,234,567.89", "1.234.567,89", "1 234 567.89"],
-            index=["1,234,567.89", "1.234.567,89", "1 234 567.89"].index(
-                st.session_state.settings.get('number_format', '1,234,567.89')
-            ),
-            help="Choose thousand and decimal separators",
+    
+    with col2:
+        st.subheader("Advanced Options")
+        show_advanced = st.toggle(
+            "Show Advanced Options",
+            value=st.session_state.settings['show_advanced_options'],
+            help="Display advanced configuration options in analysis pages"
         )
-        abbreviation_style = st.selectbox(
-            "Large Number Abbreviation",
-            ["Full", "Thousands", "Millions", "Billions"],
-            index=["Full", "Thousands", "Millions", "Billions"].index(
-                st.session_state.settings.get('abbreviation_style', 'Billions')
-            ),
-            help="Control how large figures are abbreviated in tables and charts",
-        )
+        st.session_state.settings['show_advanced_options'] = show_advanced
+        
+        st.markdown("---")
+        
         chart_theme = st.selectbox(
             "Chart Theme",
             options=['plotly_white', 'plotly_dark', 'seaborn', 'simple_white'],
             index=['plotly_white', 'plotly_dark', 'seaborn', 'simple_white'].index(
-                st.session_state.settings.get('chart_theme', 'plotly_dark')
+                st.session_state.settings['chart_theme']
             ),
-            help="Visual theme for all charts and graphs",
+            help="Visual theme for all charts and graphs"
         )
-        st.session_state.settings.update({
-            'number_format': number_format,
-            'abbreviation_style': abbreviation_style,
-            'chart_theme': chart_theme,
-        })
-
-    with tabs[2]:
-        st.subheader("Themes & Animations")
-        selected_theme_name = st.selectbox(
-            "Select Theme",
-            options=theme_names,
-            index=current_index,
-            help="Choose a visual theme for the dashboard",
-        )
-        selected_theme_id = theme_ids[theme_names.index(selected_theme_name)]
-        st.session_state.settings['theme'] = selected_theme_id
-
-        with st.expander("👁️ Preview & Customize Theme", expanded=False):
-            enable_custom = st.checkbox(
-                "🎨 Enable Custom Colors",
-                value=st.session_state.settings.get('custom_theme_enabled', False),
-                help="Customize colors for this theme",
-            )
-
-            if enable_custom:
-                custom_colors = customize_theme_colors(selected_theme_id)
-                st.session_state.settings['custom_theme_config'] = custom_colors
-                st.session_state.settings['custom_theme_enabled'] = True
-                st.markdown("---")
-                preview_theme(selected_theme_id, custom_colors)
-
-                if st.button("🔄 Reset to Default Colors"):
-                    st.session_state.settings['custom_theme_enabled'] = False
-                    st.session_state.settings['custom_theme_config'] = None
-                    st.success("Colors reset to defaults!")
-                    st.rerun()
-            else:
-                st.session_state.settings['custom_theme_enabled'] = False
-                preview_theme(selected_theme_id)
-
-        from ui.animations import get_animation_config
-        anim_config = get_animation_config(selected_theme_id)
-        if anim_config['type'] != 'none':
-            st.markdown("#### ✨ Animation Settings")
-            col1, col2 = st.columns(2)
-
-            with col1:
-                animation_enabled = st.toggle(
-                    "Enable Animations",
-                    value=st.session_state.settings.get('animation_enabled', True),
-                    help=f"{anim_config['description']}",
-                )
-                st.session_state.settings['animation_enabled'] = animation_enabled
-
-            with col2:
-                if animation_enabled and anim_config['supports_speed']:
-                    animation_speed = st.select_slider(
-                        "Animation Speed",
-                        options=['slow', 'normal', 'fast'],
-                        value=st.session_state.settings.get('animation_speed', 'normal'),
-                        help="Adjust animation speed (affects performance)",
-                    )
-                    st.session_state.settings['animation_speed'] = animation_speed
-
-            if animation_enabled and selected_theme_id == 'matrix':
-                st.markdown("#### Matrix Rain Settings")
-                matrix_font_size = st.slider(
-                    "Rain Text Size",
-                    min_value=10,
-                    max_value=32,
-                    value=st.session_state.settings.get('matrix_font_size', 16),
-                    step=2,
-                    help="Adjust the size of falling characters (10-32px)",
-                )
-                st.session_state.settings['matrix_font_size'] = matrix_font_size
-                approx_columns = 1920 // matrix_font_size
-                st.caption(f"Current: {matrix_font_size}px characters (~{approx_columns} columns on 1920px screen)")
-
-            if animation_enabled:
-                st.info("💡 **Performance Tip:** Set to 'slow' or disable animations if experiencing lag.")
-
-        if selected_theme_id in ['matrix', 'cyberpunk', 'dark'] and st.session_state.settings.get('animation_enabled', False):
-            st.markdown("#### 🎛️ Background Transparency")
-            st.caption("Adjust transparency to balance content readability with animation visibility")
-            col1, col2 = st.columns(2)
-
-            with col1:
-                bg_opacity = st.slider(
-                    "Main Background Opacity",
-                    min_value=0.0,
-                    max_value=1.0,
-                    value=st.session_state.settings.get('bg_opacity', 0.6),
-                    step=0.05,
-                    help="Lower = more animation visible (0.5-0.7 recommended)",
-                )
-                st.session_state.settings['bg_opacity'] = bg_opacity
-
-            with col2:
-                content_opacity = st.slider(
-                    "Content Block Opacity",
-                    min_value=0.0,
-                    max_value=1.0,
-                    value=st.session_state.settings.get('content_opacity', 0.8),
-                    step=0.05,
-                    help="Lower = more animation visible (0.7-0.9 recommended)",
-                )
-                st.session_state.settings['content_opacity'] = content_opacity
-
-            st.markdown("#### Sidebar & Header Transparency")
-            shared_opacity = st.slider(
-                "Sidebar & Header Opacity",
-                min_value=0.0,
-                max_value=1.0,
-                value=st.session_state.settings.get('sidebar_opacity', 0.9),
-                step=0.05,
-                help="Lower = more animation visible through the sidebar and top bar (0.8-0.95 recommended for readability)",
-            )
-            st.session_state.settings['sidebar_opacity'] = shared_opacity
-            st.session_state.settings['header_opacity'] = shared_opacity
-
-            st.caption(
-                f"📊 Current: Background {int(bg_opacity*100)}% opaque, "
-                f"Content {int(content_opacity*100)}% opaque, "
-                f"Sidebar/Header {int(shared_opacity*100)}% opaque",
-            )
-
-    with tabs[3]:
-        st.subheader("Performance")
-        policy_cache_ttl = st.slider(
-            "Policy Cache Duration (hours)",
-            min_value=1,
-            max_value=72,
-            value=st.session_state.settings.get('policy_cache_ttl_hours', 24),
-            help="How long to cache policy data before refreshing",
-        )
-        chart_cache_ttl = st.slider(
-            "Chart Cache Duration (minutes)",
-            min_value=5,
-            max_value=120,
-            value=st.session_state.settings.get('chart_cache_ttl_minutes', 30),
-            help="How long to cache chart data for faster reloads",
-        )
-        auto_refresh = st.toggle(
-            "Auto-refresh data on page load",
-            value=st.session_state.settings.get('auto_refresh_data', False),
-            help="Refresh cached data each time you open a page (slower, but freshest data)",
-        )
-        st.session_state.settings.update({
-            'policy_cache_ttl_hours': policy_cache_ttl,
-            'chart_cache_ttl_minutes': chart_cache_ttl,
-            'auto_refresh_data': auto_refresh,
-        })
-
-    with tabs[4]:
-        st.subheader("Advanced")
-        show_advanced = st.toggle(
-            "Show Advanced Options",
-            value=st.session_state.settings.get('show_advanced_options', False),
-            help="Display advanced configuration options in analysis pages",
-        )
-        debug_mode = st.toggle(
-            "Debug Mode",
-            value=st.session_state.settings.get('debug_mode', False),
-            help="Show additional diagnostics (for troubleshooting)",
-        )
-        experimental_features = st.toggle(
-            "Experimental Features",
-            value=st.session_state.settings.get('experimental_features', False),
-            help="Enable beta features for testing",
-        )
-        max_iterations = st.slider(
-            "Max Monte Carlo Iterations",
-            min_value=10_000,
-            max_value=200_000,
-            value=st.session_state.settings.get('max_monte_carlo_iterations', 100_000),
-            step=5_000,
-            help="Upper bound for Monte Carlo runs to prevent runaway jobs",
-        )
-        st.session_state.settings.update({
-            'show_advanced_options': show_advanced,
-            'debug_mode': debug_mode,
-            'experimental_features': experimental_features,
-            'max_monte_carlo_iterations': max_iterations,
-        })
-
-    with tabs[5]:
-        st.subheader("Account & Sync")
-        if StreamlitAuth.is_authenticated():
-            user = StreamlitAuth.get_current_user() or {}
-            st.markdown(StreamlitAuth.render_user_summary(user))
-            st.caption("Preferences sync automatically when saved.")
-            if st.button("🚪 Logout", key="settings_logout", use_container_width=True):
-                StreamlitAuth.logout(reason="Signed out.")
-        else:
-            st.info("Login to sync your preferences across devices.")
-        st.write("Use the User Profile page for password and API key management.")
-
-    st.markdown("---")
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        if st.button("✨ Apply Changes", use_container_width=True):
-            st.success("Settings applied! Preview your changes.")
-            st.rerun()
-
-    with col2:
-        if st.button("💾 Save Settings", type="primary", use_container_width=True):
-            success, message = save_settings()
-            if success:
-                st.success(message)
-                st.rerun()
-            else:
-                st.error(message)
-
-    with col3:
-        if st.button("♻️ Reset to Defaults", use_container_width=True):
-            success, message = reset_settings()
-            if success:
-                st.success(message)
-                st.rerun()
-            else:
-                st.error(message)
+        st.session_state.settings['chart_theme'] = chart_theme
     
     st.markdown("---")
     st.markdown("### Glossary of Terms")
     
     with st.expander("📚 Social Security Terms", expanded=False):
-        st.markdown(
-            "\n".join([
-                "- **COLA (Cost of Living Adjustment)**: Annual increase in Social Security benefits to account for inflation, typically based on the Consumer Price Index (CPI-W).",
-                "- **FRA (Full Retirement Age)**: Age at which a person can claim full Social Security retirement benefits without reduction (currently 67 for those born 1960+).",
-                "- **OASI (Old-Age and Survivors Insurance)**: Largest Social Security trust fund, providing retirement and survivor benefits.",
-                "- **DI (Disability Insurance)**: Trust fund providing benefits to disabled workers and their families.",
-                "- **Payroll Tax Rate**: Combined employer and employee Social Security tax rate (currently 12.4% total).",
-                "- **Wage Cap**: Maximum earnings subject to Social Security payroll tax (2025: $168,600).",
-                "- **Trust Fund Depletion**: Year when reserves are exhausted and benefits are limited to incoming revenue (~77% of scheduled benefits).",
-                "- **Monte Carlo Simulation**: Statistical method running many scenarios with different assumptions to quantify uncertainty.",
-            ])
-        )
+        st.markdown("""
+        - **COLA (Cost of Living Adjustment)**: Annual increase in Social Security benefits to account for inflation, typically based on the Consumer Price Index (CPI-W).
+        - **FRA (Full Retirement Age)**: The age at which a person can claim full Social Security retirement benefits without reduction (currently 67 for those born 1960+).
+        - **OASI (Old-Age and Survivors Insurance)**: The largest Social Security trust fund, providing retirement and survivor benefits.
+        - **DI (Disability Insurance)**: Trust fund providing benefits to disabled workers and their families.
+        - **Payroll Tax Rate**: The combined employer and employee Social Security tax rate (currently 12.4% total).
+        - **Wage Cap**: Maximum amount of earnings subject to Social Security payroll tax (2025: $168,600).
+        - **Trust Fund Depletion**: Year when the trust fund reserves are exhausted and can only pay benefits from incoming revenue (~77% of scheduled benefits).
+        - **Monte Carlo Simulation**: Statistical method running thousands of scenarios with different assumptions to quantify uncertainty.
+        """)
     
     with st.expander("📚 Economic Terms", expanded=False):
-        st.markdown(
-            "\n".join([
-                "- **GDP (Gross Domestic Product)**: Total value of all goods and services produced in the economy.",
-                "- **CPI (Consumer Price Index)**: Measure of inflation tracking changes in prices consumers pay for goods and services.",
-                "- **Baseline Scenario**: Projection under current law with no policy changes.",
-                "- **Fiscal Outlook**: Long-term projection of government revenues, spending, deficits, and debt.",
-                "- **Actuarial Balance**: Measure of Social Security's long-term financial status as percentage of taxable payroll.",
-            ])
-        )
+        st.markdown("""
+        - **GDP (Gross Domestic Product)**: Total value of all goods and services produced in the economy.
+        - **CPI (Consumer Price Index)**: Measure of inflation tracking changes in prices consumers pay for goods and services.
+        - **Baseline Scenario**: Projection under current law with no policy changes.
+        - **Fiscal Outlook**: Long-term projection of government revenues, spending, deficits, and debt.
+        - **Actuarial Balance**: Measure of Social Security's long-term financial status as percentage of taxable payroll.
+        """)
     
     with st.expander("📚 Healthcare Terms", expanded=False):
-        st.markdown(
-            "\n".join([
-                "- **Medicare Part A**: Hospital insurance covering inpatient care.",
-                "- **Medicare Part B**: Medical insurance covering doctor visits and outpatient care.",
-                "- **Medicare Part D**: Prescription drug coverage.",
-                "- **Medicaid**: Joint federal-state program providing health coverage to low-income individuals.",
-                "- **USGHA (United States Guaranteed Healthcare Act)**: Proposed comprehensive healthcare reform.",
-            ])
-        )
+        st.markdown("""
+        - **Medicare Part A**: Hospital insurance covering inpatient care.
+        - **Medicare Part B**: Medical insurance covering doctor visits and outpatient care.
+        - **Medicare Part D**: Prescription drug coverage.
+        - **Medicaid**: Joint federal-state program providing health coverage to low-income individuals.
+        - **USGHA (United States Guaranteed Healthcare Act)**: Proposed comprehensive healthcare reform.
+        """)
     
     st.success("Settings saved automatically!")
 
@@ -647,34 +222,30 @@ def page_overview():
     with col3:
         st.metric("Projection Horizon", "75 years", delta="Long-term sustainability")
     
-    st.markdown(
-        "\n".join([
-            "### What is CBO 2.0?",
-            "",
-            "An open-source, transparent alternative to the Congressional Budget Office's fiscal projections.",
-            "Built with full Monte Carlo stochastic modeling and comprehensive policy analysis.",
-            "",
-            "**Available Modules:**",
-            "- **Phase 1**: Healthcare policy analysis (USGHA vs baseline)",
-            "- **Phase 2**: Social Security trust funds + Federal revenues (income/payroll/corporate taxes)",
-            "- **Phase 3**: Medicare/Medicaid spending + Discretionary + Interest + Combined fiscal outlook",
-            "- **Phase 4**: Production polish, validation, and performance optimizations",
-            "- **Phase 5**: Web UI + Data Integration (Sprint 5.4 in progress)",
-        ])
-    )
+    st.markdown("""
+    ### What is CBO 2.0?
     
-    st.info(
-        "\n".join([
-            "📊 **Navigate to other pages using the sidebar:**",
-            "- Healthcare Analysis",
-            "- Social Security Outlook",
-            "- Federal Revenues",
-            "- Medicare/Medicaid",
-            "- Discretionary Spending",
-            "- Combined Fiscal Outlook",
-            "- Policy Comparison",
-        ])
-    )
+    An open-source, transparent alternative to the Congressional Budget Office's fiscal projections.
+    Built with full Monte Carlo stochastic modeling and comprehensive policy analysis.
+    
+    **Available Modules:**
+    - **Phase 1**: Healthcare policy analysis (USGHA vs baseline)
+    - **Phase 2**: Social Security trust funds + Federal revenues (income/payroll/corporate taxes)
+    - **Phase 3**: Medicare/Medicaid spending + Discretionary + Interest + Combined fiscal outlook
+    - **Phase 4**: Production polish, validation, and performance optimizations
+    - **Phase 5**: Web UI + Data Integration (Sprint 5.4 in progress)
+    """)
+    
+    st.info("""
+    📊 **Navigate to other pages using the sidebar:**
+    - Healthcare Analysis
+    - Social Security Outlook
+    - Federal Revenues
+    - Medicare/Medicaid
+    - Discretionary Spending
+    - Combined Fiscal Outlook
+    - Policy Comparison
+    """)
 
 
 def page_healthcare():
@@ -697,41 +268,18 @@ def page_healthcare():
     col1, col2 = st.columns(2)
     with col1:
         st.subheader("Policy Selection")
-
-        if "policy_category" not in st.session_state:
-            st.session_state.policy_category = "Built-in Policies"
-
-        cat_col1, cat_col2 = st.columns(2)
-        with cat_col1:
-            if st.button(
-                "Built-in Policies",
-                type="primary" if st.session_state.policy_category == "Built-in Policies" else "secondary",
-                key="policy_category_builtin",
-                help="Use the bundled healthcare scenarios",
-                # width param replaces deprecated use_container_width
-                width="stretch",
-            ):
-                st.session_state.policy_category = "Built-in Policies"
-        with cat_col2:
-            if st.button(
-                "Custom Policies",
-                type="primary" if st.session_state.policy_category == "Custom Policies" else "secondary",
-                key="policy_category_custom",
-                help="Use your saved custom healthcare scenarios",
-                width="stretch",
-            ):
-                st.session_state.policy_category = "Custom Policies"
-
-        policy_category = st.session_state.policy_category
+        policy_category = st.radio(
+            "Select policy type:",
+            ["Built-in Policies", "Custom Policies"],
+            horizontal=True,
+            key="policy_category"
+        )
         
         if policy_category == "Built-in Policies":
             selected_display = st.selectbox(
                 "Built-in Policy:",
                 ["Current US System", "USGHA (Proposed)"],
-                help=get_tooltip(
-                    "healthcare_policy_builtin",
-                    "Choose a built-in healthcare policy for simulation",
-                ),
+                help="Choose a built-in healthcare policy for simulation"
             )
             selected_policy = "current_us" if "Current US" in selected_display else "usgha"
             is_custom = False
@@ -744,10 +292,7 @@ def page_healthcare():
                 selected_display = st.selectbox(
                     "Custom Policy:",
                     custom_healthcare_policies,
-                    help=get_tooltip(
-                        "healthcare_policy_custom",
-                        "Choose a custom healthcare policy",
-                    ),
+                    help="Choose a custom healthcare policy"
                 )
                 selected_policy = selected_display
                 is_custom = True
@@ -760,42 +305,26 @@ def page_healthcare():
             max_value=30,
             value=22,
             key="healthcare_years",
-            help=get_tooltip(
-                "healthcare_projection_years",
-                "Number of years to simulate",
-            ),
+            help="Number of years to simulate"
         )
         
-        # If "Current US System" is selected, fetch real CBO data with live status updates
+        # If "Current US System" is selected, fetch real CBO data
         if not is_custom and selected_policy == "current_us":
-            with st.status("📊 Fetching real-time CBO data...", expanded=True) as status:
-                try:
-                    from core.cbo_scraper import get_current_us_parameters
-                    cbo_params = get_current_us_parameters()
-                    if cbo_params:
-                        default_gdp = cbo_params['general'].get('gdp', 29.0)
-                        default_debt = cbo_params['general'].get('national_debt', 35.0)
-                        status.update(
-                            label=f"✓ CBO Data Loaded: GDP=${default_gdp:.1f}T, Debt=${default_debt:.1f}T",
-                            state="complete",
-                            expanded=False,
-                        )
-                    else:
-                        default_gdp = 29.0
-                        default_debt = 35.0
-                        status.update(
-                            label="⚠️ Using default values (CBO data unavailable)",
-                            state="error",
-                            expanded=False,
-                        )
-                except Exception as e:
+            st.info("📊 Fetching real-time CBO data for Current US baseline...")
+            try:
+                from core.cbo_scraper import get_current_us_parameters
+                cbo_params = get_current_us_parameters()
+                if cbo_params:
+                    default_gdp = cbo_params['general'].get('gdp', 29.0)
+                    default_debt = cbo_params['general'].get('national_debt', 35.0)
+                    st.success(f"✓ CBO Data Loaded: GDP=${default_gdp:.1f}T, Debt=${default_debt:.1f}T")
+                else:
                     default_gdp = 29.0
                     default_debt = 35.0
-                    status.update(
-                        label=f"⚠️ Using default values (CBO fetch failed: {str(e)})",
-                        state="error",
-                        expanded=False,
-                    )
+            except Exception as e:
+                st.warning(f"Could not fetch CBO data: {str(e)}. Using defaults.")
+                default_gdp = 29.0
+                default_debt = 35.0
         else:
             default_gdp = 29.0
             default_debt = 35.0
@@ -806,10 +335,7 @@ def page_healthcare():
             min_value=10.0,
             max_value=100.0,
             step=0.5,
-            help=get_tooltip(
-                "healthcare_base_gdp",
-                "Starting GDP in trillions",
-            ),
+            help="Starting GDP in trillions"
         ) * 1e12
         initial_debt = st.number_input(
             "Initial Debt ($T):",
@@ -817,10 +343,7 @@ def page_healthcare():
             min_value=10.0,
             max_value=100.0,
             step=0.5,
-            help=get_tooltip(
-                "healthcare_initial_debt",
-                "Starting national debt in trillions",
-            ),
+            help="Starting national debt in trillions"
         ) * 1e12
     
     # Show policy details if custom
@@ -849,10 +372,10 @@ def page_healthcare():
                         }
                         for p in policy_obj.parameters.values()
                     ])
-                    st.dataframe(params_df, width="stretch")
+                    st.dataframe(params_df, use_container_width=True)
     
     # Simulation button and results
-    if st.button("Run Simulation", type="primary", width="stretch"):
+    if st.button("Run Simulation", type="primary", use_container_width=True):
         if is_custom and not selected_policy:
             st.error("Please select a custom policy first")
             st.stop()
@@ -894,14 +417,7 @@ def page_healthcare():
             
             # M5 Fix: Comprehensive error handling with user-friendly messages
             try:
-                with st.status("🚀 Initializing simulation...", expanded=True) as sim_status:
-                    progress_bar = st.progress(0)
-                    progress_bar.progress(0.1)
-                    sim_status.update(label="⚙️ Preparing inputs...", state="running", expanded=True)
-                    progress_bar.progress(0.2)
-
-                    sim_status.update(label="🧮 Running simulation...", state="running", expanded=True)
-                    progress_bar.progress(0.6)
+                with st.spinner(f"Running {policy.policy_name} simulation..."):
                     results = simulate_healthcare_years(
                         policy=policy,
                         base_gdp=base_gdp,
@@ -911,13 +427,6 @@ def page_healthcare():
                         gdp_growth=0.025,
                         start_year=2025,
                         cbo_data=cbo_data  # Pass CBO data if available
-                    )
-
-                    progress_bar.progress(1.0)
-                    sim_status.update(
-                        label=f"✅ Simulation completed: {len(results)} years",
-                        state="complete",
-                        expanded=False,
                     )
             except ValueError as e:
                 st.error(f"❌ Invalid simulation parameters: {str(e)}")
@@ -989,12 +498,12 @@ def page_healthcare():
                 title=f"Healthcare Spending Over Time - {policy.policy_name}",
                 xaxis_title="Year",
                 yaxis_title="Spending ($ Billions)",
+                template="plotly_white",
                 hovermode='x unified',
                 height=400
             )
-            apply_plotly_theme(fig, st.session_state.settings.get('theme', 'light'))
             
-            st.plotly_chart(fig, width="stretch")
+            st.plotly_chart(fig, use_container_width=True)
             
             # Revenue and surplus analysis
             st.subheader("Revenue & Surplus Analysis")
@@ -1018,12 +527,12 @@ def page_healthcare():
                 title="Annual Revenue vs Surplus",
                 xaxis_title="Year",
                 yaxis_title="Amount ($ Billions)",
+                template="plotly_white",
                 hovermode='x unified',
                 height=400
             )
-            apply_plotly_theme(fig2, st.session_state.settings.get('theme', 'light'))
             
-            st.plotly_chart(fig2, width="stretch")
+            st.plotly_chart(fig2, use_container_width=True)
             
             # Debt trajectory
             st.subheader("National Debt Trajectory")
@@ -1043,12 +552,12 @@ def page_healthcare():
                 title="Impact on National Debt",
                 xaxis_title="Year",
                 yaxis_title="Debt ($ Trillions)",
+                template="plotly_white",
                 hovermode='x unified',
                 height=400
             )
-            apply_plotly_theme(fig3, st.session_state.settings.get('theme', 'light'))
             
-            st.plotly_chart(fig3, width="stretch")
+            st.plotly_chart(fig3, use_container_width=True)
             
             # Detailed results table
             with st.expander("View Detailed Year-by-Year Results", expanded=False):
@@ -1081,7 +590,7 @@ def page_healthcare():
 
                 display_df = display_df.rename(columns=col_map)
                 
-                st.dataframe(display_df, width="stretch")
+                st.dataframe(display_df, use_container_width=True)
                 
                 # Download button
                 csv = display_df.to_csv(index=False)
@@ -1098,38 +607,29 @@ def page_healthcare():
             col1, col2 = st.columns(2)
             
             with col1:
-                spending_target_pct = policy.healthcare_spending_target_gdp * 100
-                final_health_spend = results[spend_col].iloc[-1] / 1e9
-                final_revenue = results[rev_col].iloc[-1] / 1e9
-                final_surplus = results[surplus_col].iloc[-1] / 1e9
-                st.info(
-                    "\n".join([
-                        f"**Policy:** {policy.policy_name}",
-                        "",
-                        f"**Spending Target:** {spending_target_pct:.1f}% of GDP",
-                        "",
-                        f"**Final Year (Year {years}):",
-                        f"- Health Spending: ${final_health_spend:.0f}B",
-                        f"- Revenue: ${final_revenue:.0f}B",
-                        f"- Surplus: ${final_surplus:.1f}B",
-                    ])
-                )
+                st.info(f"""
+                **Policy:** {policy.policy_name}
+                
+                **Spending Target:** {policy.healthcare_spending_target_gdp*100:.1f}% of GDP
+                
+                **Final Year (Year {years}):**
+                - Health Spending: ${results[spend_col].iloc[-1]/1e9:.0f}B
+                - Revenue: ${results[rev_col].iloc[-1]/1e9:.0f}B
+                - Surplus: ${results[surplus_col].iloc[-1]/1e9:.1f}B
+                """)
             
             with col2:
                 debt_change = results[debt_col].iloc[-1] - initial_debt
                 debt_change_pct = (debt_change / initial_debt) * 100
-                average_surplus = results[surplus_col].mean() / 1e9
-                st.info(
-                    "\n".join([
-                        "**22-Year Impact:**",
-                        "",
-                        f"- Debt Change: ${debt_change/1e12:.2f}T ({debt_change_pct:+.1f}%)",
-                        f"- Total Debt Reduction: ${total_debt_reduction/1e12:.2f}T",
-                        f"- Avg Annual Surplus: ${average_surplus:.1f}B",
-                        "",
-                        f"Circuit Breaker Triggered: {results['Circuit Breaker Triggered'].sum()} times",
-                    ])
-                )
+                st.info(f"""
+                **22-Year Impact:**
+                
+                - Debt Change: ${debt_change/1e12:.2f}T ({debt_change_pct:+.1f}%)
+                - Total Debt Reduction: ${total_debt_reduction/1e12:.2f}T
+                - Avg Annual Surplus: ${results[surplus_col].mean()/1e9:.1f}B
+                
+                Circuit Breaker Triggered: {results['Circuit Breaker Triggered'].sum()} times
+                """)
             
         except Exception as e:
             st.error(f"Error running simulation: {str(e)}")
@@ -1242,12 +742,8 @@ def page_social_security():
     
     # Determine which scenario to run
     if run_quick:
-        with st.status("🚀 Running Social Security projections...", expanded=True) as status:
-            progress = st.progress(0.05)
+        with st.spinner("Running Social Security projections..."):
             try:
-                status.update(label="⚙️ Initializing model...", state="running", expanded=True)
-                progress.progress(0.15)
-
                 # Initialize model with reform parameters
                 params_display = {}
                 if selected_scenario == "Current Law (Baseline)":
@@ -1309,40 +805,27 @@ def page_social_security():
                     model = SocialSecurityModel()
                     reform_name = "Unknown"
                     params_display = {}
-
-                progress.progress(0.35)
-                status.update(label="🧮 Running projections...", state="running", expanded=True)
+                
+                # Run projection
                 projections = model.project_trust_funds(years=years, iterations=iterations)
-                progress.progress(0.7)
-                status.update(label="📈 Estimating solvency dates...", state="running", expanded=True)
                 solvency = model.estimate_solvency_dates(projections)
-                progress.progress(0.9)
                 
                 # Store in session state
                 st.session_state.ss_projections = projections
                 st.session_state.ss_solvency = solvency
                 st.session_state.ss_reform_name = reform_name
                 st.session_state.ss_params_display = params_display
-                progress.progress(1.0)
-                status.update(
-                    label=f"✅ Completed {iterations:,} iterations over {years} years",
-                    state="complete",
-                    expanded=False,
-                )
                 st.success(f"✅ Completed {iterations:,} iterations over {years} years")
                 
             except ValueError as e:
-                status.update(label="❌ Invalid projection parameters", state="error", expanded=True)
                 st.error(f"❌ Invalid projection parameters: {str(e)}")
                 st.info("💡 Check tax rates, interest rates, and benefit parameters.")
                 return
             except TypeError as e:
-                status.update(label="❌ Data type error", state="error", expanded=True)
                 st.error(f"❌ Data type error: {str(e)}")
                 st.info("💡 Ensure all numeric parameters are valid numbers.")
                 return
             except Exception as e:
-                status.update(label="❌ Projection failed", state="error", expanded=True)
                 st.error(f"❌ Projection failed: {str(e)}")
                 st.info("💡 Try reducing iterations or projection years.")
                 st.exception(e)
@@ -1350,11 +833,8 @@ def page_social_security():
     
     elif run_custom:
         should_run = True
-        with st.status("🚀 Running custom Social Security projections...", expanded=True) as status:
-            progress = st.progress(0.05)
+        with st.spinner("Running custom Social Security projections..."):
             try:
-                status.update(label="⚙️ Building custom model...", state="running", expanded=True)
-                progress.progress(0.2)
                 # Build custom model
                 trust_fund = TrustFundAssumptions()
                 trust_fund.payroll_tax_rate = custom_tax_rate
@@ -1379,18 +859,14 @@ def page_social_security():
                     "Benefit Reduction": f"{benefit_reduction}%" if benefit_reduction > 0 else "None"
                 }
                 
-                progress.progress(0.45)
-                status.update(label="🧮 Running projections...", state="running", expanded=True)
+                # Run projection
                 projections = model.project_trust_funds(years=custom_years, iterations=custom_iterations)
                 
                 if projections is None or len(projections) == 0:
-                    status.update(label="⚠️ Projection returned no results", state="error", expanded=True)
                     st.error("❌ Projection produced no results.")
                     st.info("💡 Try different parameters or reduce projection years.")
                     return
                 
-                progress.progress(0.75)
-                status.update(label="📈 Estimating solvency dates...", state="running", expanded=True)
                 solvency = model.estimate_solvency_dates(projections)
                 
                 # Store in session state
@@ -1398,26 +874,17 @@ def page_social_security():
                 st.session_state.ss_solvency = solvency
                 st.session_state.ss_reform_name = reform_name
                 st.session_state.ss_params_display = params_display
-                progress.progress(1.0)
-                status.update(
-                    label=f"✅ Completed {custom_iterations:,} iterations over {custom_years} years",
-                    state="complete",
-                    expanded=False,
-                )
                 st.success(f"✅ Completed {custom_iterations:,} iterations over {custom_years} years")
                 
             except ValueError as e:
-                status.update(label="❌ Invalid custom parameters", state="error", expanded=True)
                 st.error(f"❌ Invalid custom parameters: {str(e)}")
                 st.info("💡 Check that all values are within reasonable ranges.")
                 return
             except TypeError as e:
-                status.update(label="❌ Data type error", state="error", expanded=True)
                 st.error(f"❌ Data type error: {str(e)}")
                 st.info("💡 Ensure all parameters are valid numbers.")
                 return
             except Exception as e:
-                status.update(label="❌ Custom projection failed", state="error", expanded=True)
                 st.error(f"❌ Custom projection failed: {str(e)}")
                 st.info("💡 Try simpler parameters or contact support.")
                 st.exception(e)
@@ -1532,11 +999,11 @@ def page_social_security():
                 xaxis_title="Year",
                 yaxis_title="Balance ($ Billions)",
                 hovermode='x unified',
+                template="plotly_white",
                 height=500
             )
-            apply_plotly_theme(fig, st.session_state.settings.get('theme', 'light'))
             
-            st.plotly_chart(fig, width="stretch")
+            st.plotly_chart(fig, use_container_width=True)
             
             # Summary statistics
             st.subheader("Projection Summary")
@@ -1562,7 +1029,7 @@ def page_social_security():
                     f"{di_prob*100:.0f}%" if not np.isnan(di_depl or 0) else "0%"
                 ]
             }
-            st.dataframe(pd.DataFrame(summary_data), hide_index=True, width="stretch")
+            st.dataframe(pd.DataFrame(summary_data), hide_index=True, use_container_width=True)
 
 
 def page_federal_revenues():
@@ -1577,28 +1044,19 @@ def page_federal_revenues():
         selected_scenario = st.selectbox(
             "Select economic scenario:",
             scenario_names,
-            help=get_tooltip(
-                "revenue_economic_scenario",
-                "Pre-defined combinations of GDP growth, wage growth, and other economic assumptions that affect revenue projections",
-            ),
+            help=get_tooltip("Economic Scenario", "Pre-defined combinations of GDP growth, wage growth, and other economic assumptions that affect revenue projections")
         )
     with col2:
         years = st.slider(
             "Projection years:", 
             5, 30, 10,
-            help=get_tooltip(
-                "revenue_projection_years",
-                "Number of years into the future to project federal revenues. CBO typically uses 10-year budget window",
-            ),
+            help=get_tooltip("Projection Years", "Number of years into the future to project federal revenues. CBO typically uses 10-year budget window")
         )
     
     iterations = st.slider(
         "Monte Carlo iterations:", 
         1000, 50000, 10000, step=1000,
-        help=get_tooltip(
-            "revenue_iterations",
-            "Number of simulation runs with varying economic assumptions to capture uncertainty. More iterations = more accurate confidence intervals but slower",
-        ),
+        help=get_tooltip("Monte Carlo Iterations", "Number of simulation runs with varying economic assumptions to capture uncertainty. More iterations = more accurate confidence intervals but slower")
     )
     
     if st.button("Project Federal Revenues"):
@@ -1655,11 +1113,11 @@ def page_federal_revenues():
                 title=f"Federal Revenue Composition - {selected_scenario}",
                 xaxis_title="Year",
                 yaxis_title="Revenue ($ Billions)",
-                hovermode='x unified'
+                hovermode='x unified',
+                template="plotly_white"
             )
-            apply_plotly_theme(fig, st.session_state.settings.get('theme', 'light'))
             
-            st.plotly_chart(fig, width="stretch")
+            st.plotly_chart(fig, use_container_width=True)
 
 
 def page_medicare_medicaid():
@@ -1675,20 +1133,14 @@ def page_medicare_medicaid():
             "Medicare projection years:", 
             5, 30, 10, 
             key="medicare_years",
-            help=get_tooltip(
-                "medicare_projection_years",
-                "Number of years to project Medicare spending. Trustees report uses 75-year window but 10-30 years is typical for budget analysis",
-            )
+            help=get_tooltip("Projection Years", "Number of years to project Medicare spending. Trustees report uses 75-year window but 10-30 years is typical for budget analysis")
         )
         iterations = st.slider(
             "Medicare iterations:", 
             1000, 30000, 10000, 
             step=1000, 
             key="medicare_iter",
-            help=get_tooltip(
-                "medicare_iterations",
-                "Number of simulation runs with varying assumptions (enrollment growth, cost trends, etc.). More iterations = smoother confidence bands",
-            )
+            help=get_tooltip("Monte Carlo Iterations", "Number of simulation runs with varying assumptions (enrollment growth, cost trends, etc.). More iterations = smoother confidence bands")
         )
         
         if st.button("Project Medicare"):
@@ -1719,11 +1171,11 @@ def page_medicare_medicaid():
                 title="Medicare Parts Spending Projections",
                 xaxis_title="Year",
                 yaxis_title="Spending ($ Billions)",
-                hovermode='x unified'
+                hovermode='x unified',
+                template="plotly_white"
             )
-            apply_plotly_theme(fig, st.session_state.settings.get('theme', 'light'))
             
-            st.plotly_chart(fig, width="stretch")
+            st.plotly_chart(fig, use_container_width=True)
     
     with tab2:
         st.subheader("Medicaid Spending Projections")
@@ -1732,20 +1184,14 @@ def page_medicare_medicaid():
             "Medicaid projection years:", 
             5, 30, 10, 
             key="medicaid_years",
-            help=get_tooltip(
-                "medicaid_projection_years",
-                "Number of years to project Medicaid spending. Medicaid is jointly funded by federal and state governments",
-            )
+            help=get_tooltip("Projection Years", "Number of years to project Medicaid spending. Medicaid is jointly funded by federal and state governments")
         )
         iterations = st.slider(
             "Medicaid iterations:", 
             1000, 30000, 10000, 
             step=1000, 
             key="medicaid_iter",
-            help=get_tooltip(
-                "medicaid_iterations",
-                "Number of simulation runs with varying assumptions about enrollment and per-capita costs. Medicaid enrollment is more volatile than Medicare",
-            )
+            help=get_tooltip("Monte Carlo Iterations", "Number of simulation runs with varying assumptions about enrollment and per-capita costs. Medicaid enrollment is more volatile than Medicare")
         )
         
         if st.button("Project Medicaid"):
@@ -1775,11 +1221,11 @@ def page_medicare_medicaid():
                 title="Medicaid Spending - Federal vs State Share",
                 xaxis_title="Year",
                 yaxis_title="Spending ($ Billions)",
-                hovermode='x unified'
+                hovermode='x unified',
+                template="plotly_white"
             )
-            apply_plotly_theme(fig, st.session_state.settings.get('theme', 'light'))
             
-            st.plotly_chart(fig, width="stretch")
+            st.plotly_chart(fig, use_container_width=True)
 
 
 def page_discretionary_spending():
@@ -1791,31 +1237,20 @@ def page_discretionary_spending():
         defense_scenario = st.selectbox(
             "Defense Scenario:",
             ["baseline", "growth", "reduction"],
-            help=get_tooltip(
-                "defense_scenario",
-                "baseline=inflation only (~2%), growth=+3.5% annually, reduction=+1.5% annually. Defense is ~50% of discretionary spending",
-            ),
+            help=get_tooltip("Defense Scenario", "baseline=inflation only (~2%), growth=+3.5% annually, reduction=+1.5% annually. Defense is ~50% of discretionary spending")
         )
     with col2:
         nondefense_scenario = st.selectbox(
             "Non-Defense Scenario:",
             ["baseline", "growth", "reduction", "infrastructure"],
-            help=get_tooltip(
-                "nondefense_scenario",
-                "baseline=inflation only (~2%), growth=+3.5% annually, reduction=+1.5% annually. Defense is ~50% of discretionary spending",
-            ),
+            help=get_tooltip("Non-Defense Scenario", "Includes education, transportation, science, etc. Infrastructure scenario adds 4% growth for targeted investments")
         )
     with col3:
         years = st.slider(
             "Projection years:", 
-            5,
-            30,
-            10,
+            5, 30, 10, 
             key="discret_years",
-            help=get_tooltip(
-                "discretionary_projection_years",
-                "Discretionary spending requires annual Congressional appropriations, making long-term projections uncertain",
-            ),
+            help=get_tooltip("Projection Years", "Discretionary spending requires annual Congressional appropriations, making long-term projections uncertain")
         )
     
     iterations = st.slider(
@@ -1879,15 +1314,15 @@ def page_discretionary_spending():
             title=f"Federal Discretionary Spending ({defense_scenario} defense, {nondefense_scenario} non-defense)",
             xaxis_title="Year",
             yaxis_title="Spending ($ Billions)",
-            hovermode='x unified'
+            hovermode='x unified',
+            template="plotly_white"
         )
-        apply_plotly_theme(fig, st.session_state.settings.get('theme', 'light'))
         
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(fig, use_container_width=True)
         
         # Category breakdown table
         with st.expander("View Year-by-Year Breakdown"):
-            st.dataframe(projections, width="stretch")
+            st.dataframe(projections, use_container_width=True)
 
 
 def page_combined_outlook():
@@ -1907,53 +1342,20 @@ def page_combined_outlook():
     with col1:
         revenue_scenario = st.selectbox(
             "Economic Scenario:",
-            ["baseline", "recession_2026", "strong_growth", "demographic_challenge"],
-            help=get_tooltip(
-                "combined_revenue_scenario",
-                "Macro assumption set driving revenue and discretionary forecasts (baseline, recession, strong growth, demographic).",
-            ),
+            ["baseline", "recession_2026", "strong_growth", "demographic_challenge"]
         )
         discretionary_scenario = st.selectbox(
             "Discretionary Scenario:",
-            ["baseline", "growth", "reduction"],
-            help=get_tooltip(
-                "combined_discretionary_scenario",
-                "Growth path for discretionary spending (baseline, growth, reduction). Influences defense/non-defense outlays.",
-            ),
+            ["baseline", "growth", "reduction"]
         )
     with col2:
         interest_scenario = st.selectbox(
             "Interest Rate Scenario:",
-            ["baseline", "rising", "falling", "spike"],
-            help=get_tooltip(
-                "combined_interest_scenario",
-                "Projected path for interest rates on federal debt (baseline, rising, falling, spike). Affects debt service costs.",
-            ),
+            ["baseline", "rising", "falling", "spike"]
         )
-        years = st.slider(
-            "Projection years:",
-            10,
-            75,
-            30,
-            key="outlook_years",
-            help=get_tooltip(
-                "combined_projection_years",
-                "Years to simulate the unified federal outlook (revenue + spending + interest).",
-            ),
-        )
+        years = st.slider("Projection years:", 10, 75, 30, key="outlook_years")
     
-    iterations = st.slider(
-        "Monte Carlo iterations:",
-        1000,
-        50000,
-        10000,
-        step=1000,
-        key="outlook_iter",
-        help=get_tooltip(
-            "combined_iterations",
-            "Monte Carlo runs for the unified outlook. Higher counts give smoother confidence bands.",
-        ),
-    )
+    iterations = st.slider("Monte Carlo iterations:", 1000, 50000, 10000, step=1000, key="outlook_iter")
     
     if st.button("Calculate Combined Fiscal Outlook"):
         model = CombinedFiscalOutlookModel()
@@ -2020,11 +1422,11 @@ def page_combined_outlook():
                     title="Federal Revenue vs Spending",
                     xaxis_title="Year",
                     yaxis_title="$ Billions",
-                    hovermode='x unified'
+                    hovermode='x unified',
+                    template="plotly_white"
                 )
-                apply_plotly_theme(fig, st.session_state.settings.get('theme', 'light'))
                 
-                st.plotly_chart(fig, width="stretch")
+                st.plotly_chart(fig, use_container_width=True)
                 
                 # Spending breakdown: stacked area
                 fig2 = go.Figure()
@@ -2039,11 +1441,11 @@ def page_combined_outlook():
                     title="Federal Spending by Category",
                     xaxis_title="Year",
                     yaxis_title="$ Billions",
-                    hovermode='x unified'
+                    hovermode='x unified',
+                    template="plotly_white"
                 )
-                apply_plotly_theme(fig2, st.session_state.settings.get('theme', 'light'))
                 
-                st.plotly_chart(fig2, width="stretch")
+                st.plotly_chart(fig2, use_container_width=True)
                 
                 # Deficit trend
                 fig3 = go.Figure()
@@ -2053,15 +1455,15 @@ def page_combined_outlook():
                 fig3.update_layout(
                     title="Annual Deficit/Surplus",
                     xaxis_title="Year",
-                    yaxis_title="$ Billions (negative = deficit)"
+                    yaxis_title="$ Billions (negative = deficit)",
+                    template="plotly_white"
                 )
-                apply_plotly_theme(fig3, st.session_state.settings.get('theme', 'light'))
                 
-                st.plotly_chart(fig3, width="stretch")
+                st.plotly_chart(fig3, use_container_width=True)
                 
                 # Detailed data table
                 with st.expander("View Detailed Budget Data"):
-                    st.dataframe(df, width="stretch")
+                    st.dataframe(df, use_container_width=True)
                     
             except Exception as e:
                 st.error(f"Error calculating outlook: {str(e)}")
@@ -2202,7 +1604,7 @@ def page_policy_comparison():
                 
                 # Create comparison table
                 comparison_df = pd.DataFrame(comparison_data).T
-                st.dataframe(comparison_df, width="stretch")
+                st.dataframe(comparison_df, use_container_width=True)
                 
                 # Chart: Compare selected metric
                 fig = go.Figure()
@@ -2219,11 +1621,11 @@ def page_policy_comparison():
                 fig.update_layout(
                     title=f"Policy Comparison: {metric_to_compare}",
                     yaxis_title="$ Billions",
-                    showlegend=False
+                    showlegend=False,
+                    template="plotly_white"
                 )
-                apply_plotly_theme(fig, st.session_state.settings.get('theme', 'light'))
                 
-                st.plotly_chart(fig, width="stretch")
+                st.plotly_chart(fig, use_container_width=True)
                 
                 st.success("Comparison complete! Green bars are better (lower spending/deficit).")
                 
@@ -2338,7 +1740,7 @@ def page_custom_policy_builder():
     
     if policies:
         library_df = library.export_policies_dataframe()
-        st.dataframe(library_df, width="stretch")
+        st.dataframe(library_df, use_container_width=True)
         
         # Export all policies
         col1, col2 = st.columns(2)
@@ -2410,7 +1812,7 @@ def page_real_data_dashboard():
         # Full summary table
         st.divider()
         summary_df = data_loader.export_summary_metrics()
-        st.dataframe(summary_df, width="stretch")
+        st.dataframe(summary_df, use_container_width=True)
     
     with tab_revenues:
         st.subheader("Federal Revenue Sources (FY 2025)")
@@ -2427,10 +1829,10 @@ def page_real_data_dashboard():
             revenue_df,
             values="Amount",
             names="Source",
-            title="Federal Revenue Distribution"
+            title="Federal Revenue Distribution",
+            template="plotly_white"
         )
-        apply_plotly_theme(fig, st.session_state.settings.get('theme', 'light'))
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(fig, use_container_width=True)
         
         # Revenue details
         st.write("**Revenue by Source ($B)**")
@@ -2455,10 +1857,10 @@ def page_real_data_dashboard():
             spending_df,
             values="Amount",
             names="Category",
-            title="Federal Spending Distribution"
+            title="Federal Spending Distribution",
+            template="plotly_white"
         )
-        apply_plotly_theme(fig, st.session_state.settings.get('theme', 'light'))
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(fig, use_container_width=True)
         
         # Spending details
         st.write("**Spending by Category ($B)**")
@@ -2487,16 +1889,12 @@ def page_real_data_dashboard():
             st.metric("Annual Growth", f"{pop_metrics['annual_growth_rate']:.2f}%")
             st.metric("Life Expectancy", f"{pop_metrics['life_expectancy']:.1f} years")
         
-        percent_65_now = pop_metrics['percent_65_plus']
-        percent_65_future = percent_65_now * 1.4
-        st.info(
-            "\n".join([
-                "The U.S. is experiencing significant aging:",
-                f"- In 2025, about **{percent_65_now:.0f}%** of Americans are 65+",
-                f"- By 2045, this will grow to approximately **{percent_65_future:.0f}%**",
-                "- This affects demand for Social Security, Medicare, and Medicaid",
-            ])
-        )
+        st.info(f"""
+        The U.S. is experiencing significant aging:
+        - In 2025, about **{pop_metrics['percent_65_plus']:.0f}%** of Americans are 65+
+        - By 2045, this will grow to approximately **{pop_metrics['percent_65_plus'] * 1.4:.0f}%**
+        - This affects demand for Social Security, Medicare, and Medicaid
+        """)
 
 
 def page_library_manager():
@@ -2527,7 +1925,7 @@ def page_library_manager():
             )
         
         with col2:
-            if st.button("🔄 Refresh", width="stretch"):
+            if st.button("🔄 Refresh", use_container_width=True):
                 st.rerun()
         
         category_policies = library.list_policies_by_category(selected_category)
@@ -2570,7 +1968,7 @@ def page_library_manager():
                                     }
                                     for p in policy.parameters.values()
                                 ])
-                                st.dataframe(params_df, width="stretch")
+                                st.dataframe(params_df, use_container_width=True)
                         
                         elif operation == "Edit":
                             with st.expander("✏️ Edit Policy", expanded=True):
@@ -2951,15 +2349,13 @@ def page_policy_upload():
 
 
 def page_policy_recommendations():
-    # Policy recommendation engine based on fiscal goals
+    """Policy recommendation engine based on fiscal goals."""
     st.title("Recommendation Engine: Find Your Ideal Policy")
     
-    st.markdown(
-        "\n".join([
-            "Get personalized policy recommendations based on your fiscal priorities.",
-            "The engine scores policies across multiple dimensions.",
-        ])
-    )
+    st.markdown("""
+    Get personalized policy recommendations based on your fiscal priorities.
+    The engine scores policies across multiple dimensions.
+    """)
     
     from core.policy_enhancements import (
         PolicyRecommendationEngine, 
@@ -3070,14 +2466,12 @@ def page_policy_recommendations():
 
 
 def page_scenario_explorer():
-    # Interactive scenario explorer for comparing multiple policy scenarios
+    """Interactive scenario explorer for comparing multiple policy scenarios."""
     st.title("Scenario Explorer: Compare Policy Impacts")
     
-    st.markdown(
-        "\n".join([
-            "Create and compare multiple policy scenarios side-by-side with real-time calculations.",
-        ])
-    )
+    st.markdown("""
+    Create and compare multiple policy scenarios side-by-side with real-time calculations.
+    """)
     
     from core.policy_enhancements import InteractiveScenarioExplorer, PolicyImpactCalculator
     
@@ -3135,7 +2529,7 @@ def page_scenario_explorer():
     # Display summary
     st.subheader("Scenario Comparison")
     summary_df = explorer.get_scenario_summary()
-    st.dataframe(summary_df, width="stretch")
+    st.dataframe(summary_df, use_container_width=True)
     
     # Chart: Deficit by scenario
     st.subheader("10-Year Cumulative Deficit by Scenario")
@@ -3155,11 +2549,11 @@ def page_scenario_explorer():
         y="Total Deficit",
         title="Cumulative 10-Year Deficit by Scenario",
         labels={"Total Deficit": "Deficit ($B)"},
+        template="plotly_white",
         color="Total Deficit",
         color_continuous_scale="RdYlGn_r",
     )
-    apply_plotly_theme(fig, st.session_state.settings.get('theme', 'light'))
-    st.plotly_chart(fig, width="stretch")
+    st.plotly_chart(fig, use_container_width=True)
     
     # Show best scenario
     st.subheader("Best Scenario")
@@ -3179,18 +2573,16 @@ def page_scenario_explorer():
     display_df = best_df[["year", "revenue", "spending", "deficit"]].copy()
     display_df.columns = ["Year", "Revenue ($B)", "Spending ($B)", "Deficit ($B)"]
     display_df = display_df.round(1)
-    st.dataframe(display_df, width="stretch")
+    st.dataframe(display_df, use_container_width=True)
 
 
 def page_impact_calculator():
-    # Real-time policy impact calculator
+    """Real-time policy impact calculator."""
     st.title("Impact Calculator: Measure Policy Effects")
     
-    st.markdown(
-        "\n".join([
-            "Adjust policy parameters and instantly see fiscal impact over time.",
-        ])
-    )
+    st.markdown("""
+    Adjust policy parameters and instantly see fiscal impact over time.
+    """)
     
     from core.policy_enhancements import PolicyImpactCalculator
     from core.data_loader import load_real_data
@@ -3302,10 +2694,10 @@ def page_impact_calculator():
         title="Revenue vs Spending Over Time",
         xaxis_title="Year",
         yaxis_title="Amount ($B)",
+        template="plotly_white",
         hovermode="x unified",
     )
-    apply_plotly_theme(fig1, st.session_state.settings.get('theme', 'light'))
-    st.plotly_chart(fig1, width="stretch")
+    st.plotly_chart(fig1, use_container_width=True)
     
     # Deficit trend
     fig2 = px.bar(
@@ -3314,11 +2706,11 @@ def page_impact_calculator():
         y="deficit",
         title="Annual Deficit",
         labels={"year": "Year", "deficit": "Deficit ($B)"},
+        template="plotly_white",
         color="deficit",
         color_continuous_scale="Reds",
     )
-    apply_plotly_theme(fig2, st.session_state.settings.get('theme', 'light'))
-    st.plotly_chart(fig2, width="stretch")
+    st.plotly_chart(fig2, use_container_width=True)
     
     # Data table
     st.subheader("Year-by-Year Details")
@@ -3326,19 +2718,17 @@ def page_impact_calculator():
     display_df = impact_df[["year", "revenue", "spending", "deficit"]].copy()
     display_df.columns = ["Year", "Revenue ($B)", "Spending ($B)", "Deficit ($B)"]
     display_df = display_df.round(1)
-    st.dataframe(display_df, width="stretch", height=400)
+    st.dataframe(display_df, use_container_width=True, height=400)
 
 
 def page_monte_carlo_scenarios():
-    # Advanced Monte Carlo scenario analysis
+    """Advanced Monte Carlo scenario analysis."""
     st.title("Advanced Scenarios: Monte Carlo Uncertainty Analysis")
     
-    st.markdown(
-        "\n".join([
-            "Analyze policies under uncertainty with Monte Carlo simulation.",
-            "Generate P10/P90 confidence bounds, stress tests, and sensitivity analysis.",
-        ])
-    )
+    st.markdown("""
+    Analyze policies under uncertainty with Monte Carlo simulation.
+    Generate P10/P90 confidence bounds, stress tests, and sensitivity analysis.
+    """)
     
     from core.monte_carlo_scenarios import (
         MonteCarloPolicySimulator,
@@ -3384,13 +2774,8 @@ def page_monte_carlo_scenarios():
             )
         
         if st.button("Run Monte Carlo Simulation"):
-            with st.status("🚀 Running Monte Carlo simulation...", expanded=True) as status:
-                progress = st.progress(0.1)
-                status.update(label="⚙️ Initializing simulator...", state="running", expanded=True)
+            with st.spinner("Running 10,000 simulations..."):
                 simulator = MonteCarloPolicySimulator()
-                progress.progress(0.3)
-                status.update(label="🧮 Executing simulation runs...", state="running", expanded=True)
-
                 result = simulator.simulate_policy(
                     policy_name="Custom Policy",
                     revenue_change_pct=revenue_change,
@@ -3398,8 +2783,6 @@ def page_monte_carlo_scenarios():
                     years=10,
                     iterations=iterations,
                 )
-                progress.progress(0.7)
-                status.update(label="📊 Preparing results...", state="running", expanded=True)
                 
                 # Display results
                 col1, col2, col3, col4, col5 = st.columns(5)
@@ -3421,10 +2804,10 @@ def page_monte_carlo_scenarios():
                 fig = px.histogram(
                     x=result.simulation_results[:, -1],
                     nbins=50,
-                    title=f"Distribution of Final Year Deficit ({iterations:,} simulations)",
-                    labels={"x": "Deficit ($B)"}
+                    title="Distribution of Final Year Deficit (10,000 simulations)",
+                    labels={"x": "Deficit ($B)"},
+                    template="plotly_white",
                 )
-                apply_plotly_theme(fig, st.session_state.settings.get('theme', 'light'))
                 
                 # Add confidence bounds
                 fig.add_vline(x=result.p10_deficit, line_dash="dash", line_color="green", 
@@ -3434,9 +2817,7 @@ def page_monte_carlo_scenarios():
                 fig.add_vline(x=result.mean_deficit, line_dash="solid", line_color="blue",
                              annotation_text="Mean", annotation_position="top")
                 
-                st.plotly_chart(fig, width="stretch")
-                progress.progress(1.0)
-                status.update(label="✅ Monte Carlo simulation complete", state="complete", expanded=False)
+                st.plotly_chart(fig, use_container_width=True)
     
     with tabs[1]:
         st.subheader("Parameter Sensitivity Analysis")
@@ -3479,11 +2860,11 @@ def page_monte_carlo_scenarios():
             title="Parameter Sensitivity (Tornado Chart)",
             xaxis_title="10-Year Deficit Impact ($B)",
             barmode="relative",
+            template="plotly_white",
             height=400,
         )
-        apply_plotly_theme(fig, st.session_state.settings.get('theme', 'light'))
         
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(fig, use_container_width=True)
         
         st.write("**Interpretation:** The longer the bar, the more impact that parameter has on the deficit.")
     
@@ -3521,7 +2902,7 @@ def page_monte_carlo_scenarios():
             }
         )
         
-        st.dataframe(stress_df, width="stretch")
+        st.dataframe(stress_df, use_container_width=True)
         
         st.write("**Stress Scenarios:**")
         st.write("- **Recession:** 10% revenue drop, 5% spending increase")
@@ -3532,7 +2913,7 @@ def page_monte_carlo_scenarios():
 
 
 def page_report_generation():
-    # Report generation page
+    """Report generation page."""
     st.title("Report Generation")
     st.write("Generate comprehensive PDF and Excel reports from policy analysis.")
     
@@ -3577,182 +2958,164 @@ def page_report_generation():
         include_recommendations = st.checkbox("Recommendations", value=True)
     
     if st.button("Generate Report", type="primary"):
-        with st.status("📄 Building report...", expanded=True) as status:
-            progress = st.progress(0.1)
-            try:
-                from core.report_generator import ComprehensiveReportBuilder, ReportMetadata
-                
-                # Create metadata
-                metadata = ReportMetadata(
-                    title=report_title,
-                    author=report_author,
-                    description=report_description,
+        try:
+            from core.report_generator import ComprehensiveReportBuilder, ReportMetadata
+            
+            # Create metadata
+            metadata = ReportMetadata(
+                title=report_title,
+                author=report_author,
+                description=report_description,
+            )
+            
+            # Create builder
+            builder = ComprehensiveReportBuilder(metadata)
+            
+            # Add executive summary based on report type
+            if report_type == "Policy Summary":
+                summary_text = (
+                    "This report summarizes the key findings of a fiscal policy analysis. "
+                    "The analysis includes revenue impacts, spending changes, and deficit effects "
+                    "across a 10-year projection horizon."
                 )
-                progress.progress(0.2)
-                status.update(label="🧭 Preparing report metadata...", state="running", expanded=True)
-                
-                # Create builder
-                builder = ComprehensiveReportBuilder(metadata)
-                progress.progress(0.3)
-                status.update(label="✍️ Drafting content sections...", state="running", expanded=True)
-                
-                # Add executive summary based on report type
-                if report_type == "Policy Summary":
-                    summary_text = (
-                        "This report summarizes the key findings of a fiscal policy analysis. "
-                        "The analysis includes revenue impacts, spending changes, and deficit effects "
-                        "across a 10-year projection horizon."
-                    )
-                elif report_type == "Full Analysis":
-                    summary_text = (
-                        "This comprehensive report presents a detailed analysis of fiscal policy scenarios. "
-                        "It includes baseline projections, sensitivity analyses, Monte Carlo simulations, "
-                        "and policy recommendations based on multiple fiscal goals."
-                    )
-                else:
-                    summary_text = (
-                        "This report compares multiple policy scenarios to identify optimal approaches "
-                        "for achieving fiscal objectives. Results include comparative metrics, ranking, "
-                        "and scenario-specific recommendations."
-                    )
-                
-                builder.add_executive_summary(summary_text)
-                
-                # Add sample policy overview
-                builder.add_policy_overview(
-                    policy_name="Sample Policy Scenario",
-                    revenue_impact=50.0,
-                    spending_impact=-30.0,
-                    deficit_impact=-80.0,
+            elif report_type == "Full Analysis":
+                summary_text = (
+                    "This comprehensive report presents a detailed analysis of fiscal policy scenarios. "
+                    "It includes baseline projections, sensitivity analyses, Monte Carlo simulations, "
+                    "and policy recommendations based on multiple fiscal goals."
                 )
-                progress.progress(0.45)
-                status.update(label="📊 Adding projections and analysis...", state="running", expanded=True)
-                
-                # Add projections if selected
-                if include_projections:
-                    projection_data = {
-                        "Year": list(range(2025, 2035)),
-                        "Revenue (B)": [6000 + i*50 for i in range(10)],
-                        "Spending (B)": [6900 - i*20 for i in range(10)],
-                        "Deficit (B)": [900 - i*70 for i in range(10)],
-                    }
-                    projections_df = pd.DataFrame(projection_data)
-                    builder.add_fiscal_projections(projections_df)
-                
-                # Add sensitivity if selected
-                if include_sensitivity:
-                    sensitivity_data = {
-                        "Parameter": ["Revenue Growth", "Spending Change", "GDP Growth", "Interest Rate"],
-                        "Impact on Deficit": [-150, 200, -80, 120],
-                        "Elasticity": [-0.25, 0.35, -0.15, 0.20],
-                    }
-                    sensitivity_df = pd.DataFrame(sensitivity_data)
-                    builder.add_sensitivity_analysis(sensitivity_df)
-                
-                # Add scenarios if selected
-                if include_scenarios:
-                    scenarios_data = {
-                        "Scenario": ["Status Quo", "Tax Reform", "Spending Cut", "Balanced"],
-                        "10-Year Deficit (B)": [9200, 8500, 8200, 7800],
-                        "Avg Annual (B)": [920, 850, 820, 780],
-                        "Final Year Deficit (B)": [650, 450, 300, 200],
-                    }
-                    scenarios_df = pd.DataFrame(scenarios_data)
-                    builder.add_scenario_comparison(scenarios_df)
-                
-                # Add Monte Carlo if selected
-                if include_monte_carlo:
-                    mc_data = {
-                        "Metric": ["Mean Deficit", "Median Deficit", "Std Dev", "P10", "P90"],
-                        "Value (B)": [850, 825, 120, 600, 1100],
-                        "Probability": [100, 100, 100, 100, 100],
-                    }
-                    mc_df = pd.DataFrame(mc_data)
-                    builder.add_monte_carlo_results(mc_df)
-                
-                # Add recommendations if selected
-                if include_recommendations:
-                    recommendations_text = (
-                        "<b>1. Revenue Enhancement:</b> Consider targeted tax reforms to increase federal revenue. "
-                        "A 5% increase in revenue would reduce the 10-year deficit by approximately $300B.<br/><br/>"
-                        "<b>2. Spending Efficiency:</b> Implement spending controls in discretionary categories. "
-                        "A 3% reduction in growth would save approximately $200B over 10 years.<br/><br/>"
-                        "<b>3. Balanced Approach:</b> Combine modest revenue increases with targeted spending reforms "
-                        "for the most sustainable fiscal path.<br/><br/>"
-                        "<b>4. Risk Management:</b> Monitor Monte Carlo results for adverse scenarios and maintain "
-                        "policy flexibility for economic changes."
-                    )
-                    builder.add_recommendations(recommendations_text)
-                
-                progress.progress(0.65)
-                status.update(label="💾 Rendering exports...", state="running", expanded=True)
-                
-                # Generate reports
-                report_dir = Path("reports/generated")
-                report_dir.mkdir(parents=True, exist_ok=True)
-                
-                timestamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
-                
-                generated_files = []
-                
-                # PDF export
-                if export_pdf:
-                    try:
-                        pdf_path = report_dir / f"report_{timestamp}.pdf"
-                        builder.generate_pdf(str(pdf_path))
-                        generated_files.append(("PDF", pdf_path))
-                        st.success(f"PDF report generated: {pdf_path.name}")
-                    except Exception:
-                        st.warning("PDF generation requires reportlab: pip install reportlab")
-                
-                # Excel export
-                if export_excel:
-                    try:
-                        excel_path = report_dir / f"report_{timestamp}.xlsx"
-                        builder.generate_excel(str(excel_path))
-                        generated_files.append(("Excel", excel_path))
-                        st.success(f"Excel report generated: {excel_path.name}")
-                    except Exception:
-                        st.warning("Excel generation requires openpyxl: pip install openpyxl")
-                
-                # JSON export
-                if export_json:
-                    try:
-                        json_path = report_dir / f"report_{timestamp}.json"
-                        builder.generate_json(str(json_path))
-                        generated_files.append(("JSON", json_path))
-                        st.success(f"JSON report generated: {json_path.name}")
-                    except Exception as e:
-                        st.error(f"JSON generation failed: {e}")
-                
-                progress.progress(0.9)
-                status.update(label="🔗 Preparing download links...", state="running", expanded=True)
-                
-                # Display download links
-                if generated_files:
-                    st.subheader("Generated Reports")
-                    for file_type, file_path in generated_files:
-                        if file_path.exists():
-                            with open(file_path, "rb") as f:
-                                st.download_button(
-                                    label=f"Download {file_type} Report",
-                                    data=f.read(),
-                                    file_name=file_path.name,
-                                    mime="application/octet-stream"
-                                )
-                
-                progress.progress(1.0)
-                status.update(label="✅ Report generation complete", state="complete", expanded=False)
+            else:
+                summary_text = (
+                    "This report compares multiple policy scenarios to identify optimal approaches "
+                    "for achieving fiscal objectives. Results include comparative metrics, ranking, "
+                    "and scenario-specific recommendations."
+                )
+            
+            builder.add_executive_summary(summary_text)
+            
+            # Add sample policy overview
+            builder.add_policy_overview(
+                policy_name="Sample Policy Scenario",
+                revenue_impact=50.0,
+                spending_impact=-30.0,
+                deficit_impact=-80.0,
+            )
+            
+            # Add projections if selected
+            if include_projections:
+                projection_data = {
+                    "Year": list(range(2025, 2035)),
+                    "Revenue (B)": [6000 + i*50 for i in range(10)],
+                    "Spending (B)": [6900 - i*20 for i in range(10)],
+                    "Deficit (B)": [900 - i*70 for i in range(10)],
+                }
+                projections_df = pd.DataFrame(projection_data)
+                builder.add_fiscal_projections(projections_df)
+            
+            # Add sensitivity if selected
+            if include_sensitivity:
+                sensitivity_data = {
+                    "Parameter": ["Revenue Growth", "Spending Change", "GDP Growth", "Interest Rate"],
+                    "Impact on Deficit": [-150, 200, -80, 120],
+                    "Elasticity": [-0.25, 0.35, -0.15, 0.20],
+                }
+                sensitivity_df = pd.DataFrame(sensitivity_data)
+                builder.add_sensitivity_analysis(sensitivity_df)
+            
+            # Add scenarios if selected
+            if include_scenarios:
+                scenarios_data = {
+                    "Scenario": ["Status Quo", "Tax Reform", "Spending Cut", "Balanced"],
+                    "10-Year Deficit (B)": [9200, 8500, 8200, 7800],
+                    "Avg Annual (B)": [920, 850, 820, 780],
+                    "Final Year Deficit (B)": [650, 450, 300, 200],
+                }
+                scenarios_df = pd.DataFrame(scenarios_data)
+                builder.add_scenario_comparison(scenarios_df)
+            
+            # Add Monte Carlo if selected
+            if include_monte_carlo:
+                mc_data = {
+                    "Metric": ["Mean Deficit", "Median Deficit", "Std Dev", "P10", "P90"],
+                    "Value (B)": [850, 825, 120, 600, 1100],
+                    "Probability": [100, 100, 100, 100, 100],
+                }
+                mc_df = pd.DataFrame(mc_data)
+                builder.add_monte_carlo_results(mc_df)
+            
+            # Add recommendations if selected
+            if include_recommendations:
+                recommendations_text = (
+                    "<b>1. Revenue Enhancement:</b> Consider targeted tax reforms to increase federal revenue. "
+                    "A 5% increase in revenue would reduce the 10-year deficit by approximately $300B.<br/><br/>"
+                    "<b>2. Spending Efficiency:</b> Implement spending controls in discretionary categories. "
+                    "A 3% reduction in growth would save approximately $200B over 10 years.<br/><br/>"
+                    "<b>3. Balanced Approach:</b> Combine modest revenue increases with targeted spending reforms "
+                    "for the most sustainable fiscal path.<br/><br/>"
+                    "<b>4. Risk Management:</b> Monitor Monte Carlo results for adverse scenarios and maintain "
+                    "policy flexibility for economic changes."
+                )
+                builder.add_recommendations(recommendations_text)
+            
+            # Generate reports
+            report_dir = Path("reports/generated")
+            report_dir.mkdir(parents=True, exist_ok=True)
+            
+            timestamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
+            
+            generated_files = []
+            
+            # PDF export
+            if export_pdf:
+                try:
+                    pdf_path = report_dir / f"report_{timestamp}.pdf"
+                    builder.generate_pdf(str(pdf_path))
+                    generated_files.append(("PDF", pdf_path))
+                    st.success(f"PDF report generated: {pdf_path.name}")
+                except Exception as e:
+                    st.warning(f"PDF generation requires reportlab: pip install reportlab")
+            
+            # Excel export
+            if export_excel:
+                try:
+                    excel_path = report_dir / f"report_{timestamp}.xlsx"
+                    builder.generate_excel(str(excel_path))
+                    generated_files.append(("Excel", excel_path))
+                    st.success(f"Excel report generated: {excel_path.name}")
+                except Exception as e:
+                    st.warning(f"Excel generation requires openpyxl: pip install openpyxl")
+            
+            # JSON export
+            if export_json:
+                try:
+                    json_path = report_dir / f"report_{timestamp}.json"
+                    builder.generate_json(str(json_path))
+                    generated_files.append(("JSON", json_path))
+                    st.success(f"JSON report generated: {json_path.name}")
+                except Exception as e:
+                    st.error(f"JSON generation failed: {e}")
+            
+            # Display download links
+            if generated_files:
+                st.subheader("Generated Reports")
+                for file_type, file_path in generated_files:
+                    if file_path.exists():
+                        with open(file_path, "rb") as f:
+                            st.download_button(
+                                label=f"Download {file_type} Report",
+                                data=f.read(),
+                                file_name=file_path.name,
+                                mime="application/octet-stream"
+                            )
         
-            except Exception as e:
-                status.update(label="❌ Report generation failed", state="error", expanded=True)
-                st.error(f"Error generating report: {e}")
-                st.write(f"Make sure you have reportlab and openpyxl installed:")
-                st.code("pip install reportlab openpyxl")
+        except Exception as e:
+            st.error(f"Error generating report: {e}")
+            st.write(f"Make sure you have reportlab and openpyxl installed:")
+            st.code("pip install reportlab openpyxl")
 
 
 def main():
-    # Main Streamlit app entry point
+    """Main Streamlit app."""
     if not HAS_STREAMLIT:
         print("Streamlit not installed. Install with: pip install streamlit plotly")
         return
@@ -3764,81 +3127,36 @@ def main():
         initial_sidebar_state="expanded"
     )
     
-    # Sprint 5.4: Initialize authentication
-    StreamlitAuth.initialize()
-
-    # Enforce authentication in production mode before rendering the app
-    if not StreamlitAuth.is_authenticated():
-        StreamlitAuth.show_auth_page()
-        return
-    
     # M6 Fix: Initialize settings globally for all pages
     initialize_settings()
     
-    # Sprint 5.4: Apply theme
-    current_theme = st.session_state.settings.get('theme', 'light')
-    
-    # Apply custom colors if enabled
-    custom_colors = None
-    if st.session_state.settings.get('custom_theme_enabled', False):
-        custom_colors = st.session_state.settings.get('custom_theme_config', None)
-    
-    apply_theme(current_theme, custom_colors)
-    
-    # Sprint 5.4: Apply animations if enabled
-    animation_enabled = st.session_state.settings.get('animation_enabled', True)
-    animation_speed = st.session_state.settings.get('animation_speed', 'normal')
-    matrix_font_size = st.session_state.settings.get('matrix_font_size', 16)
-    apply_animation(current_theme, animation_enabled, animation_speed, matrix_font_size)
-    
-    # Sprint 5.4: Show user widget in sidebar
-    StreamlitAuth.show_user_widget()
-    
-    # Sidebar navigation (button-based to avoid radio icons)
-    st.sidebar.markdown('<div class="nav-header">Navigation</div>', unsafe_allow_html=True)
-    nav_items = [
-        "Overview",
-        "Healthcare",
-        "Social Security",
-        "Federal Revenues",
-        "Medicare/Medicaid",
-        "Discretionary Spending",
-        "Combined Outlook",
-        "Policy Comparison",
-        "---",
-        "Recommendations",
-        "Scenario Explorer",
-        "Impact Calculator",
-        "Advanced Scenarios",
-        "---",
-        "Report Generation",
-        "Custom Policy Builder",
-        "Policy Library Manager",
-        "Real Data Dashboard",
-        "Policy Upload",
-        "---",
-        "👤 User Profile",
-        "⚙️ Settings",
-    ]
-
-    if "nav_page" not in st.session_state:
-        st.session_state["nav_page"] = nav_items[0]
-
-    for item in nav_items:
-        if item == "---":
-            st.sidebar.markdown('<hr class="nav-hr" />', unsafe_allow_html=True)
-            continue
-        is_active = st.session_state.get("nav_page") == item
-        clicked = st.sidebar.button(
-            item,
-            key=f"nav_{item}",
-            width="stretch",
-            type="primary" if is_active else "secondary",
-        )
-        if clicked:
-            st.session_state["nav_page"] = item
-
-    page = st.session_state.get("nav_page", nav_items[0])
+    # Sidebar navigation
+    page = st.sidebar.radio(
+        "Navigation",
+        [
+            "Overview",
+            "Healthcare",
+            "Social Security",
+            "Federal Revenues",
+            "Medicare/Medicaid",
+            "Discretionary Spending",
+            "Combined Outlook",
+            "Policy Comparison",
+            "---",
+            "Recommendations",
+            "Scenario Explorer",
+            "Impact Calculator",
+            "Advanced Scenarios",
+            "---",
+            "Report Generation",
+            "Custom Policy Builder",
+            "Policy Library Manager",
+            "Real Data Dashboard",
+            "Policy Upload",
+            "---",
+            "⚙️ Settings"
+        ]
+    )
     
     if page == "Overview":
         page_overview()
@@ -3874,8 +3192,6 @@ def main():
         page_real_data_dashboard()
     elif page == "Policy Upload":
         page_policy_upload()
-    elif page == "👤 User Profile":
-        show_user_profile_page()
     elif page == "⚙️ Settings":
         page_settings()
 

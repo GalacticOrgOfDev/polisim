@@ -14,6 +14,8 @@ ENV/
 *.csv
 *.xlsx
 *.log
+databases/
+*.db
 
 # OS files
 .DS_Store
@@ -88,6 +90,8 @@ profile_output.prof
 # Cache files
 *.cache
 .cache/
+.mypy_cache/
+.ruff_cache/
 core/cbo_data_cache.json
 *.pyc
 

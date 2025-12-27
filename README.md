@@ -2,13 +2,18 @@
 
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-417/419%20passing-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-458/460%20passing-brightgreen.svg)](tests/)
 [![Production Ready](https://img.shields.io/badge/status-production%20ready-brightgreen.svg)](documentation/VALIDATION_REPORT_DEC26.md)
 [![Documentation](https://img.shields.io/badge/docs-comprehensive-blue.svg)](documentation/INDEX.md)
 
 > **An open-source, transparent, stochastic U.S. federal fiscal projection system that democratizes policy analysis.**
 
 Polisim enables researchers, policymakers, and citizens to independently model and verify the fiscal impacts of policy proposals—transforming federal budget analysis from a closed-source black box into an open, auditable, democratic tool.
+
+## 🛰️ Project Status
+
+- **Current:** Phase 5.4 (Web UI + Data Integration) — launcher/bootstrap hardening and dashboard refresh
+- **Complete:** Phases 1-4 (see [documentation/PHASES.md](documentation/PHASES.md) for history)
 
 ## 🎯 Core Purpose
 
@@ -21,7 +26,7 @@ Polisim enables researchers, policymakers, and citizens to independently model a
 - **✅ Validated:** Projections validated against government baselines (CBO, SSA, CMS) within ±2-5%
 - **🌐 Democratic:** Open source (MIT license), accessible to everyone
 - **🔧 Extensible:** Modular architecture enables community contributions
-- **🚀 Production Ready:** 417/419 tests passing, comprehensive error handling, optimized performance
+- **🚀 Production Ready:** 458/460 tests passing, comprehensive error handling, optimized performance
 
 ## 💡 Why Uncertainty Matters
 
@@ -81,6 +86,13 @@ cd polisim
 pip install -r requirements.txt
 ```
 
+### Friendly Startup Check
+
+- Run dependency check only: `python main.py --startup-check-only` (adds `--auto-install-deps` to skip prompts).
+- The installer/launcher plan is outlined in [docs/startup_check_plan.md](docs/startup_check_plan.md).
+- Windows one-liner bootstrap: `powershell -ExecutionPolicy Bypass -File scripts/bootstrap_windows.ps1 -LaunchDashboard` (downloads embeddable Python if needed, builds venv, installs deps, runs startup check, then launches Streamlit).
+- Launcher shell (Windows, Tk-based): `python launcher.py` (cyberpunk splash, calls bootstrap for install + launch, opens mobile links).
+
 ### Run Example Simulations
 
 ```powershell
@@ -94,10 +106,10 @@ python scripts/demo_phase2_scenarios.py --scenarios baseline progressive moderat
 python scripts/demo_phase2_scenarios.py --scenarios baseline --years 75
 
 # Healthcare policy simulation
-python run_health_sim.py
+python scripts/run_health_sim.py
 
 # Generate comparison reports
-python run_report.py
+python scripts/run_report.py
 
 # Regenerate scenario from PDF policy document
 python scripts/regenerate_scenario_from_pdf.py "path/to/policy.pdf"
@@ -150,6 +162,8 @@ Launch the Streamlit interface for interactive analysis:
 
 ```powershell
 streamlit run ui/dashboard.py
+# or
+python scripts/run_dashboard.py --port 8501
 ```
 
 **Dashboard Features:**
@@ -227,6 +241,7 @@ polisim/
 - [Quick Reference Guide](documentation/QUICK_REFERENCE.md) - API and usage
 - [Demo Scripts Guide](documentation/DEMO_SCRIPT_USAGE.md) - Example simulations
 - [MCP Integration Guide](MCP_INTEGRATION.md) - AI agent integration
+- [Sprint 5.4 Slice Work Plan](docs/slice%2054%20work%20plan.md) - Current UI enhancement tasks
 
 **Technical:**
 - [Context Framework](documentation/CONTEXT_FRAMEWORK.md) - Policy extraction system

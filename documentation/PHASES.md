@@ -1,7 +1,7 @@
 # Project Phases & Roadmap
 
-**Last Updated:** December 25, 2025  
-**Current Phase:** Phase 4 - Production Polish & Documentation
+**Last Updated:** December 27, 2025  
+**Current Phase:** Phase 5.4 - Web UI + Data Integration (Launcher + Dashboard polish)
 
 ---
 
@@ -13,8 +13,8 @@
 | Phase 2A | Tax Reform + SS + Integration | ✅ Complete | 124/124 (100%) | A+ |
 | Phase 2B | Documentation + Code Quality | ✅ Complete | 277/278 (99.6%) | A+ |
 | Phase 3 | Medicare/Medicaid + Revenue + Combined Outlook | ✅ Complete | 312/314 (99.4%) | A+ |
-| Phase 4 | Production Polish + Validation | 🚀 In Progress | 312/314 (99.4%) | - |
-| Phase 5 | Web UI + Data Integration | 📋 Planned | - | - |
+| Phase 4 | Production Polish + Validation | ✅ Complete | 312/314 (99.4%) | A+ |
+| Phase 5 | Web UI + Data Integration | 🚀 In Progress (Sprint 5.4) | TBD | TBD |
 | Phase 6 | Validation + Public Launch | 📋 Planned | - | - |
 
 ---
@@ -202,13 +202,18 @@
 
 ---
 
-## Phase 5: Web UI + Data Integration
+## Phase 5: Web UI + Data Integration 🚀 IN PROGRESS
 
 **Timeline:** Q1-Q2 2026  
-**Status:** 📋 Planned
+**Status:** Sprint 5.4 in progress
 
-### Planned Deliverables
-- Professional web interface (React or Streamlit enhancement)
+### Current Sprint (5.4) Focus
+- Harden Windows bootstrap + Tk launcher (reliable repo-relative paths, boolean flag handling)
+- Align dashboard overview copy with Phase 5 status
+- Clean documentation to reflect Phase 5.4 progress and remove outdated phase references
+
+### Planned Deliverables (Phase 5 scope)
+- Professional web interface (Streamlit enhancements + dashboards)
 - Real-time CBO data scraping and updates
 - Interactive scenario builder
 - PDF report generation
@@ -217,9 +222,9 @@
 
 ---
 
-## Phase 5: Validation + Community + Public Launch
+## Phase 6: Validation + Community + Public Launch
 
-**Timeline:** Q1-Q2 2026  
+**Timeline:** Q2-Q3 2026  
 **Status:** 📋 Planned
 
 ### Planned Deliverables

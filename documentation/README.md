@@ -2,6 +2,8 @@
 
 Welcome to the PoliSim documentation directory!
 
+**Status:** Phase 5.4 (Web UI + Data Integration) — focusing on launcher/bootstrap stability and dashboard polish. For milestone details, see [PHASES.md](PHASES.md).
+
 ## 📚 START HERE: [INDEX.md](INDEX.md)
 
 The **[INDEX.md](INDEX.md)** file is your central navigation hub for all documentation.
@@ -45,5 +47,5 @@ documentation/
 
 ---
 
-**Last Updated:** December 25, 2025  
-**Documentation Status:** ✅ Consolidated and production-ready
+**Last Updated:** December 27, 2025  
+**Documentation Status:** ✅ Consolidated and kept current for Phase 5.4
