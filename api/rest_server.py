@@ -29,6 +29,18 @@ from core.data_loader import load_real_data
 from core.report_generator import ComprehensiveReportBuilder, ReportMetadata
 import pandas as pd
 
+# Authentication imports (Phase 5)
+try:
+    from api.models import User, APIKey, UserPreferences
+    from api.auth import (
+        create_jwt_token, authenticate_user, authenticate_api_key,
+        require_auth, AuthError
+    )
+    from api.database import init_database, get_db_session
+    HAS_AUTH = True
+except ImportError:
+    HAS_AUTH = False
+
 
 class APIError(Exception):
     """Custom API error."""
@@ -45,6 +57,10 @@ def create_api_app() -> "Flask":
     app = Flask(__name__)
     CORS(app)  # Enable CORS for all routes
     
+    # Initialize database (Phase 5)
+    if HAS_AUTH:
+        init_database()
+    
     # Error handler
     @app.errorhandler(APIError)
     def handle_api_error(error):
@@ -55,6 +71,277 @@ def create_api_app() -> "Flask":
         response.status_code = error.status_code
         return response
     
+    # Auth error handler (Phase 5)
+    if HAS_AUTH:
+        @app.errorhandler(AuthError)
+        def handle_auth_error(error):
+            response = jsonify({
+                "error": error.message,
+                "status": "error"
+            })
+            response.status_code = error.status_code
+            return response
+    
+    # ==================== AUTHENTICATION ENDPOINTS (Phase 5) ====================
+    
+    if HAS_AUTH:
+        @app.route('/api/auth/register', methods=['POST'])
+        def register():
+            """Register new user account."""
+            try:
+                data = request.get_json()
+                
+                # Validate required fields
+                required_fields = ['email', 'username', 'password']
+                for field in required_fields:
+                    if not data.get(field):
+                        raise APIError(f"Missing required field: {field}", 400)
+                
+                session = get_db_session()
+                
+                # Check if user already exists
+                existing_user = session.query(User).filter(
+                    (User.email == data['email']) | (User.username == data['username'])
+                ).first()
+                
+                if existing_user:
+                    raise APIError("User with this email or username already exists", 409)
+                
+                # Create new user
+                user = User(
+                    email=data['email'],
+                    username=data['username'],
+                    full_name=data.get('full_name'),
+                    organization=data.get('organization'),
+                    role='user',  # Default role
+                    is_active=True,
+                    is_verified=False,  # Require email verification in production
+                )
+                user.set_password(data['password'])
+                
+                session.add(user)
+                session.commit()
+                
+                # Create JWT token
+                token = create_jwt_token(user.id, user.email, user.role)
+                
+                return jsonify({
+                    "status": "success",
+                    "message": "User registered successfully",
+                    "user": user.to_dict(),
+                    "token": token,
+                }), 201
+                
+            except APIError:
+                raise
+            except Exception as e:
+                raise APIError(f"Registration failed: {str(e)}", 500)
+            finally:
+                if 'session' in locals():
+                    session.close()
+        
+        @app.route('/api/auth/login', methods=['POST'])
+        def login():
+            """Login with email and password."""
+            try:
+                data = request.get_json()
+                
+                # Validate required fields
+                if not data.get('email') or not data.get('password'):
+                    raise APIError("Email and password are required", 400)
+                
+                session = get_db_session()
+                
+                # Authenticate user
+                user = authenticate_user(session, data['email'], data['password'])
+                
+                if not user:
+                    raise APIError("Invalid email or password", 401)
+                
+                # Create JWT token
+                token = create_jwt_token(user.id, user.email, user.role)
+                
+                return jsonify({
+                    "status": "success",
+                    "message": "Login successful",
+                    "user": user.to_dict(),
+                    "token": token,
+                })
+                
+            except AuthError as e:
+                raise APIError(e.message, e.status_code)
+            except APIError:
+                raise
+            except Exception as e:
+                raise APIError(f"Login failed: {str(e)}", 500)
+            finally:
+                if 'session' in locals():
+                    session.close()
+        
+        @app.route('/api/auth/me', methods=['GET'])
+        @require_auth()
+        def get_current_user():
+            """Get current user profile."""
+            from flask import g
+            return jsonify({
+                "status": "success",
+                "user": g.current_user.to_dict(include_sensitive=True),
+            })
+        
+        @app.route('/api/auth/api-keys', methods=['GET'])
+        @require_auth()
+        def list_api_keys():
+            """List user's API keys."""
+            from flask import g
+            user = g.current_user
+            
+            return jsonify({
+                "status": "success",
+                "api_keys": [key.to_dict() for key in user.api_keys if key.is_active],
+            })
+        
+        @app.route('/api/auth/api-keys', methods=['POST'])
+        @require_auth()
+        def create_api_key():
+            """Create new API key."""
+            from flask import g
+            try:
+                data = request.get_json() or {}
+                user = g.current_user
+                session = g.db_session
+                
+                # Generate API key
+                key_value = APIKey.generate_key()
+                
+                api_key = APIKey(
+                    user_id=user.id,
+                    key=key_value,
+                    name=data.get('name', f'API Key {len(user.api_keys) + 1}'),
+                    prefix=key_value[:8],
+                    rate_limit=data.get('rate_limit', 1000),
+                )
+                
+                session.add(api_key)
+                session.commit()
+                
+                return jsonify({
+                    "status": "success",
+                    "message": "API key created successfully",
+                    "api_key": api_key.to_dict(include_full_key=True),
+                    "warning": "Save this key now. You won't be able to see it again.",
+                }), 201
+                
+            except Exception as e:
+                raise APIError(f"Failed to create API key: {str(e)}", 500)
+        
+        # ==================== USER PREFERENCES ENDPOINTS (Sprint 5.4) ====================
+        
+        @app.route('/api/users/preferences', methods=['GET'])
+        @require_auth()
+        def get_user_preferences():
+            """Get current user's preferences."""
+            from flask import g
+            user = g.current_user
+            session = g.db_session
+            
+            try:
+                # Get or create preferences
+                prefs = session.query(UserPreferences).filter_by(user_id=user.id).first()
+                
+                if not prefs:
+                    # Create default preferences
+                    prefs = UserPreferences(user_id=user.id)
+                    session.add(prefs)
+                    session.commit()
+                
+                return jsonify({
+                    "status": "success",
+                    "preferences": prefs.to_dict(),
+                })
+                
+            except Exception as e:
+                raise APIError(f"Failed to get preferences: {str(e)}", 500)
+        
+        @app.route('/api/users/preferences', methods=['PUT'])
+        @require_auth()
+        def update_user_preferences():
+            """Update current user's preferences."""
+            from flask import g
+            user = g.current_user
+            session = g.db_session
+            data = request.get_json()
+            
+            try:
+                # Get or create preferences
+                prefs = session.query(UserPreferences).filter_by(user_id=user.id).first()
+                
+                if not prefs:
+                    prefs = UserPreferences(user_id=user.id)
+                    session.add(prefs)
+                
+                # Update fields
+                updatable_fields = [
+                    'theme', 'tooltips_enabled', 'show_advanced_options', 'decimal_places',
+                    'number_format', 'currency_symbol', 'chart_theme', 'default_chart_type',
+                    'color_palette', 'legend_position', 'animation_enabled', 'animation_speed',
+                    'cache_duration_policies', 'cache_duration_cbo_data', 'cache_duration_charts',
+                    'auto_refresh_data', 'max_monte_carlo_iterations', 'debug_mode',
+                    'experimental_features', 'api_endpoint', 'email_notifications',
+                    'notify_simulation_complete', 'notify_policy_updates', 'notify_new_features',
+                    'notify_weekly_digest', 'language', 'timezone', 'date_format',
+                    'custom_theme_config'
+                ]
+                
+                for field in updatable_fields:
+                    if field in data:
+                        setattr(prefs, field, data[field])
+                
+                session.commit()
+                
+                return jsonify({
+                    "status": "success",
+                    "message": "Preferences updated successfully",
+                    "preferences": prefs.to_dict(),
+                })
+                
+            except Exception as e:
+                session.rollback()
+                raise APIError(f"Failed to update preferences: {str(e)}", 500)
+        
+        @app.route('/api/users/preferences/reset', methods=['POST'])
+        @require_auth()
+        def reset_user_preferences():
+            """Reset current user's preferences to defaults."""
+            from flask import g
+            user = g.current_user
+            session = g.db_session
+            
+            try:
+                # Get preferences
+                prefs = session.query(UserPreferences).filter_by(user_id=user.id).first()
+                
+                if prefs:
+                    # Delete existing preferences
+                    session.delete(prefs)
+                    session.commit()
+                
+                # Create new default preferences
+                prefs = UserPreferences(user_id=user.id)
+                session.add(prefs)
+                session.commit()
+                
+                return jsonify({
+                    "status": "success",
+                    "message": "Preferences reset to defaults",
+                    "preferences": prefs.to_dict(),
+                })
+                
+            except Exception as e:
+                session.rollback()
+                raise APIError(f"Failed to reset preferences: {str(e)}", 500)
+    
+    # ==================== END AUTHENTICATION ENDPOINTS ====================
+    
     # Health check
     @app.route('/api/health', methods=['GET'])
     def health():
@@ -62,6 +349,7 @@ def create_api_app() -> "Flask":
         return jsonify({
             "status": "healthy",
             "version": "1.0",
+            "authentication": "enabled" if HAS_AUTH else "disabled",
             "timestamp": datetime.now().isoformat()
         })
     
@@ -315,6 +603,93 @@ def create_api_app() -> "Flask":
             })
         except Exception as e:
             raise APIError(f"Failed to load historical data: {str(e)}")
+    
+    @app.route('/api/data/refresh', methods=['POST'])
+    @require_auth(roles=['admin'])
+    def refresh_cbo_data():
+        """
+        Manually refresh CBO data from live sources (admin only).
+        
+        Phase 5.2: Manual refresh endpoint with authentication.
+        Fetches latest data from CBO/Treasury/OMB, validates, and caches.
+        
+        Returns:
+            JSON with updated data and timestamp
+        """
+        try:
+            from core.cbo_scraper import CBODataScraper
+            
+            # Create scraper with notifications enabled
+            scraper = CBODataScraper(use_cache=True, enable_notifications=True)
+            
+            # Fetch fresh data
+            data = scraper.get_current_us_budget_data()
+            
+            if not data:
+                raise APIError("Failed to fetch data from CBO/Treasury sources", 503)
+            
+            return jsonify({
+                "status": "success",
+                "message": "Data refreshed successfully",
+                "data": {
+                    "gdp": data['gdp'],
+                    "national_debt": data['debt'],
+                    "deficit": data['deficit'],
+                    "total_revenue": sum(data['revenues'].values()),
+                    "total_spending": sum(data['spending'].values()),
+                    "interest_rate": data['interest_rate'],
+                    "last_updated": data['last_updated'],
+                    "data_source": data['data_source'],
+                },
+            })
+        except ImportError:
+            raise APIError("CBO scraper module not available", 500)
+        except Exception as e:
+            raise APIError(f"Failed to refresh data: {str(e)}", 500)
+    
+    @app.route('/api/data/history', methods=['GET'])
+    @require_auth()
+    def get_cbo_history():
+        """
+        Get historical CBO data (last 365 days of updates).
+        
+        Phase 5.2: Historical data tracking endpoint.
+        Shows how CBO data has changed over time.
+        
+        Query params:
+            limit (int): Max number of entries (default: 30)
+        
+        Returns:
+            JSON with historical data entries
+        """
+        try:
+            from core.cbo_scraper import CBODataScraper
+            
+            scraper = CBODataScraper()
+            limit = request.args.get('limit', 30, type=int)
+            
+            # Get recent history
+            history = scraper.history[-limit:] if scraper.history else []
+            
+            return jsonify({
+                "status": "success",
+                "count": len(history),
+                "history": [
+                    {
+                        "timestamp": entry['timestamp'],
+                        "hash": entry['hash'],
+                        "gdp": entry['data'].get('gdp'),
+                        "debt": entry['data'].get('debt'),
+                        "deficit": entry['data'].get('deficit'),
+                    }
+                    for entry in history
+                ],
+            })
+        except ImportError:
+            raise APIError("CBO scraper module not available", 500)
+        except Exception as e:
+            raise APIError(f"Failed to retrieve history: {str(e)}", 500)
+
     
     # Report generation endpoint
     @app.route('/api/report/generate', methods=['POST'])

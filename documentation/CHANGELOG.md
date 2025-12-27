@@ -421,7 +421,7 @@ Successfully completed comprehensive code audit and debugging session, resolving
    - Eliminated maintenance burden of duplicated logic
    - **Impact:** Cleaner codebase, reduced file size, eliminated confusion
 
-3. ✅ **Bug #9: Unicode Encoding Fix** - `run_health_sim.py` (LOW SEVERITY)
+3. ✅ **Bug #9: Unicode Encoding Fix** - `scripts/run_health_sim.py` (LOW SEVERITY)
    - Removed Unicode checkmark (✓) from logger output
    - Replaced with plain ASCII text
    - **Impact:** Resolved Windows cp1252 encoding errors
@@ -431,7 +431,7 @@ Successfully completed comprehensive code audit and debugging session, resolving
    - Kept single assignment at line 143
    - **Impact:** Eliminated redundant code execution
 
-5. ✅ **Bug #10: Docstring Escape Sequence** - `run_health_sim.py` (TRIVIAL)
+5. ✅ **Bug #10: Docstring Escape Sequence** - `scripts/run_health_sim.py` (TRIVIAL)
    - Fixed SyntaxWarning by using raw string `r"""`
    - Properly escaped Windows path `e:\AI Projects\polisim`
    - **Impact:** Eliminated syntax warnings
@@ -451,7 +451,7 @@ Successfully completed comprehensive code audit and debugging session, resolving
 **Files Modified:**
 - `core/revenue_modeling.py` - Added division by zero protection (lines 194-198)
 - `core/policy_mechanics_extractor.py` - Removed 86 lines duplicate code + duplicate flag
-- `run_health_sim.py` - Removed unicode character, fixed docstring (lines 1, 136)
+- `scripts/run_health_sim.py` - Removed unicode character, fixed docstring (lines 1, 136)
 - `core/simulation.py` - Fixed import order (lines 7-18)
 
 **Documentation Updated:**
@@ -627,7 +627,7 @@ Automated web scraper fetches real-time CBO/Treasury data for Current US baselin
   - Features: JSON cache, error handling, logging
 
 ### Files Modified
-- `Economic_projector.py` — Calls `get_current_us_parameters()` for Current US
+- `scripts/Economic_projector.py` — Calls `get_current_us_parameters()` for Current US
 - `defaults.py` — Deprecated for Current US (now uses live data)
 
 ### Data Sources
@@ -660,10 +660,10 @@ Professional healthcare policy modeling system with Monte Carlo uncertainty quan
 - `core/simulation.py` — Unified simulation runner
 - `core/metrics.py` — KPI calculations
 - `ui/chart_carousel.py` — Multi-scenario visualization
-- `run_health_sim.py` — Healthcare simulation runner
-- `run_report.py` — Report generator
-- `run_visualize.py` — Visualization suite
-- `Economic_projector.py` — Economic engine
+- `scripts/run_health_sim.py` — Healthcare simulation runner
+- `scripts/run_report.py` — Report generator
+- `scripts/run_visualize.py` — Visualization suite
+- `scripts/Economic_projector.py` — Economic engine
 
 ### Test Infrastructure
 - `tests/test_simulation_healthcare.py`

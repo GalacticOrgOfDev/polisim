@@ -1,0 +1,26 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/pyright/main/packages/pyright-internal/schemas/pyrightconfig.schema.json",
+  "pythonVersion": "3.9",
+  "typeCheckingMode": "basic",
+  "reportMissingTypeStubs": "none",
+  "reportMissingImports": "warning",
+  "reportMissingModuleSource": "warning",
+  "exclude": [
+    "**/.venv",
+    "**/__pycache__",
+    "docs/build",
+    "docs/_build",
+    "documentation/**/*.md",
+    "project guidelines/**",
+    "ui/dashboard.py",
+    "scripts/run_report.py",
+    "scripts/run_compare_and_export.py",
+    "scripts/Economic_projector.py"
+  ],
+  "executionEnvironments": [
+    {
+      "root": ".",
+      "venv": ".venv"
+    }
+  ]
+}

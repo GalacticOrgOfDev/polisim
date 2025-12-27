@@ -8,36 +8,50 @@ Usage:
     python mcp_server.py
 
     # In another terminal, run this client:
-    python mcp_client_example.py
+    python scripts/mcp_client_example.py
 """
 
 import json
+import shlex
 import subprocess
 import sys
 import time
-from typing import Any, Dict, Optional
+from pathlib import Path
+from typing import Any, Dict, Optional, Sequence, Union
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 
 class PolisimMCPClient:
     """Simple client for interacting with POLISIM MCP server."""
 
-    def __init__(self, server_cmd: str = "python mcp_server.py"):
+    def __init__(self, server_cmd: Optional[Union[Sequence[str], str]] = None):
         """
         Initialize client and start MCP server process.
 
         Args:
             server_cmd: Command to start server
         """
-        self.server_cmd = server_cmd
-        self.process = None
+        if server_cmd is None:
+            self.server_cmd_args: list[str] = [sys.executable, str(REPO_ROOT / 'mcp_server.py')]
+        elif isinstance(server_cmd, (list, tuple)):
+            self.server_cmd_args = [str(part) for part in server_cmd]
+        elif isinstance(server_cmd, str):
+            self.server_cmd_args = shlex.split(server_cmd)
+        else:
+            self.server_cmd_args = [str(server_cmd)]
+        self.process: Optional[subprocess.Popen[str]] = None
         self._start_server()
 
     def _start_server(self):
         """Start the MCP server process."""
         try:
-            print(f"Starting MCP server: {self.server_cmd}", file=sys.stderr)
+            print(f"Starting MCP server: {' '.join(self.server_cmd_args)}", file=sys.stderr)
             self.process = subprocess.Popen(
-                self.server_cmd.split(),
+                self.server_cmd_args,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
@@ -61,17 +75,25 @@ class PolisimMCPClient:
             MCP response dictionary
         """
         try:
+            process = self.process
+            if process is None or process.stdin is None or process.stdout is None:
+                raise RuntimeError("MCP server process is not running")
+
             # Send request
             request_json = json.dumps(request)
-            self.process.stdin.write(request_json + "\n")
-            self.process.stdin.flush()
+            process.stdin.write(request_json + "\n")
+            process.stdin.flush()
 
             # Read response
-            response_line = self.process.stdout.readline()
+            response_line = process.stdout.readline()
             if not response_line:
                 raise RuntimeError("Server closed connection")
 
-            response = json.loads(response_line)
+            response_raw = json.loads(response_line)
+            if not isinstance(response_raw, dict):
+                raise RuntimeError("Unexpected MCP response format")
+
+            response: Dict[str, Any] = response_raw
             return response
 
         except Exception as e:
@@ -102,7 +124,7 @@ class PolisimMCPClient:
         Returns:
             Simulation results
         """
-        request = {
+        request: Dict[str, Any] = {
             "type": "call_tool",
             "name": "run_simulation",
             "input": {
@@ -133,7 +155,7 @@ class PolisimMCPClient:
         Returns:
             Comparison results
         """
-        request = {
+        request: Dict[str, Any] = {
             "type": "call_tool",
             "name": "compare_scenarios",
             "input": {
@@ -161,7 +183,7 @@ class PolisimMCPClient:
         Returns:
             Sensitivity analysis results
         """
-        request = {
+        request: Dict[str, Any] = {
             "type": "call_tool",
             "name": "sensitivity_analysis",
             "input": {
@@ -176,7 +198,7 @@ class PolisimMCPClient:
 
     def get_policy_catalog(self, filter_keyword: Optional[str] = None) -> Dict[str, Any]:
         """Get available policies."""
-        request = {
+        request: Dict[str, Any] = {
             "type": "call_tool",
             "name": "get_policy_catalog",
             "input": {},

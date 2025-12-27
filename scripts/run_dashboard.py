@@ -12,6 +12,10 @@ Usage:
 import sys
 import subprocess
 import argparse
+from pathlib import Path
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def main():
@@ -22,16 +26,16 @@ def main():
     
     if args.legacy:
         print("Launching legacy Economic Projector GUI...")
-        subprocess.run([sys.executable, 'main.py', '--legacy-gui'])
+        subprocess.run([sys.executable, str(REPO_ROOT / 'main.py'), '--legacy-gui'], cwd=REPO_ROOT)
     else:
         print(f"Launching CBO 2.0 Dashboard on http://localhost:{args.port}")
         print("Press Ctrl+C to stop")
         subprocess.run([
             sys.executable, '-m', 'streamlit', 'run',
-            'ui/dashboard.py',
+            str(REPO_ROOT / 'ui' / 'dashboard.py'),
             '--logger.level=warning',
             f'--server.port={args.port}'
-        ])
+        ], cwd=REPO_ROOT)
 
 
 if __name__ == '__main__':

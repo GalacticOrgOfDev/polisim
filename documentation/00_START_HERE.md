@@ -13,16 +13,16 @@
 pip install -r requirements.txt
 
 # Run healthcare simulation
-python run_health_sim.py
+python scripts/run_health_sim.py
 
 # Generate economic projections
-python Economic_projector.py
+python scripts/Economic_projector.py
 
 # Create comparison reports
-python run_report.py
+python scripts/run_report.py
 
 # View visualizations
-python run_visualize.py
+python scripts/run_visualize.py
 ```
 
 **Expected Output:**

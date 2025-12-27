@@ -70,7 +70,7 @@ This document codifies the naming conventions used throughout the polisim codeba
 **Scripts:**
 - Use snake_case
 - Descriptive action names
-- Examples: `run_dashboard.py`, `extract_policy_parameters.py`
+- Examples: `scripts/run_dashboard.py`, `scripts/extract_policy_parameters.py`
 
 **Modules:**
 - Use snake_case

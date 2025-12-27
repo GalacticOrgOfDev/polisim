@@ -25,6 +25,12 @@ import os
 import sys
 import logging
 import argparse
+from pathlib import Path
+
+# Ensure repo root on sys.path when running from scripts/
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 # Configure logging
 def setup_logging(verbose=False):
@@ -121,7 +127,7 @@ def main():
         logger.info(f'Simulation complete. Generated {len(df)} rows of output.')
         
         # Save results
-        output_path = os.path.join(os.getcwd(), 'usgha_simulation_22y.csv')
+        output_path = os.path.join(REPO_ROOT, 'usgha_simulation_22y.csv')
         try:
             df.to_csv(output_path, index=False)
             logger.info(f'Results saved to: {output_path}')

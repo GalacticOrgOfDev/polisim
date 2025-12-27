@@ -1,4 +1,4 @@
-﻿# PoliSim Project: Exhaustive Instruction Manual
+# PoliSim Project: Exhaustive Instruction Manual
 **Created:** 2025-12-23  
 **Purpose:** Complete step-by-step guide for development, testing, and deployment  
 **Audience:** Development team, new contributors, project leads  
@@ -34,9 +34,9 @@
 - Create government-ready analysis reports
 
 **Current Status (As of 2025-12-23):**
-- **Phase 1:** âœ… 100% Complete (Healthcare simulation working)
-- **Phase 2:** ðŸŸ¡ 70% Complete (Social Security + tax reforms in progress)
-- **Phase 3.2:** ðŸŸ¡ 80% Complete (Discretionary spending + interest modeling)
+- **Phase 1:** ✅ 100% Complete (Healthcare simulation working)
+- **Phase 2:** 🟡 70% Complete (Social Security + tax reforms in progress)
+- **Phase 3.2:** 🟡 80% Complete (Discretionary spending + interest modeling)
 - **Test Coverage:** 92/125 passing (73.6% - acceptable for Phase 2 work)
 - **Code Quality:** GOOD (clean architecture, well-organized modules)
 - **Production Ready:** YES (for core healthcare analysis)
@@ -44,41 +44,41 @@
 ### 1.2 System Architecture
 
 ```
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚                   PoliSim System Architecture               â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+┌─────────────────────────────────────────────────────────────┐
+│                   PoliSim System Architecture               │
+└─────────────────────────────────────────────────────────────┘
 
 User Interface Layer:
-â”œâ”€ Economic_projector.py (Tkinter GUI for scenario management)
-â”œâ”€ ui/server.py (Web interface)
-â””â”€ CLI runners (run_health_sim.py, run_visualize.py, etc.)
+├─ scripts/Economic_projector.py (Tkinter GUI for scenario management)
+├─ ui/server.py (Web interface)
+└─ CLI runners (scripts/run_health_sim.py, scripts/run_visualize.py, etc.)
 
 Business Logic Layer:
-â”œâ”€ core/simulation.py (Main simulation engine)
-â”œâ”€ core/economics.py (Economic calculations)
-â”œâ”€ core/healthcare.py (Healthcare-specific models)
-â”œâ”€ core/metrics.py (Metric calculations)
-â”œâ”€ core/comparison.py (Policy comparison)
-â””â”€ core/policies.py (Policy utilities)
+├─ core/simulation.py (Main simulation engine)
+├─ core/economics.py (Economic calculations)
+├─ core/healthcare.py (Healthcare-specific models)
+├─ core/metrics.py (Metric calculations)
+├─ core/comparison.py (Policy comparison)
+└─ core/policies.py (Policy utilities)
 
 Data Layer:
-â”œâ”€ core/scenario_loader.py (Policy configuration loading)
-â”œâ”€ policies/ (JSON policy files)
-â”œâ”€ current_policy.csv (Current US baseline)
-â””â”€ utils/io.py (File I/O operations)
+├─ core/scenario_loader.py (Policy configuration loading)
+├─ policies/ (JSON policy files)
+├─ current_policy.csv (Current US baseline)
+└─ utils/io.py (File I/O operations)
 
 Visualization Layer:
-â”œâ”€ ui/chart_carousel.py (Chart organization)
-â”œâ”€ ui/healthcare_charts.py (Healthcare-specific charts)
-â”œâ”€ ui/widgets.py (UI components)
-â””â”€ reports/charts/ (Generated chart output)
+├─ ui/chart_carousel.py (Chart organization)
+├─ ui/healthcare_charts.py (Healthcare-specific charts)
+├─ ui/widgets.py (UI components)
+└─ reports/charts/ (Generated chart output)
 
 Testing Framework:
-â”œâ”€ tests/test_simulation_healthcare.py (Healthcare tests)
-â”œâ”€ tests/test_phase2_integration.py (Phase 2 tests)
-â”œâ”€ tests/test_revenue_modeling.py (Revenue tests)
-â”œâ”€ tests/test_phase32_integration.py (Phase 3.2 tests)
-â””â”€ tests/test_social_security.py (Social Security tests)
+├─ tests/test_simulation_healthcare.py (Healthcare tests)
+├─ tests/test_phase2_integration.py (Phase 2 tests)
+├─ tests/test_revenue_modeling.py (Revenue tests)
+├─ tests/test_phase32_integration.py (Phase 3.2 tests)
+└─ tests/test_social_security.py (Social Security tests)
 ```
 
 ### 1.3 Key Components Deep Dive
@@ -117,7 +117,7 @@ def simulate_healthcare_years(
 - Taxpayer savings/costs
 
 **Recent Fix (2025-12-23):**
-Revenue was frozen at $11.53T instead of growing with GDP. Fixed by moving revenue calculation inside the main simulation loop with proper GDP growth multipliers. Now correctly shows 68% revenue growth over 22 years ($11.53T â†’ $19.37T).
+Revenue was frozen at $11.53T instead of growing with GDP. Fixed by moving revenue calculation inside the main simulation loop with proper GDP growth multipliers. Now correctly shows 68% revenue growth over 22 years ($11.53T → $19.37T).
 
 #### B. Healthcare Policy Models (core/healthcare.py)
 **Purpose:** Represent healthcare policy as Python objects
@@ -225,7 +225,7 @@ pip install -r requirements-dev.txt
 python --version  # Should be 3.9+
 
 # Check imports work
-python -c "import pandas; import matplotlib; print('âœ“ Core dependencies OK')"
+python -c "import pandas; import matplotlib; print('✓ Core dependencies OK')"
 
 # Run quick test
 python -m pytest tests/ -v --tb=short  # Should see 92/125 passing
@@ -255,7 +255,7 @@ GDP_GROWTH_ANNUAL = 0.022        # 2.2% baseline
 #### core/cbo_scraper.py
 **Purpose:** Fetch real-time Congressional Budget Office data for Current US baseline
 
-**Status:** ✅ NEW - Implemented 2025-12-23
+**Status:** ? NEW - Implemented 2025-12-23
 
 **Key Features:**
 - Multi-source scraping from CBO, Treasury, OMB
@@ -365,49 +365,49 @@ class CBODataScraper:
 
 ```
 polisim/
-â”œâ”€ core/                          # Business logic modules
-â”‚  â”œâ”€ simulation.py              # Main simulation engine â˜…â˜…â˜…
-â”‚  â”œâ”€ healthcare.py              # Healthcare policy models
-â”‚  â”œâ”€ economics.py               # Economic calculations
-â”‚  â”œâ”€ metrics.py                 # Metric computation
-â”‚  â”œâ”€ comparison.py              # Policy comparison
-â”‚  â”œâ”€ policies.py                # Policy utilities
-â”‚  â””â”€ scenario_loader.py         # Configuration loading
-â”‚
-â”œâ”€ ui/                            # User interface
-â”‚  â”œâ”€ chart_carousel.py          # Chart organization
-â”‚  â”œâ”€ healthcare_charts.py       # Healthcare visualizations
-â”‚  â”œâ”€ widgets.py                 # UI components
-â”‚  â””â”€ server.py                  # Web interface (future)
-â”‚
-â”œâ”€ utils/                         # Utilities
-â”‚  â””â”€ io.py                      # File I/O operations
-â”‚
-â”œâ”€ tests/                         # Test suite
-â”‚  â”œâ”€ test_simulation_healthcare.py
-â”‚  â”œâ”€ test_phase2_integration.py
-â”‚  â”œâ”€ test_revenue_modeling.py
-â”‚  â”œâ”€ test_phase32_integration.py
-â”‚  â””â”€ test_social_security.py
-â”‚
-â”œâ”€ policies/                      # Policy definitions
-â”‚  â”œâ”€ catalog.json               # Policy catalog
-â”‚  â”œâ”€ parameters.json            # Policy parameters
-â”‚  â””â”€ galactic_health_scenario.json  # USGHA details
-â”‚
-â”œâ”€ reports/                       # Generated output
-â”‚  â””â”€ charts/                    # Chart output
-â”‚     â”œâ”€ Current_US_Healthcare_System/
-â”‚     â””â”€ United_States_Galactic_Health_Act/
-â”‚
-â”œâ”€ main.py                        # Main entry point
-â”œâ”€ defaults.py                    # Configuration constants
-â”œâ”€ Economic_projector.py          # Tkinter GUI
-â”œâ”€ requirements.txt               # Production dependencies
-â”œâ”€ requirements-dev.txt           # Development dependencies
-â””â”€ README.md                      # Project overview
+├─ core/                          # Business logic modules
+│  ├─ simulation.py              # Main simulation engine ★★★
+│  ├─ healthcare.py              # Healthcare policy models
+│  ├─ economics.py               # Economic calculations
+│  ├─ metrics.py                 # Metric computation
+│  ├─ comparison.py              # Policy comparison
+│  ├─ policies.py                # Policy utilities
+│  └─ scenario_loader.py         # Configuration loading
+│
+├─ ui/                            # User interface
+│  ├─ chart_carousel.py          # Chart organization
+│  ├─ healthcare_charts.py       # Healthcare visualizations
+│  ├─ widgets.py                 # UI components
+│  └─ server.py                  # Web interface (future)
+│
+├─ utils/                         # Utilities
+│  └─ io.py                      # File I/O operations
+│
+├─ tests/                         # Test suite
+│  ├─ test_simulation_healthcare.py
+│  ├─ test_phase2_integration.py
+│  ├─ test_revenue_modeling.py
+│  ├─ test_phase32_integration.py
+│  └─ test_social_security.py
+│
+├─ policies/                      # Policy definitions
+│  ├─ catalog.json               # Policy catalog
+│  ├─ parameters.json            # Policy parameters
+│  └─ galactic_health_scenario.json  # USGHA details
+│
+├─ reports/                       # Generated output
+│  └─ charts/                    # Chart output
+│     ├─ Current_US_Healthcare_System/
+│     └─ United_States_Galactic_Health_Act/
+│
+├─ main.py                        # Main entry point
+├─ defaults.py                    # Configuration constants
+├─ scripts/Economic_projector.py          # Tkinter GUI
+├─ requirements.txt               # Production dependencies
+├─ requirements-dev.txt           # Development dependencies
+└─ README.md                      # Project overview
 
-â˜…â˜…â˜… = Most important/frequently modified
+★★★ = Most important/frequently modified
 ```
 
 ### 3.2 Git Workflow
@@ -499,7 +499,7 @@ git push origin feature/new-policy-model
 
 **Step 7: Create Pull Request**
 - Go to GitHub
-- Create PR from `feature/new-policy-model` â†’ `main`
+- Create PR from `feature/new-policy-model` → `main`
 - Add description of changes
 - Reference any related issues
 
@@ -520,7 +520,7 @@ git push origin main
 **Option A: Command Line Simulation**
 ```powershell
 # Run healthcare simulation
-python run_health_sim.py
+python scripts/run_health_sim.py
 
 # Output: Generates usgha_simulation_22y.csv with 22 years of data
 ```
@@ -528,16 +528,16 @@ python run_health_sim.py
 **Option B: Generate Visualizations**
 ```powershell
 # Generate charts for current policies
-python run_visualize.py
+python scripts/run_visualize.py
 
 # Optional: Specify output format
-python run_visualize.py --format html --output reports/
+python scripts/run_visualize.py --format html --output reports/
 ```
 
 **Option C: Export Comparison Report**
 ```powershell
 # Compare policies and export to Excel
-python run_compare_and_export.py
+python scripts/run_compare_and_export.py
 
 # Output: usgha_comparison.xlsx with comparison metrics
 ```
@@ -545,7 +545,7 @@ python run_compare_and_export.py
 **Option D: Launch GUI**
 ```powershell
 # Open Tkinter interface
-python Economic_projector.py
+python scripts/Economic_projector.py
 
 # Features:
 # - Scenario selection dropdown
@@ -631,19 +631,19 @@ pytest tests/ --cov=core --cov-report=html
 **Interpreting Test Output:**
 ```
 tests/test_simulation_healthcare.py::test_basic_simulation PASSED  [10%]
-                                                                    â†‘
+                                                                    ↑
                                                            Result: PASSED/FAILED/SKIPPED
                                                            Progress: 10% of tests run
 
 tests/test_simulation_healthcare.py::test_revenue_growth FAILED   [20%]
 
 FAILED tests/test_simulation_healthcare.py::test_revenue_growth
-AssertionError: assert 11.53e12 == 19.37e12  â† What failed
+AssertionError: assert 11.53e12 == 19.37e12  ← What failed
 
 short test summary info
 ======================
 FAILED tests/test_simulation_healthcare.py::test_revenue_growth - AssertionError
-1 failed, 91 passed in 5.32s  â† Final summary
+1 failed, 91 passed in 5.32s  ← Final summary
 ```
 
 ### 4.4 Common Issues & Solutions
@@ -656,7 +656,7 @@ pwd  # Verify you're in correct directory
 
 # Or: Add to PYTHONPATH
 $env:PYTHONPATH = "${pwd}"
-python run_health_sim.py
+python scripts/run_health_sim.py
 ```
 
 **Issue: UnicodeEncodeError with checkmark character**
@@ -665,8 +665,8 @@ Error: UnicodeEncodeError: 'cp1252' codec can't encode character '\u2713'
 ```
 **Solution:** This is BUG #1 from the audit. Fix by:
 ```python
-# In run_health_sim.py line 136, change:
-logger.info('âœ“ Healthcare simulation completed successfully')
+# In scripts/run_health_sim.py line 136, change:
+logger.info('✓ Healthcare simulation completed successfully')
 # To:
 logger.info('Healthcare simulation completed successfully')
 ```
@@ -746,12 +746,12 @@ except Exception as e:
 UnicodeEncodeError: 'cp1252' codec can't encode character '\u2713'
 ```
 
-**Location:** `run_health_sim.py`, line 136
+**Location:** `scripts/run_health_sim.py`, line 136
 
 **Fix:**
 ```python
 # BEFORE:
-logger.info('âœ“ Healthcare simulation completed successfully')
+logger.info('✓ Healthcare simulation completed successfully')
 
 # AFTER:
 logger.info('Healthcare simulation completed successfully')
@@ -765,7 +765,7 @@ logger.info('Healthcare simulation completed successfully')
 SyntaxWarning: invalid escape sequence '\A'
 ```
 
-**Location:** `run_health_sim.py`, line 1
+**Location:** `scripts/run_health_sim.py`, line 1
 
 **Fix:**
 ```python
@@ -889,36 +889,36 @@ This section is the **definitive technical roadmap** integrating audit findings 
 
 | Phase | Component | Status | Effort | Timeline |
 |-------|-----------|--------|--------|----------|
-| 1 | Healthcare Simulation | ✅ Complete | 0 | Done |
-| 2 | Social Security + Tax Reform | 🟡 70% | 38-49h | 5-7 days |
-| 3 | Discretionary Spending + Interest | 🟡 80% | 13h | 2-3 days |
-| 4 | Policy Comparison Module | ⏳ Queued | 16-20h | 2-3 days |
-| 5 | Comprehensive Metrics (100+) | ⏳ Queued | 20-24h | 3 days |
-| 6 | Government-Grade Visualizations | 🟡 Partial | 16-20h | 2-3 days |
-| 7 | Professional I/O System | ⏳ Queued | 12-16h | 2 days |
-| 8 | Comprehensive Documentation | 🟡 Partial | 16-20h | 2-3 days |
-| 9 | Professional User Interface | ⏳ Queued | 20-24h | 3 days |
-| 10 | REST API for Integration | ⏳ Queued | 24-32h | 4-5 days |
+| 1 | Healthcare Simulation | ? Complete | 0 | Done |
+| 2 | Social Security + Tax Reform | ?? 70% | 38-49h | 5-7 days |
+| 3 | Discretionary Spending + Interest | ?? 80% | 13h | 2-3 days |
+| 4 | Policy Comparison Module | ? Queued | 16-20h | 2-3 days |
+| 5 | Comprehensive Metrics (100+) | ? Queued | 20-24h | 3 days |
+| 6 | Government-Grade Visualizations | ?? Partial | 16-20h | 2-3 days |
+| 7 | Professional I/O System | ? Queued | 12-16h | 2 days |
+| 8 | Comprehensive Documentation | ?? Partial | 16-20h | 2-3 days |
+| 9 | Professional User Interface | ? Queued | 20-24h | 3 days |
+| 10 | REST API for Integration | ? Queued | 24-32h | 4-5 days |
 | | **TOTAL** | | **154-214h** | **25-37 days** |
 
 ---
 
 ### 6.1 PHASE 2: SOCIAL SECURITY + TAX REFORM (38-49 hours, 5-7 days)
 
-**Status:** 🟡 70% Complete  
+**Status:** ?? 70% Complete  
 **Audit Finding:** Two major incomplete modules identified  
 **Priority:** CRITICAL - Unlocks advanced policy analysis
 
 #### 6.1.1 Social Security Reform Module (11-17 hours)
 
 **Current State:**
-- ✅ Basic SS cost calculations (working)
-- ✅ Benefit payment modeling (working)
-- ❌ Payroll tax adjustments (NOT IMPLEMENTED)
-- ❌ Benefit reduction scenarios (NOT IMPLEMENTED)
-- ❌ Longevity indexing (NOT IMPLEMENTED)
-- ❌ COLA adjustments (NOT IMPLEMENTED)
-- ❌ Retirement age flexibility (NOT IMPLEMENTED)
+- ? Basic SS cost calculations (working)
+- ? Benefit payment modeling (working)
+- ? Payroll tax adjustments (NOT IMPLEMENTED)
+- ? Benefit reduction scenarios (NOT IMPLEMENTED)
+- ? Longevity indexing (NOT IMPLEMENTED)
+- ? COLA adjustments (NOT IMPLEMENTED)
+- ? Retirement age flexibility (NOT IMPLEMENTED)
 
 **Target File:** `core/social_security.py`
 
@@ -1040,13 +1040,13 @@ def calculate_age_adjusted_benefit(
 #### 6.1.2 Tax Reform Module (14-19 hours)
 
 **Current State:**
-- ✅ Basic income tax (working)
-- ✅ Corporate tax (working)
-- ❌ Wealth tax (NOT IMPLEMENTED)
-- ❌ Consumption tax (NOT IMPLEMENTED)
-- ❌ Carbon tax (NOT IMPLEMENTED)
-- ❌ Financial transaction tax (NOT IMPLEMENTED)
-- ❌ Tax incidence analysis (NOT IMPLEMENTED)
+- ? Basic income tax (working)
+- ? Corporate tax (working)
+- ? Wealth tax (NOT IMPLEMENTED)
+- ? Consumption tax (NOT IMPLEMENTED)
+- ? Carbon tax (NOT IMPLEMENTED)
+- ? Financial transaction tax (NOT IMPLEMENTED)
+- ? Tax incidence analysis (NOT IMPLEMENTED)
 
 **Target File:** `core/tax_reform.py`
 
@@ -1227,7 +1227,7 @@ def apply_tax_reform(
 
 ### 6.2 PHASE 3: DISCRETIONARY SPENDING & INTEREST (13 hours, 2-3 days)
 
-**Status:** 🟡 80% Complete  
+**Status:** ?? 80% Complete  
 **Audit Finding:** Minor refinements needed, core logic solid  
 **Priority:** HIGH - Completes fiscal model
 
@@ -1398,7 +1398,7 @@ def project_long_term_interest(
 1. Create `policies/my_policy.json` with structure
 2. Register in `core/healthcare.py` PolicyType enum
 3. Write tests in `tests/test_policies.py`
-4. Run: `python run_compare_and_export.py --policies CURRENT_US MY_POLICY`
+4. Run: `python scripts/run_compare_and_export.py --policies CURRENT_US MY_POLICY`
 
 #### Adding a New Metric
 
@@ -1484,14 +1484,14 @@ class PolicyType(Enum):
     CURRENT_US = "current_us"
     USGHA = "usgha"
     MEDICARE_FOR_ALL = "mfa"
-    MY_CUSTOM_POLICY = "custom_policy"  # â† Add new policy
+    MY_CUSTOM_POLICY = "custom_policy"  # ← Add new policy
 
 def get_policy_by_type(policy_type: PolicyType) -> HealthcarePolicyModel:
     policies = {
         PolicyType.CURRENT_US: load_json('policies/current_us_2025.json'),
         PolicyType.USGHA: load_json('policies/galactic_health_scenario.json'),
         PolicyType.MEDICARE_FOR_ALL: load_json('policies/medicare_for_all_2024.json'),
-        PolicyType.MY_CUSTOM_POLICY: load_json('policies/my_new_policy.json'),  # â† Add here
+        PolicyType.MY_CUSTOM_POLICY: load_json('policies/my_new_policy.json'),  # ← Add here
     }
     return policies[policy_type]
 ```
@@ -1554,12 +1554,12 @@ pytest tests/test_new_policy.py -v
 
 **Step 5: Generate Visualizations**
 ```powershell
-python run_visualize.py --policy MY_CUSTOM_POLICY
+python scripts/run_visualize.py --policy MY_CUSTOM_POLICY
 ```
 
 **Step 6: Compare Policies**
 ```powershell
-python run_compare_and_export.py --policies CURRENT_US MY_CUSTOM_POLICY USGHA
+python scripts/run_compare_and_export.py --policies CURRENT_US MY_CUSTOM_POLICY USGHA
 ```
 
 ### 6.2 Adding a New Metric
@@ -1802,7 +1802,7 @@ def compute_metrics(data: pd.DataFrame) -> HealthcareMetrics:
     pass
 
 # Avoid: Vague types
-def process(x, y):  # â† What are x and y?
+def process(x, y):  # ← What are x and y?
     pass
 ```
 
@@ -1845,36 +1845,36 @@ Before committing code:
 
 ```
 Code Style:
-â˜ Code formatted with black (pytest plugins handle this)
-â˜ No lines over 100 characters
-â˜ Imports organized (stdlib, third-party, local)
-â˜ No unused imports
-â˜ No magic numbers (use constants)
+☐ Code formatted with black (pytest plugins handle this)
+☐ No lines over 100 characters
+☐ Imports organized (stdlib, third-party, local)
+☐ No unused imports
+☐ No magic numbers (use constants)
 
 Documentation:
-â˜ All functions have docstrings
-â˜ Complex logic has comments
-â˜ README updated if needed
-â˜ Type hints on all public functions
-â˜ Examples provided in docstrings
+☐ All functions have docstrings
+☐ Complex logic has comments
+☐ README updated if needed
+☐ Type hints on all public functions
+☐ Examples provided in docstrings
 
 Testing:
-â˜ New code has tests
-â˜ All tests pass (pytest tests/ -v)
-â˜ No test warnings
-â˜ Code coverage maintained or improved
+☐ New code has tests
+☐ All tests pass (pytest tests/ -v)
+☐ No test warnings
+☐ Code coverage maintained or improved
 
 Architecture:
-â˜ No circular imports
-â˜ Follows module responsibility
-â˜ Uses existing utilities instead of duplicating
-â˜ Configuration externalized (not hardcoded)
+☐ No circular imports
+☐ Follows module responsibility
+☐ Uses existing utilities instead of duplicating
+☐ Configuration externalized (not hardcoded)
 
 Performance:
-â˜ No obvious inefficiencies
-â˜ Large loops optimized
-â˜ Unnecessary calculations removed
-â˜ Memory usage reasonable for scale
+☐ No obvious inefficiencies
+☐ Large loops optimized
+☐ Unnecessary calculations removed
+☐ Memory usage reasonable for scale
 ```
 
 ---
@@ -1887,27 +1887,27 @@ After consolidation (Tier 2), documentation will be organized as:
 
 ```
 docs/
-â”œâ”€ README.md              # Main entry point
-â”œâ”€ PROJECT_STATUS.md      # Current status and phase completion
-â”œâ”€ ROADMAP.md            # Future phases and timeline
-â”œâ”€ QUICK_REFERENCE.md    # Developer cheat sheet
-â”œâ”€ API_DOCUMENTATION.md  # API reference
-â”‚
-â”œâ”€ FEATURES/
-â”‚  â”œâ”€ CAROUSEL.md        # Chart carousel feature guide
-â”‚  â”œâ”€ DASHBOARD.md       # Dashboard guide
-â”‚  â””â”€ INTEGRATIONS.md    # Integration guides (MCP, etc.)
-â”‚
-â”œâ”€ DEVELOPMENT/
-â”‚  â”œâ”€ ARCHITECTURE.md    # System architecture deep dive
-â”‚  â”œâ”€ TESTING.md         # Test strategy and guidelines
-â”‚  â”œâ”€ BUGFIXES.md        # Bug tracking and fixes
-â”‚  â””â”€ REFACTORING.md     # Refactoring details
-â”‚
-â””â”€ REFERENCE/
-   â”œâ”€ POLICIES/          # Policy documentation (per policy)
-   â”œâ”€ METRICS/           # Metrics reference (all 100+)
-   â””â”€ VERIFICATION.md    # Verification checklist
+├─ README.md              # Main entry point
+├─ PROJECT_STATUS.md      # Current status and phase completion
+├─ ROADMAP.md            # Future phases and timeline
+├─ QUICK_REFERENCE.md    # Developer cheat sheet
+├─ API_DOCUMENTATION.md  # API reference
+│
+├─ FEATURES/
+│  ├─ CAROUSEL.md        # Chart carousel feature guide
+│  ├─ DASHBOARD.md       # Dashboard guide
+│  └─ INTEGRATIONS.md    # Integration guides (MCP, etc.)
+│
+├─ DEVELOPMENT/
+│  ├─ ARCHITECTURE.md    # System architecture deep dive
+│  ├─ TESTING.md         # Test strategy and guidelines
+│  ├─ BUGFIXES.md        # Bug tracking and fixes
+│  └─ REFACTORING.md     # Refactoring details
+│
+└─ REFERENCE/
+   ├─ POLICIES/          # Policy documentation (per policy)
+   ├─ METRICS/           # Metrics reference (all 100+)
+   └─ VERIFICATION.md    # Verification checklist
 ```
 
 ### 8.2 Markdown Best Practices
@@ -1933,7 +1933,7 @@ docs/
 
 ### Subsection 1.1
 
-Use this structure: Headings â†’ Subheadings â†’ Content
+Use this structure: Headings → Subheadings → Content
 
 - Use bullet points for lists
 - Use numbered lists for procedures
@@ -2049,33 +2049,33 @@ __version__ = "1.0.0"
 
 ```
 Testing:
-â˜ All tests pass (pytest tests/ -v)
-â˜ Manual testing completed
-â˜ No console errors or warnings
-â˜ Performance acceptable
+☐ All tests pass (pytest tests/ -v)
+☐ Manual testing completed
+☐ No console errors or warnings
+☐ Performance acceptable
 
 Documentation:
-â˜ ROADMAP.md updated
-â˜ PROJECT_STATUS.md updated
-â˜ CHANGELOG.md created for this version
-â˜ README.md still accurate
+☐ ROADMAP.md updated
+☐ PROJECT_STATUS.md updated
+☐ CHANGELOG.md created for this version
+☐ README.md still accurate
 
 Code:
-â˜ Version number updated in __init__.py
-â˜ No debug code or breakpoints left
-â˜ All dependencies pinned in requirements.txt
-â˜ Code formatted and linted
+☐ Version number updated in __init__.py
+☐ No debug code or breakpoints left
+☐ All dependencies pinned in requirements.txt
+☐ Code formatted and linted
 
 Release:
-â˜ Create git tag: git tag v1.0.0
-â˜ Push tag: git push origin v1.0.0
-â˜ Create GitHub Release
-â˜ Upload to PyPI (if applicable)
+☐ Create git tag: git tag v1.0.0
+☐ Push tag: git push origin v1.0.0
+☐ Create GitHub Release
+☐ Upload to PyPI (if applicable)
 
 Deployment:
-â˜ Update installation instructions if needed
-â˜ Test installation process
-â˜ Notify users if needed
+☐ Update installation instructions if needed
+☐ Test installation process
+☐ Notify users if needed
 ```
 
 ### 9.3 Deployment Steps
@@ -2141,10 +2141,10 @@ python -m venv .venv              # Create virtual environment
 pip install -r requirements.txt   # Install dependencies
 
 # Running Application
-python run_health_sim.py          # Run healthcare simulation
-python run_visualize.py           # Generate visualizations
-python run_compare_and_export.py  # Export comparison report
-python Economic_projector.py      # Launch GUI
+python scripts/run_health_sim.py          # Run healthcare simulation
+python scripts/run_visualize.py           # Generate visualizations
+python scripts/run_compare_and_export.py  # Export comparison report
+python scripts/Economic_projector.py      # Launch GUI
 
 # Testing
 pytest tests/ -v                  # Run all tests
@@ -2317,20 +2317,20 @@ This manual is part of a comprehensive documentation suite:
 
 **Getting Help:**
 
-1. **Code question?** → Check Section 6 (Feature Implementation) for patterns
-2. **Setup problem?** → Check Section 2 (Environment Setup) or Section 5 (Troubleshooting)
-3. **Test issue?** → See Section 4 (Building & Testing)
-4. **Architecture question?** → See Section 1 (Architecture)
-5. **Git workflow question?** → See Section 3 (Development Workflow)
-6. **Can't find something?** → Use [PROJECT_ENHANCEMENT_MASTER_INDEX.md](PROJECT_ENHANCEMENT_MASTER_INDEX.md)
+1. **Code question?** ? Check Section 6 (Feature Implementation) for patterns
+2. **Setup problem?** ? Check Section 2 (Environment Setup) or Section 5 (Troubleshooting)
+3. **Test issue?** ? See Section 4 (Building & Testing)
+4. **Architecture question?** ? See Section 1 (Architecture)
+5. **Git workflow question?** ? See Section 3 (Development Workflow)
+6. **Can't find something?** ? Use [PROJECT_ENHANCEMENT_MASTER_INDEX.md](PROJECT_ENHANCEMENT_MASTER_INDEX.md)
 
 **Contributing Improvements:**
 
 This manual should evolve with the project:
-- Found a bug in instructions? → Fix it directly
-- New pattern discovered? → Add to Section 6
-- Common problem solved? → Add to Section 5
-- Outdated information? → Update immediately
+- Found a bug in instructions? ? Fix it directly
+- New pattern discovered? ? Add to Section 6
+- Common problem solved? ? Add to Section 5
+- Outdated information? ? Update immediately
 
 ---
 
@@ -2366,24 +2366,24 @@ Before pushing code:
 
 ## Phase Timeline
 
-**Phase 1** ✅ COMPLETE
+**Phase 1** ? COMPLETE
 - Healthcare simulation: Working
 - Economic projections: Working
 - Chart generation: Working
 - **Time spent**: ~40 hours
 - **Status**: Production ready
 
-**Phase 2** 🟡 IN PROGRESS (70% complete, 38-49 hours remaining)
+**Phase 2** ?? IN PROGRESS (70% complete, 38-49 hours remaining)
 - Social Security module: 11-17 hours remaining
 - Tax reform module: 14-19 hours remaining
 - Integration & testing: 13 hours remaining
 
-**Phase 3** 🟡 IN PROGRESS (80% complete, 13 hours remaining)
+**Phase 3** ?? IN PROGRESS (80% complete, 13 hours remaining)
 - Discretionary spending: 13 hours remaining
 - Interest rate modeling: Done
 - Advanced scenarios: Done
 
-**Phases 4-10** 📋 PLANNED (154+ hours total)
+**Phases 4-10** ?? PLANNED (154+ hours total)
 - See [PHASE_2_10_ROADMAP_UPDATED.md](PHASE_2_10_ROADMAP_UPDATED.md) for details
 
 ---
@@ -2440,11 +2440,11 @@ Before pushing code:
 ## Success Metrics for Phase 2
 
 **Code Quality:**
-- ✅ All new code follows Python standards
-- ✅ Type hints on all public functions
-- ✅ Docstrings on all classes/functions
-- ✅ No circular dependencies
-- ✅ <20 lines per function average
+- ? All new code follows Python standards
+- ? Type hints on all public functions
+- ? Docstrings on all classes/functions
+- ? No circular dependencies
+- ? <20 lines per function average
 
 **Test Coverage:**
 - Target: 95+ tests passing (75%+)

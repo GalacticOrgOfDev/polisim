@@ -7,16 +7,25 @@ Data Sources:
 - Congressional Budget Office (CBO): https://www.cbo.gov/
 - Treasury Department: https://fiscal.treasury.gov/
 - OMB Historical Tables: https://www.whitehouse.gov/omb/
+
+Phase 5.2 Enhancements:
+- Retry logic with exponential backoff
+- Data validation and sanity checks
+- Historical data tracking
+- Multi-source fallback
+- Change detection and notifications
 """
 
 import requests
 from bs4 import BeautifulSoup
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, List
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 import json
 from functools import lru_cache
+import time
+import hashlib
 
 logger = logging.getLogger(__name__)
 
@@ -28,21 +37,38 @@ class CBODataScraper:
     TREASURY_FISCAL_URL = "https://fiscal.treasury.gov/reports-statements/index.html"
     OMB_HISTORICAL_URL = "https://www.whitehouse.gov/omb/historical-tables/"
     
-    # Cache file for offline fallback
+    # Cache files (Phase 5.2: Historical tracking)
     CACHE_FILE = Path(__file__).parent / "cbo_data_cache.json"
+    HISTORY_FILE = Path(__file__).parent / "cbo_data_history.json"
     
-    # Timeout for requests (seconds)
+    # Request configuration (Phase 5.2: Retry logic)
     REQUEST_TIMEOUT = 15
+    MAX_RETRIES = 3
+    RETRY_DELAY = 2  # Initial delay in seconds
+    RETRY_BACKOFF = 2  # Exponential backoff multiplier
     
-    def __init__(self, use_cache: bool = True):
+    # Data validation ranges (Phase 5.2: Sanity checks)
+    VALIDATION_RANGES = {
+        'gdp': (20.0, 50.0),  # Trillions
+        'debt': (20.0, 60.0),  # Trillions
+        'deficit': (-5.0, 5.0),  # Trillions (negative = surplus)
+        'interest_rate': (0.5, 10.0),  # Percent
+        'total_revenue': (3.0, 8.0),  # Trillions
+        'total_spending': (4.0, 10.0),  # Trillions
+    }
+    
+    def __init__(self, use_cache: bool = True, enable_notifications: bool = False):
         """
         Initialize scraper.
         
         Args:
             use_cache: If True, use cached data when scraping fails
+            enable_notifications: If True, log data change notifications
         """
         self.use_cache = use_cache
+        self.enable_notifications = enable_notifications
         self.cached_data = self._load_cache()
+        self.history = self._load_history()
     
     def _load_cache(self) -> Dict:
         """Load cached CBO data if available."""
@@ -62,6 +88,165 @@ class CBODataScraper:
                 json.dump(data, f, indent=2, default=str)
         except Exception as e:
             logger.warning(f"Could not save cache: {e}")
+    
+    def _load_history(self) -> List[Dict]:
+        """Load historical data from disk (Phase 5.2)."""
+        if self.HISTORY_FILE.exists():
+            try:
+                with open(self.HISTORY_FILE, 'r') as f:
+                    history = json.load(f)
+                    logger.info(f"Loaded {len(history)} historical entries")
+                    return history
+            except Exception as e:
+                logger.warning(f"Could not load history: {e}")
+        return []
+    
+    def _save_history_entry(self, data: Dict) -> None:
+        """Append current data to history file (Phase 5.2)."""
+        try:
+            entry = {
+                'timestamp': datetime.now().isoformat(),
+                'data': data,
+                'hash': self._hash_data(data)
+            }
+            self.history.append(entry)
+            
+            # Keep last 365 days only
+            cutoff = datetime.now() - timedelta(days=365)
+            self.history = [
+                h for h in self.history 
+                if datetime.fromisoformat(h['timestamp']) > cutoff
+            ]
+            
+            with open(self.HISTORY_FILE, 'w') as f:
+                json.dump(self.history, f, indent=2)
+            logger.info("History entry saved")
+        except Exception as e:
+            logger.error(f"Could not save history: {e}")
+    
+    def _hash_data(self, data: Dict) -> str:
+        """Generate hash of data for change detection."""
+        data_str = json.dumps(data, sort_keys=True, default=str)
+        return hashlib.sha256(data_str.encode()).hexdigest()[:12]
+    
+    def _detect_changes(self, new_data: Dict) -> List[str]:
+        """Detect significant changes in data (Phase 5.2)."""
+        if not self.history:
+            return []
+        
+        last_entry = self.history[-1]
+        old_data = last_entry['data']
+        changes = []
+        
+        # Check GDP change > 5%
+        old_gdp = old_data.get('gdp', 0)
+        new_gdp = new_data.get('gdp', 0)
+        if old_gdp and abs(new_gdp - old_gdp) / old_gdp > 0.05:
+            changes.append(f"GDP changed {((new_gdp - old_gdp) / old_gdp * 100):+.1f}%")
+        
+        # Check debt change > $1T
+        old_debt = old_data.get('debt', 0)
+        new_debt = new_data.get('debt', 0)
+        if abs(new_debt - old_debt) > 1.0:
+            changes.append(f"National debt changed {(new_debt - old_debt):+.1f}T")
+        
+        # Check deficit change > $500B
+        old_deficit = old_data.get('deficit', 0)
+        new_deficit = new_data.get('deficit', 0)
+        if abs(new_deficit - old_deficit) > 0.5:
+            changes.append(f"Deficit changed {(new_deficit - old_deficit):+.1f}T")
+        
+        return changes
+    
+    def _request_with_retry(self, url: str, description: str = "data") -> Optional[requests.Response]:
+        """
+        Make HTTP request with exponential backoff retry (Phase 5.2).
+        
+        Args:
+            url: URL to fetch
+            description: Description for logging
+        
+        Returns:
+            Response object or None if all retries failed
+        """
+        delay = self.RETRY_DELAY
+        
+        for attempt in range(1, self.MAX_RETRIES + 1):
+            try:
+                logger.info(f"Fetching {description} (attempt {attempt}/{self.MAX_RETRIES})")
+                response = requests.get(url, timeout=self.REQUEST_TIMEOUT)
+                response.raise_for_status()
+                logger.info(f"Successfully fetched {description}")
+                return response
+            
+            except requests.exceptions.Timeout:
+                logger.warning(f"Timeout fetching {description} (attempt {attempt})")
+            except requests.exceptions.ConnectionError:
+                logger.warning(f"Connection error fetching {description} (attempt {attempt})")
+            except requests.exceptions.HTTPError as e:
+                logger.warning(f"HTTP error fetching {description}: {e.response.status_code}")
+                if e.response.status_code in [404, 403, 401]:
+                    # Don't retry on client errors
+                    break
+            except Exception as e:
+                logger.warning(f"Error fetching {description}: {e}")
+            
+            # Exponential backoff before retry
+            if attempt < self.MAX_RETRIES:
+                logger.info(f"Retrying in {delay}s...")
+                time.sleep(delay)
+                delay *= self.RETRY_BACKOFF
+        
+        logger.error(f"Failed to fetch {description} after {self.MAX_RETRIES} attempts")
+        return None
+    
+    def _validate_data(self, data: Dict) -> Tuple[bool, List[str]]:
+        """
+        Validate scraped data against expected ranges (Phase 5.2).
+        
+        Args:
+            data: Data dict to validate
+        
+        Returns:
+            (is_valid, list_of_errors)
+        """
+        errors = []
+        
+        # Validate GDP
+        gdp = data.get('gdp', 0)
+        min_gdp, max_gdp = self.VALIDATION_RANGES['gdp']
+        if not (min_gdp <= gdp <= max_gdp):
+            errors.append(f"GDP {gdp:.1f}T outside range [{min_gdp}-{max_gdp}]T")
+        
+        # Validate debt
+        debt = data.get('debt', 0)
+        min_debt, max_debt = self.VALIDATION_RANGES['debt']
+        if not (min_debt <= debt <= max_debt):
+            errors.append(f"National debt {debt:.1f}T outside range [{min_debt}-{max_debt}]T")
+        
+        # Validate deficit
+        deficit = data.get('deficit', 0)
+        min_def, max_def = self.VALIDATION_RANGES['deficit']
+        if not (min_def <= deficit <= max_def):
+            errors.append(f"Deficit {deficit:.1f}T outside range [{min_def}-{max_def}]T")
+        
+        # Validate total revenue
+        revenues = data.get('revenues', {})
+        total_revenue = sum(revenues.values()) if revenues else 0
+        min_rev, max_rev = self.VALIDATION_RANGES['total_revenue']
+        if total_revenue and not (min_rev <= total_revenue <= max_rev):
+            errors.append(f"Total revenue {total_revenue:.1f}T outside range [{min_rev}-{max_rev}]T")
+        
+        # Validate total spending
+        spending = data.get('spending', {})
+        total_spending = sum(spending.values()) if spending else 0
+        min_spend, max_spend = self.VALIDATION_RANGES['total_spending']
+        if total_spending and not (min_spend <= total_spending <= max_spend):
+            errors.append(f"Total spending {total_spending:.1f}T outside range [{min_spend}-{max_spend}]T")
+        
+        is_valid = len(errors) == 0
+        return is_valid, errors
+
     
     def get_current_us_budget_data(self) -> Dict:
         """
@@ -97,6 +282,22 @@ class CBODataScraper:
             total_spending = sum(data['spending'].values())
             data['deficit'] = total_spending - total_revenues
             
+            # Phase 5.2: Validate data
+            is_valid, errors = self._validate_data(data)
+            if not is_valid:
+                logger.error(f"Data validation failed: {errors}")
+                if self.use_cache and self.cached_data:
+                    logger.warning("Falling back to cached data due to validation errors")
+                    return self.cached_data
+            
+            # Phase 5.2: Detect changes and notify
+            changes = self._detect_changes(data)
+            if changes and self.enable_notifications:
+                logger.info(f"Data changes detected: {', '.join(changes)}")
+            
+            # Phase 5.2: Save to history
+            self._save_history_entry(data)
+            
             # Save to cache for offline use
             self._save_cache(data)
             
@@ -115,10 +316,16 @@ class CBODataScraper:
     def _get_gdp_data(self) -> float:
         """Get current US GDP estimate (in trillions)."""
         try:
-            # Fetch from CBO economic projections
+            # Fetch from CBO economic projections with retry logic (Phase 5.2)
             url = f"{self.BASE_CBO_URL}/publications/collections/economic-projections"
-            response = requests.get(url, timeout=self.REQUEST_TIMEOUT)
-            response.raise_for_status()
+            response = self._request_with_retry(url, "GDP data")
+            
+            if not response:
+                # Fallback to cache
+                if 'gdp' in self.cached_data:
+                    logger.warning("Using cached GDP data")
+                    return self.cached_data['gdp']
+                return 30.5  # 2024 estimate
             
             soup = BeautifulSoup(response.content, 'html.parser')
             
@@ -220,8 +427,14 @@ class CBODataScraper:
         """Get current US national debt (in trillions)."""
         try:
             url = "https://fiscal.treasury.gov/reports-statements/financial-report/current.html"
-            response = requests.get(url, timeout=self.REQUEST_TIMEOUT)
-            response.raise_for_status()
+            response = self._request_with_retry(url, "National Debt data")
+            
+            if not response:
+                # Fallback to cache
+                if 'debt' in self.cached_data:
+                    logger.warning("Using cached debt data")
+                    return self.cached_data['debt']
+                return 38.0  # 2024 estimate
             
             soup = BeautifulSoup(response.content, 'html.parser')
             
