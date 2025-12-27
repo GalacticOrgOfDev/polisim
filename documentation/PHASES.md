@@ -353,6 +353,92 @@
 
 ---
 
+Phase 12: Regional & Subnational ExtensionTimeline: Mid–Late 2026
+Status:  PlannedPlanned DeliverablesRegion selector (Country → State → County/City/Metro) with automated baseline generation
+Data scraping pipeline integration for state/local fiscal data (revenues, expenditures by function, debt)
+Regional demographic, economic, and policy assumption overrides
+Subnational scenario builder with federal-state cost-sharing logic
+Regional comparison dashboards and peer benchmarking
+User authentication + optional community-submitted regional datasets (moderated)
+
+Strategic ObjectivesDemocratize policy simulation at state and local levels
+Enable hyper-local “what-if” analysis for governors, mayors, school boards, and citizens
+Leverage existing scraping infrastructure for real-time regional accuracy
+
+Phase 13: Education Policy SimulationTimeline: Late 2026–Early 2027
+Status:  PlannedPlanned DeliverablesFederal + state education spending categories (K-12, higher ed, Pell, Title I, IDEA, student loans)
+Policy levers: universal pre-K, free community college, debt cancellation, teacher pay boosts, per-pupil funding formulas
+Long-term outcome modeling (graduation rates, lifetime earnings, tax revenue ROI, mobility)
+Stochastic ROI distributions with behavioral and implementation uncertainty
+Linkages to healthcare (health → attendance/learning) and economic growth modules
+Educational “teaching mode” with simplified scenarios and narrated results
+
+Strategic ObjectivesProvide evidence-based projections for major education reforms
+Strengthen human capital modeling across the platform
+Expand educational utility for classrooms and policy advocacy
+
+Phase 14: Infrastructure & Transportation ModelingTimeline: 2027
+Status:  PlannedPlanned DeliverablesMultimodal spending categories (highways, transit, rail, aviation, ports)
+Investment allocation sliders (repair vs. expansion, modal splits)
+Material cost fluctuation modeling via scraped BLS PPI, FHWA NHCCI, regional bid data
+Stochastic multipliers, cost overruns, usage growth, and climate/disaster risks
+Economic (GDP/jobs), environmental (emissions), and equity outputs
+Regional infrastructure backlog and maintenance modeling
+
+Strategic ObjectivesEnable rigorous scoring of infrastructure bills and state DOT plans
+Quantify probabilistic returns and risks of capital investments
+Integrate with energy and agriculture for multimodal synergies
+
+Phase 15: Agriculture & Rural Economy ModelingTimeline: 2027
+Status:  PlannedPlanned DeliverablesFarm bill categories (commodities, crop insurance, conservation, SNAP, rural development)
+Commodity price, yield, and input cost volatility (scraped USDA, CME, BLS)
+Policy levers: subsidy design, conservation incentives, climate-smart practices, trade impacts
+Nutrition → healthcare cost feedbacks (SNAP effects on long-term outcomes)
+Rural employment, income, and broadband/infrastructure linkages
+Regional farm economy projections (state/county crop mixes)
+
+Strategic ObjectivesModel full farm bill cycles and rural policy trade-offs
+Capture agriculture’s fiscal, nutritional, and environmental externalities
+Strengthen rural-urban equity analysis
+
+Phase 16: Energy & Climate Policy IntegrationTimeline: 2027–2028
+Status:  PlannedPlanned DeliverablesEnergy spending and subsidy modeling (fossil, renewable, nuclear, efficiency)
+Carbon pricing, clean energy incentives, and phase-out scenarios
+Fuel and technology cost curves with learning rates and volatility (EIA, Lazard scraped data)
+Grid reliability, emissions → healthcare cost linkages
+Transition pathway projections (net-zero timelines with probability bands)
+Regional energy mix customization (state RPS, resource availability)
+
+Strategic ObjectivesProvide stochastic energy transition forecasting
+Integrate climate-economy feedbacks across all sectors
+Support comprehensive decarbonization policy analysis
+
+Phase 17: Defense & National Security Budget ModelingTimeline: 2028
+Status:  PlannedPlanned DeliverablesDoD budget categories (O&M, Procurement, R&D, Personnel, nuclear)
+Force structure and modernization scenario builder
+Procurement overrun and geopolitical risk distributions
+Opportunity cost analysis (defense vs. domestic investment trade-offs)
+Regional economic impacts (base-dependent communities)
+R&D spillover effects on civilian innovation and GDP
+
+Strategic ObjectivesEnable transparent analysis of defense spending sustainability
+Quantify fiscal trade-offs in reallocation debates
+Model uncertainty in long-term security planning
+
+Phase 18: Comprehensive All-Sector Integration & MasteryTimeline: 2028+
+Status:  PlannedPlanned DeliverablesFull cross-sector feedback loops (health  education  infrastructure  agriculture  energy  defense)
+Unified national and subnational “master model” dashboard
+Transformative policy package simulator (e.g., “Green New Deal + USGHA + Education For All”)
+Advanced distributional and inequality metrics across all domains
+Long-horizon (100+ year) integrated projections
+AI-assisted scenario optimization and recommendation engine
+
+Strategic ObjectivesAchieve the world’s most complete open-source policy simulation platform
+Enable holistic analysis of interconnected societal challenges
+Serve as the transparent backbone for evidence-based governance at all scales
+
+--
+
 ## Ongoing Principles Across Future Phases
 
 - **Testing Standards:** 100% unit test coverage for new modules; integration and validation against official sources
