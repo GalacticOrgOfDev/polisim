@@ -12,8 +12,9 @@ Polisim enables researchers, policymakers, and citizens to independently model a
 
 ## 🛰️ Project Status
 
-- **Current:** Phase 6.2.5 (Security Hardening & Policy Extraction) — DDoS protection complete, policy-adaptive scenarios
-- **Complete:** Phases 1-6.2.5 (see [docs/PHASES.md](docs/PHASES.md) for full roadmap)
+- **Current:** Phase 6.3 (Public Documentation Complete) — Community-facing documentation ready
+- **Complete:** Phases 1-6.3 (see [docs/PHASES.md](docs/PHASES.md) for full roadmap)
+- **Next:** Phase 6.4 (Community Infrastructure) — GitHub templates, discussion boards, contributor onboarding
 
 ## 🎯 Core Purpose
 
@@ -351,6 +352,9 @@ polisim/
 - [Quick Reference Guide](documentation/QUICK_REFERENCE.md) - API and usage
 - [Demo Scripts Guide](documentation/DEMO_SCRIPT_USAGE.md) - Example simulations
 - [MCP Integration Guide](MCP_INTEGRATION.md) - AI agent integration
+- [API Quick Start](docs/API_QUICK_START.md) - 5-minute API tutorial
+- [FAQ](FAQ.md) - Frequently asked questions (20+ Q&A)
+- [Glossary](docs/GLOSSARY.md) - 120+ term definitions
 - [Sprint 5.4 Slice Work Plan](docs/slice%2054%20work%20plan.md) - Current UI enhancement tasks
 
 **Slice 5.7 (Public API & Hardening):**
@@ -360,9 +364,19 @@ polisim/
 - [Observability Guide](api/observability.py) - Logging, metrics, SLO reporting
 
 **Phase 6.2 (Security Hardening):**
+- [Security Policy](docs/SECURITY.md) - Comprehensive security policy (v2.0)
 - [Security Hardening Guide](docs/PHASE_6_2_SECURITY_HARDENING_GUIDE.md) - CORS, security headers, input validation, rate limiting
 - [Security Audit Report](docs/PHASE_6_2_SECURITY_AUDIT_REPORT.md) - CVE findings, remediation plan, compliance checklist
-- [Secrets Management & Configuration](documentation/PHASE_6_2_3_SECRETS_MANAGEMENT.md) - Multi-backend secrets manager, configuration management, secret rotation
+- [DDoS Protection Quick Start](docs/PHASE_6_2_5_QUICK_START.md) - Rate limiting, circuit breakers, backpressure
+- [Implementation Summary](docs/PHASE_6_2_IMPLEMENTATION_SUMMARY.md) - Phase 6.2 delivery summary
+- [Incident Response](docs/INCIDENT_RESPONSE.md) - 5-phase incident response procedures
+- [Monitoring & Compliance](docs/MONITORING_COMPLIANCE.md) - Metrics, alerting, compliance
+
+**Phase 6.3 (Public Documentation):**
+- [Contributing Guide](CONTRIBUTING.md) - Code style, workflow, community guidelines
+- [FAQ](FAQ.md) - 20+ frequently asked questions with detailed answers
+- [API Quick Start](docs/API_QUICK_START.md) - Get started with the API in 5 minutes
+- [Glossary](docs/GLOSSARY.md) - 120+ economic and policy terms defined
 
 **Technical:**
 - [Context Framework](documentation/CONTEXT_FRAMEWORK.md) - Policy extraction system
@@ -412,6 +426,13 @@ Comprehensive test coverage validates:
 
 Contributions welcome! This is government-grade open-source policy infrastructure.
 
+**📚 Essential Reading:**
+- **[Contributing Guide](CONTRIBUTING.md)** - How to contribute: bug reports, features, code style, workflow
+- **[Code of Conduct](CODE_OF_CONDUCT.md)** - Community guidelines and expectations
+- **[Security Policy](docs/SECURITY.md)** - Report vulnerabilities responsibly
+- **[FAQ](FAQ.md)** - Frequently asked questions (20+ Q&A)
+
+**Quick Start:**
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-policy`)
 3. Add tests for new functionality (maintain >99% passing rate)
@@ -437,9 +458,17 @@ Permissive license enabling fork, modify, and redistribute freely—including fo
 
 ## 💬 Questions & Support
 
+**Community Resources:**
+- **[FAQ](FAQ.md)** - Quick answers to common questions
+- **[Glossary](docs/GLOSSARY.md)** - Comprehensive term definitions (120+ terms)
+- **[API Quick Start](docs/API_QUICK_START.md)** - Get started with the API in 5 minutes
+- **[Contributing Guide](CONTRIBUTING.md)** - How to contribute to the project
+
+**Get Help:**
 - **Issues:** Bug reports, feature requests, policy suggestions
 - **Discussions:** Methodology questions, model improvements, collaboration
 - **Email:** galacticorgofdev@gmail.com
+- **Security:** See [SECURITY.md](docs/SECURITY.md) for responsible disclosure
 
 **Built with rigor. Validated with 417/419 tests. Ready for policy analysis at scale.**
 

@@ -245,6 +245,12 @@ project guidelines/
 # Debug doc (used locally, can have sensitive info)
 docs/debug.md
 
+# Phase 6 implementation tracking (internal development docs)
+documentation/PHASE_6_IMPLEMENTATION_SLICES.md
+docs/PHASE_6_2_SECURITY_AUDIT_REPORT.md
+docs/PHASE_6_2_SECURITY_HARDENING_GUIDE.md
+docs/PHASE_6_3_IMPLEMENTATION_COMPLETE.md
+
 # ============================================================================
 # STREAMLIT & UI
 # ============================================================================
