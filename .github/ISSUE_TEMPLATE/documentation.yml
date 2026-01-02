@@ -1,0 +1,96 @@
+name: 📚 Documentation Improvement
+description: Suggest improvements to PoliSim documentation
+title: "[DOCS] "
+labels: ["documentation", "good first issue"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Help us improve our documentation! Good documentation is crucial for PoliSim's mission of making policy analysis accessible.
+
+  - type: dropdown
+    id: doc-type
+    attributes:
+      label: Documentation Type
+      description: What type of documentation needs improvement?
+      options:
+        - README or Getting Started
+        - API Documentation
+        - Code Comments/Docstrings
+        - Tutorial or Guide
+        - Architecture/Design Docs
+        - CONTRIBUTING Guide
+        - Glossary/Terminology
+        - FAQ
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: issue-type
+    attributes:
+      label: Issue Type
+      description: What kind of documentation issue is this?
+      options:
+        - Missing documentation
+        - Outdated/incorrect information
+        - Unclear or confusing explanation
+        - Typo or grammar error
+        - Missing code examples
+        - Broken links
+        - Formatting issues
+        - Translation needed
+    validations:
+      required: true
+
+  - type: input
+    id: location
+    attributes:
+      label: Document Location
+      description: Which file or section needs improvement?
+      placeholder: "e.g., docs/API_ENDPOINTS.md, README.md#installation"
+    validations:
+      required: true
+
+  - type: textarea
+    id: current-state
+    attributes:
+      label: Current State
+      description: What does the documentation currently say (if applicable)?
+      placeholder: |
+        Currently it says:
+        "..."
+
+  - type: textarea
+    id: proposed-change
+    attributes:
+      label: Proposed Change
+      description: What should the documentation say or include?
+      placeholder: |
+        It should say:
+        "..."
+        
+        Or it should include:
+        - New section about...
+        - Example showing...
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Why This Matters
+      description: How would this improvement help users?
+      placeholder: |
+        This would help users because...
+        Without this, users might...
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      description: Would you like to help fix this?
+      options:
+        - label: I would like to submit a PR to fix this documentation issue

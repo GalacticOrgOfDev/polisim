@@ -1,0 +1,86 @@
+name: ❓ Question / Support
+description: Ask a question about using PoliSim
+title: "[QUESTION] "
+labels: ["question", "support"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have a question about PoliSim? We're here to help!
+        
+        **Note:** Consider using [GitHub Discussions](https://github.com/GalacticOrgOfDev/polisim/discussions) for general questions - it's easier to have a conversation there!
+
+  - type: checkboxes
+    id: checked-docs
+    attributes:
+      label: Pre-submission Checklist
+      description: Please verify you've checked these resources first
+      options:
+        - label: I have read the [README](https://github.com/GalacticOrgOfDev/polisim/blob/main/README.md)
+          required: true
+        - label: I have checked the [FAQ](https://github.com/GalacticOrgOfDev/polisim/blob/main/FAQ.md)
+          required: true
+        - label: I have searched existing issues and discussions
+          required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Question Category
+      description: What is your question about?
+      options:
+        - Installation / Setup
+        - Running Simulations
+        - Policy Configuration
+        - API Usage
+        - Dashboard / UI
+        - Data Interpretation
+        - Extending / Customizing PoliSim
+        - Contributing to the Project
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Your Question
+      description: What would you like to know?
+      placeholder: |
+        I'm trying to understand how to...
+        Can you explain...
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Any relevant context that might help us answer your question
+      placeholder: |
+        I'm working on...
+        I've tried...
+        My goal is to...
+
+  - type: textarea
+    id: code
+    attributes:
+      label: Relevant Code (if applicable)
+      description: Share any code you're working with
+      render: python
+      placeholder: |
+        # Your code here
+        from core.simulation import run_simulation
+        ...
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment (if relevant)
+      description: Your environment details if the question is technical
+      placeholder: |
+        - OS: 
+        - Python Version: 
+        - PoliSim Version:
