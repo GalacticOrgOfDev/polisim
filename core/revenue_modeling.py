@@ -413,26 +413,52 @@ class FederalRevenueModel:
         gdp_growth: Optional[np.ndarray] = None,
         wage_growth: Optional[np.ndarray] = None,
         iterations: int = 10000,
+        scenario: str = "baseline",
     ) -> pd.DataFrame:
         """
-        Project all federal revenues.
+        Project all federal revenues with scenario differentiation.
 
         Args:
             years: Number of years to project
-            gdp_growth: Annual GDP growth rates (if None, use 2% baseline)
-            wage_growth: Annual wage growth rates (if None, use 3% baseline)
+            gdp_growth: Annual GDP growth rates (if None, use scenario-specific baseline)
+            wage_growth: Annual wage growth rates (if None, use scenario-specific baseline)
             iterations: Number of Monte Carlo iterations
+            scenario: Revenue scenario - "baseline", "recession", or "strong_growth"
 
         Returns:
             DataFrame with detailed revenue projections
         """
-        # Default growth assumptions if not provided
+        # Scenario-specific growth assumptions
+        scenario_params = {
+            "baseline": {"gdp_multiplier": 1.0, "wage_multiplier": 1.0},
+            "recession": {"gdp_multiplier": 0.5, "wage_multiplier": 0.6},  # Lower growth
+            "strong_growth": {"gdp_multiplier": 1.5, "wage_multiplier": 1.4},  # Higher growth
+            "demographic_challenge": {"gdp_multiplier": 0.8, "wage_multiplier": 0.9},  # Slower growth due to aging population
+        }
+        
+        if scenario not in scenario_params:
+            raise ValueError(f"Unknown scenario: {scenario}. Must be one of {list(scenario_params.keys())}")
+        
+        scenario_config = scenario_params[scenario]
+        
+        # Default growth assumptions if not provided - apply scenario multipliers
         if gdp_growth is None:
-            gdp_growth = np.full(years, DEFAULT_GDP_GROWTH)
+            gdp_growth = np.full(years, DEFAULT_GDP_GROWTH * scenario_config["gdp_multiplier"])
+        else:
+            gdp_growth = gdp_growth * scenario_config["gdp_multiplier"]
+        
+        # Type assertion to satisfy type checker
+        assert isinstance(gdp_growth, np.ndarray), "gdp_growth must be numpy array"
+            
         if wage_growth is None:
-            wage_growth = np.full(years, DEFAULT_WAGE_GROWTH)
+            wage_growth = np.full(years, DEFAULT_WAGE_GROWTH * scenario_config["wage_multiplier"])
+        else:
+            wage_growth = wage_growth * scenario_config["wage_multiplier"]
+        
+        # Type assertion to satisfy type checker
+        assert isinstance(wage_growth, np.ndarray), "wage_growth must be numpy array"
 
-        logger.info(f"Projecting all revenues for {years} years with {iterations} iterations")
+        logger.info(f"Projecting all revenues for {years} years with {iterations} iterations (scenario: {scenario})")
 
         # Project individual sources
         iit_results = self.project_individual_income_tax(
@@ -479,6 +505,7 @@ class FederalRevenueModel:
                     {
                         "year": self.start_year + year,
                         "iteration": it,
+                        "scenario": scenario,
                         "individual_income_tax": iit_results["revenues"][year, it],
                         "social_security_tax": payroll_results["ss_revenues"][year, it],
                         "medicare_tax": payroll_results["medicare_revenues"][year, it],
@@ -490,7 +517,7 @@ class FederalRevenueModel:
                 )
 
         df = pd.DataFrame(results)
-        logger.info(f"Revenue projections complete: {len(df)} records")
+        logger.info(f"Revenue projections complete: {len(df)} records (scenario: {scenario})")
         return df
 
     def apply_tax_reform(

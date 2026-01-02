@@ -165,6 +165,165 @@ def ensure_dependencies(auto_install=False, headless=False, deps=None):
     return True
 
 
+def check_data_ingestion(headless: bool = True) -> bool:
+    """Run a lightweight data ingestion check (CBO scraper with cache fallback)."""
+    try:
+        from core.cbo_scraper import CBODataScraper
+
+        scraper = CBODataScraper(use_cache=True)
+        data = scraper.get_current_us_budget_data()
+        if not data:
+            msg = "Data ingestion failed: no live or cached CBO data available."
+            if headless:
+                print(msg)
+            else:
+                root = tk.Tk(); root.withdraw(); messagebox.showerror("Startup Check", msg); root.destroy()
+            return False
+
+        cache_used = bool(data.get('cache_used', False))
+        freshness = float(data.get('freshness_hours', 0.0))
+        source = data.get('data_source', 'unknown')
+        checksum = data.get('checksum')
+        schema_valid = bool(data.get('schema_valid', True))
+        validation_errors = data.get('validation_errors', []) or []
+
+        if not checksum:
+            msg = "Data ingestion failed: checksum missing from CBO payload."
+            if headless:
+                print(msg)
+            else:
+                root = tk.Tk(); root.withdraw(); messagebox.showerror("Startup Check", msg); root.destroy()
+            return False
+
+        if not schema_valid:
+            msg = f"Data ingestion failed: schema invalid ({'; '.join(validation_errors) or 'no details'})."
+            if headless:
+                print(msg)
+            else:
+                root = tk.Tk(); root.withdraw(); messagebox.showerror("Startup Check", msg); root.destroy()
+            return False
+
+        if cache_used and freshness > 72:
+            msg = f"Data ingestion failed: cache is stale ({freshness:.1f}h > 72h) and live data unavailable."
+            if headless:
+                print(msg)
+            else:
+                root = tk.Tk(); root.withdraw(); messagebox.showerror("Startup Check", msg); root.destroy()
+            return False
+
+        line = f"Data ingestion OK: source={source}; cache_used={cache_used}; freshness={freshness:.1f}h; checksum={checksum}"
+        if headless:
+            print(line)
+        else:
+            root = tk.Tk(); root.withdraw(); messagebox.showinfo("Startup Check", line); root.destroy()
+        return True
+
+    except Exception as e:
+        msg = f"Data ingestion check failed: {e}"
+        if headless:
+            print(msg)
+        else:
+            root = tk.Tk(); root.withdraw(); messagebox.showerror("Startup Check", msg); root.destroy()
+        return False
+
+
+def check_api_prerequisites(headless: bool = True) -> bool:
+    """
+    Slice 5.7: Check API prerequisites and configuration.
+    
+    Validates:
+    - Pydantic models available (validation_models.py)
+    - v1 middleware available (v1_middleware.py)
+    - Observability module available (observability.py)
+    - Flask and dependencies installed
+    - API environment flags set correctly
+    """
+    try:
+        # Check Pydantic
+        try:
+            import pydantic
+        except ImportError:
+            msg = "API check failed: pydantic not installed (pip install pydantic)"
+            if headless:
+                print(msg)
+            else:
+                root = tk.Tk(); root.withdraw(); messagebox.showerror("Startup Check", msg); root.destroy()
+            return False
+        
+        # Check validation models
+        try:
+            from api.validation_models import SimulateRequest, SimulateResponse
+        except ImportError as e:
+            msg = f"API check failed: validation models not available ({e})"
+            if headless:
+                print(msg)
+            else:
+                root = tk.Tk(); root.withdraw(); messagebox.showerror("Startup Check", msg); root.destroy()
+            return False
+        
+        # Check v1 middleware
+        try:
+            from api.v1_middleware import get_api_config, init_rate_limiter
+        except ImportError as e:
+            msg = f"API check failed: v1 middleware not available ({e})"
+            if headless:
+                print(msg)
+            else:
+                root = tk.Tk(); root.withdraw(); messagebox.showerror("Startup Check", msg); root.destroy()
+            return False
+        
+        # Check observability
+        try:
+            from api.observability import configure_api_logging, MetricsCollector
+        except ImportError as e:
+            msg = f"API check failed: observability module not available ({e})"
+            if headless:
+                print(msg)
+            else:
+                root = tk.Tk(); root.withdraw(); messagebox.showerror("Startup Check", msg); root.destroy()
+            return False
+        
+        # Check Flask
+        try:
+            import flask
+            import flask_cors  # type: ignore[import]
+        except ImportError:
+            msg = "API check failed: Flask or flask-cors not installed (pip install flask flask-cors)"
+            if headless:
+                print(msg)
+            else:
+                root = tk.Tk(); root.withdraw(); messagebox.showerror("Startup Check", msg); root.destroy()
+            return False
+        
+        # Get API config and validate
+        config = get_api_config()
+        status_lines = [
+            f"API Prerequisites OK:",
+            f"  PUBLIC_API_ENABLED={config['PUBLIC_API_ENABLED']}",
+            f"  API_REQUIRE_AUTH={config['API_REQUIRE_AUTH']}",
+            f"  API_AUTH_METHOD={config['API_AUTH_METHOD']}",
+            f"  API_RATE_LIMIT_ENABLED={config['API_RATE_LIMIT_ENABLED']}",
+            f"  API_MAX_PAYLOAD_MB={config['API_MAX_PAYLOAD_MB']}",
+            f"  API_VERSION={config['API_VERSION']}",
+        ]
+        status = "\n".join(status_lines)
+        
+        if headless:
+            print(status)
+        else:
+            root = tk.Tk(); root.withdraw(); messagebox.showinfo("Startup Check", status); root.destroy()
+        
+        return True
+
+    except Exception as e:
+        msg = f"API prerequisites check failed: {e}"
+        if headless:
+            print(msg)
+        else:
+            root = tk.Tk(); root.withdraw(); messagebox.showerror("Startup Check", msg); root.destroy()
+        return False
+
+
 def main():
     parser = argparse.ArgumentParser(description='Start the Economic Projector GUI or run simulations headless')
     parser.add_argument('--simulate', action='store_true', help='Run headless simulation using scenario file')
@@ -178,8 +337,10 @@ def main():
     args = parser.parse_args()
 
     if args.startup_check_only:
-        ok = ensure_dependencies(auto_install=args.auto_install_deps, headless=True)
-        sys.exit(0 if ok else 1)
+        deps_ok = ensure_dependencies(auto_install=args.auto_install_deps, headless=True)
+        data_ok = check_data_ingestion(headless=True)
+        api_ok = check_api_prerequisites(headless=True)
+        sys.exit(0 if (deps_ok and data_ok and api_ok) else 1)
 
     if args.simulate:
         # run headless simulation and exit
@@ -203,6 +364,8 @@ def main():
     ok = ensure_dependencies(auto_install=args.auto_install_deps, headless=True)
     if not ok:
         return
+
+    _ = check_data_ingestion(headless=True)
     
     try:
         # Use subprocess to launch streamlit command

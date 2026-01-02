@@ -14,14 +14,7 @@ Features:
 # mypy: ignore-errors
 
 try:
-    import streamlit as st
-    import pandas as pd  # type: ignore[import-untyped]
-    import numpy as np
-    import plotly.graph_objects as go  # type: ignore[import-untyped]
-    import plotly.express as px  # type: ignore[import-untyped]
-    from pathlib import Path
-    import json
-    
+    # Load core modules FIRST (before streamlit) to avoid circular dependency issues
     from core.social_security import SocialSecurityModel, SocialSecurityReforms, TrustFundAssumptions, BenefitFormula
     from core.revenue_modeling import FederalRevenueModel, TaxReforms
     from core.medicare_medicaid import MedicareModel, MedicaidModel
@@ -43,6 +36,17 @@ try:
         PolicySensitivityAnalyzer,
         StressTestAnalyzer,
     )
+    
+    # NOW load streamlit and UI modules
+    import streamlit as st
+    import pandas as pd  # type: ignore[import-untyped]
+    import numpy as np
+    import plotly.graph_objects as go  # type: ignore[import-untyped]
+    import plotly.express as px  # type: ignore[import-untyped]
+    from pathlib import Path
+    import json
+    from typing import Dict, Any
+    
     from ui.auth import StreamlitAuth, show_user_profile_page
     from ui.themes import apply_theme, get_theme_list, preview_theme, customize_theme_colors, apply_plotly_theme
     from ui.animations import apply_animation
@@ -219,6 +223,112 @@ def get_tooltip(term, definition):
     if st.session_state.get('settings', {}).get('tooltips_enabled', True):
         return registry_get_tooltip(term, definition)
     return None
+
+
+def show_uploaded_policy_selector():
+    """
+    Display a selector for uploaded policies and return the selected policy or None.
+    Returns a tuple of (selected_policy_dict, policy_name) or (None, None).
+    """
+    from core.policy_builder import PolicyLibrary
+    
+    library = PolicyLibrary()
+    all_policies = library.list_policies()
+    
+    # Filter for uploaded policies, with fallback for legacy saves missing category
+    uploaded_policies = []
+    for name in all_policies:
+        policy = library.get_policy(name)
+        if not policy:
+            continue
+        is_uploaded_category = getattr(policy, "category", "General") == "Uploaded Policies"
+        has_uploaded_traits = policy.author == "PDF Upload" or bool(getattr(policy, "structured_mechanics", None))
+        if is_uploaded_category or has_uploaded_traits:
+            uploaded_policies.append(name)
+    
+    if not uploaded_policies:
+        st.info("📌 No uploaded policies yet. Use the 'Policy Upload' page to extract policies from PDFs.")
+        return None, None
+    
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        selected_policy_name = st.selectbox(
+            "Select an uploaded policy to analyze:",
+            uploaded_policies,
+            help=get_tooltip(
+                "Uploaded Policy Selection",
+                "Select a policy you've previously uploaded and extracted from a PDF document. This will apply the policy's parameters to your analysis."
+            )
+        )
+    
+    with col2:
+        if st.button("🔄 Refresh", key=f"refresh_policy_{selected_policy_name}"):
+            st.rerun()
+    
+    if selected_policy_name:
+        policy = library.get_policy(selected_policy_name)
+        if policy:
+            st.session_state[f"selected_policy_{selected_policy_name}"] = policy
+            return policy, selected_policy_name
+    
+    return None, None
+
+
+def get_policy_scenario_overrides(policy) -> Dict[str, Dict[str, Any]]:
+    """Derive scenario overrides from structured mechanics for modules.
+
+    Returns dict with per-domain adjustments and labels to drive default scenario choices.
+    """
+    overrides: Dict[str, Dict[str, Any]] = {"revenue": {}, "ss": {}, "medicaid": {}, "discretionary": {}}
+
+    if not policy or not getattr(policy, "structured_mechanics", None):
+        return overrides
+
+    mech = policy.structured_mechanics
+    tax = mech.get("tax_mechanics") or {}
+    ss = mech.get("social_security_mechanics") or {}
+    spend = mech.get("spending_mechanics") or {}
+
+    # Revenue overrides
+    payroll_rate = tax.get("payroll_tax_rate") or ss.get("payroll_tax_rate")
+    corporate_rate = tax.get("corporate_tax_rate")
+    if payroll_rate or corporate_rate or tax.get("consumption_tax_rate") or tax.get("carbon_tax_per_ton"):
+        overrides["revenue"].update({
+            "label": "Policy-derived scenario",
+            "payroll_rate": payroll_rate,
+            "corporate_rate": corporate_rate,
+            "carbon_tax": tax.get("carbon_tax_per_ton"),
+            "consumption_tax": tax.get("consumption_tax_rate"),
+        })
+
+    # Social Security overrides
+    if ss:
+        overrides["ss"].update({
+            "label": "Policy-derived scenario",
+            "payroll_rate": ss.get("payroll_tax_rate"),
+            "cap_change": ss.get("payroll_tax_cap_change"),
+            "cap_increase": ss.get("payroll_tax_cap_increase"),
+            "fra": ss.get("full_retirement_age") or (67 + ss.get("full_retirement_age_change", 0)) if ss.get("full_retirement_age_change") else None,
+            "cola_hint": ss.get("cola_adjustments"),
+        })
+
+    # Medicaid / discretionary hints for defaults
+    if spend:
+        overrides["medicaid"].update({
+            "label": "Policy-derived scenario",
+            "expansion": spend.get("medicaid_expansion"),
+            "block_grant": spend.get("medicaid_block_grant"),
+            "per_capita_cap": spend.get("medicaid_per_capita_cap"),
+            "fmap": spend.get("medicaid_fmap_change"),
+        })
+        overrides["discretionary"].update({
+            "label": "Policy-derived scenario",
+            "defense_change": spend.get("defense_spending_change"),
+            "nondefense_change": spend.get("nondefense_discretionary_change"),
+            "budget_caps": spend.get("budget_caps_enabled"),
+        })
+
+    return overrides
 
 
 def get_column_safe(df: pd.DataFrame, primary: str, fallback: str) -> str:
@@ -641,7 +751,7 @@ def page_overview():
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        st.metric("Module Status", "Phase 5.4", delta="Web UI + data integration (launcher/dashboard hardening)")
+        st.metric("Module Status", "Phase 6.2.5", delta="Security hardening complete")
     with col2:
         st.metric("Monte Carlo Iterations", "100K+", delta="Full uncertainty quantification")
     with col3:
@@ -654,12 +764,13 @@ def page_overview():
             "An open-source, transparent alternative to the Congressional Budget Office's fiscal projections.",
             "Built with full Monte Carlo stochastic modeling and comprehensive policy analysis.",
             "",
-            "**Available Modules:**",
-            "- **Phase 1**: Healthcare policy analysis (USGHA vs baseline)",
-            "- **Phase 2**: Social Security trust funds + Federal revenues (income/payroll/corporate taxes)",
-            "- **Phase 3**: Medicare/Medicaid spending + Discretionary + Interest + Combined fiscal outlook",
-            "- **Phase 4**: Production polish, validation, and performance optimizations",
-            "- **Phase 5**: Web UI + Data Integration (Sprint 5.4 in progress)",
+            "**Completed Phases:**",
+            "- **Phase 1-4**: Healthcare, Tax Reform, Social Security, Medicare/Medicaid, Revenue, Combined Outlook",
+            "- **Phase 5**: Web UI, Launcher, Scenario Builder, Reports, Public API",
+            "- **Phase 6.2**: Security hardening (audit, CORS, secrets, auth, DDoS protection)",
+            "",
+            "**Current Work:**",
+            "- Policy extraction enhancements and Combined Outlook policy adaptation",
         ])
     )
     
@@ -692,6 +803,7 @@ def page_healthcare():
     
     # Load custom policies from library - ALWAYS FRESH (not cached)
     custom_healthcare_policies, library = get_policy_library_policies(PolicyBuilderType.HEALTHCARE)
+    combined_policies = library.list_policies_by_type(PolicyBuilderType.COMBINED)
     
     # Combine built-in and custom policies with visual indicators
     col1, col2 = st.columns(2)
@@ -736,14 +848,20 @@ def page_healthcare():
             selected_policy = "current_us" if "Current US" in selected_display else "usgha"
             is_custom = False
         else:
-            if not custom_healthcare_policies:
-                st.info("No custom healthcare policies found. Upload or create one in the Library Manager.")
+            # Merge dedicated healthcare and combined policies so combined uploads can flow into healthcare simulations
+            selectable_custom = custom_healthcare_policies[:]
+            for name in combined_policies:
+                if name not in selectable_custom:
+                    selectable_custom.append(name)
+
+            if not selectable_custom:
+                st.info("No custom or combined policies found. Upload or create one in the Library Manager.")
                 selected_policy = None
                 is_custom = False
             else:
                 selected_display = st.selectbox(
                     "Custom Policy:",
-                    custom_healthcare_policies,
+                    selectable_custom,
                     help=get_tooltip(
                         "healthcare_policy_custom",
                         "Choose a custom healthcare policy",
@@ -1147,6 +1265,83 @@ def page_social_security():
     
     st.info("💡 This page uses Phase 2 Social Security Monte Carlo engine with full uncertainty quantification.")
     
+    # Display uploaded policy selector
+    st.markdown("### 📋 Use an Uploaded Policy")
+    uploaded_policy, policy_name = show_uploaded_policy_selector()
+    policy_overrides = get_policy_scenario_overrides(uploaded_policy)
+    ss_override = policy_overrides.get("ss", {})
+    
+    # Baseline defaults used when no uploaded mechanics are present
+    BASE_TAX_RATE_PCT = 12.4
+    BASE_WAGE_CAP = 168_600
+    BASE_FRA = 67
+    BASE_COLA_PCT = 3.2
+
+    ss_mechanics = None
+    if uploaded_policy:
+        st.success(f"✅ Using policy: **{policy_name}**")
+        ss_mechanics = (
+            uploaded_policy.structured_mechanics or {}
+        ).get("social_security_mechanics") if hasattr(uploaded_policy, "structured_mechanics") else None
+
+        # Prefill controls only when switching to a new uploaded policy
+        if ss_mechanics and st.session_state.get("ss_uploaded_policy_applied") != policy_name:
+            # Map extracted mechanics into UI defaults
+            tax_rate_pct = round((ss_mechanics.get("payroll_tax_rate") or (BASE_TAX_RATE_PCT / 100)) * 100, 3)
+            cap_change = ss_mechanics.get("payroll_tax_cap_change")
+            cap_increase = ss_mechanics.get("payroll_tax_cap_increase")
+            fra_val = ss_mechanics.get("full_retirement_age")
+            fra_delta = ss_mechanics.get("full_retirement_age_change")
+            cola_hint = ss_mechanics.get("cola_adjustments")
+
+            # Wage cap handling
+            use_no_cap_default = cap_change == "remove_cap"
+            cap_value_default = BASE_WAGE_CAP
+            if use_no_cap_default:
+                cap_value_default = BASE_WAGE_CAP
+            elif cap_change == "increase_cap" and cap_increase:
+                cap_value_default = cap_increase
+
+            # FRA handling
+            fra_default = fra_val or (BASE_FRA + fra_delta if fra_delta else BASE_FRA)
+
+            # COLA handling: chained CPI typically implies slightly lower COLA
+            cola_default = BASE_COLA_PCT
+            if cola_hint == "chained_cpi":
+                cola_default = 2.6
+            elif cola_hint:
+                cola_default = BASE_COLA_PCT
+
+            # Seed session state values so widgets render prefilled
+            st.session_state["ss_tax_rate_value"] = tax_rate_pct
+            st.session_state["ss_tax_cap_value"] = cap_value_default
+            st.session_state["ss_use_no_cap"] = use_no_cap_default
+            st.session_state["ss_fra_value"] = fra_default
+            st.session_state["ss_cola_value"] = cola_default
+            st.session_state["ss_benefit_reduction_value"] = st.session_state.get("ss_benefit_reduction_value", 0)
+            st.session_state["ss_uploaded_policy_applied"] = policy_name
+
+        if ss_mechanics:
+            with st.expander("📑 Extracted Social Security Mechanics", expanded=False):
+                st.write("- Payroll tax rate: {}%".format(round((ss_mechanics.get("payroll_tax_rate") or (BASE_TAX_RATE_PCT/100)) * 100, 2)))
+                cap_change = ss_mechanics.get("payroll_tax_cap_change")
+                cap_text = "Remove cap" if cap_change == "remove_cap" else (
+                    f"Raise cap to ${ss_mechanics.get('payroll_tax_cap_increase'):,.0f}" if cap_change == "increase_cap" and ss_mechanics.get("payroll_tax_cap_increase") else "No change"
+                )
+                st.write(f"- Payroll tax cap: {cap_text}")
+                if ss_mechanics.get("full_retirement_age") or ss_mechanics.get("full_retirement_age_change"):
+                    fra_display = ss_mechanics.get("full_retirement_age") or (BASE_FRA + ss_mechanics.get("full_retirement_age_change", 0))
+                    st.write(f"- Full retirement age: {fra_display}")
+                if ss_mechanics.get("cola_adjustments"):
+                    st.write(f"- COLA adjustment: {ss_mechanics.get('cola_adjustments')}")
+                if ss_mechanics.get("means_testing_enabled"):
+                    threshold = ss_mechanics.get("means_testing_threshold")
+                    st.write(f"- Means testing enabled{f' at ${threshold:,.0f}' if threshold else ''}")
+                if ss_mechanics.get("benefit_formula_changes"):
+                    st.write(f"- Benefit formula changes: {ss_mechanics.get('benefit_formula_changes')}")
+    
+    st.divider()
+    
     # Initialize session state for results
     if 'ss_projections' not in st.session_state:
         st.session_state.ss_projections = None
@@ -1165,9 +1360,22 @@ def page_social_security():
         
         col1, col2 = st.columns(2)
         with col1:
+            quick_options = [
+                "Current Law (Baseline)",
+                "Raise Payroll Tax",
+                "Remove Wage Cap",
+                "Raise Retirement Age",
+                "Combined Reform",
+            ]
+            policy_quick_label = None
+            if ss_override.get("label"):
+                policy_quick_label = f"{ss_override['label']} ({policy_name})" if policy_name else ss_override["label"]
+                quick_options = [policy_quick_label] + quick_options
+            quick_default_index = 0 if policy_quick_label else 0
             selected_scenario = st.selectbox(
                 "Select reform scenario:",
-                ["Current Law (Baseline)", "Raise Payroll Tax", "Remove Wage Cap", "Raise Retirement Age", "Combined Reform"],
+                quick_options,
+                index=quick_default_index,
                 help=get_tooltip("Reform Scenario", "Compare different Social Security reform proposals to see their impact on trust fund solvency")
             )
         with col2:
@@ -1196,21 +1404,35 @@ def page_social_security():
             st.markdown("**Trust Fund Parameters**")
             custom_tax_rate = st.number_input(
                 "Payroll Tax Rate (%)", 
-                min_value=10.0, max_value=20.0, value=12.4, step=0.1,
+                min_value=10.0,
+                max_value=20.0,
+                value=st.session_state.get("ss_tax_rate_value", BASE_TAX_RATE_PCT),
+                step=0.1,
+                key="ss_tax_rate_value",
                 help=get_tooltip("Payroll Tax Rate", "Combined employer + employee Social Security tax rate. Current law: 12.4% (6.2% each)")
             ) / 100
             custom_tax_cap = st.number_input(
                 "Payroll Tax Cap ($)", 
-                min_value=0, max_value=1000000, value=168600, step=1000,
+                min_value=0,
+                max_value=1_000_000,
+                value=int(st.session_state.get("ss_tax_cap_value", BASE_WAGE_CAP)),
+                step=1000,
+                key="ss_tax_cap_value",
                 help=get_tooltip("Payroll Tax Cap", "Maximum annual earnings subject to Social Security tax. 2025 cap: $168,600. Earnings above this are not taxed.")
             )
             use_no_cap = st.checkbox(
                 "Remove wage cap (override value above)",
+                value=st.session_state.get("ss_use_no_cap", False),
+                key="ss_use_no_cap",
                 help=get_tooltip("Remove Wage Cap", "Eliminate the earnings cap so all wages are taxed for Social Security, increasing revenue by ~20%")
             )
             custom_interest = st.number_input(
                 "Trust Fund Interest Rate (%)", 
-                min_value=0.0, max_value=10.0, value=3.5, step=0.1,
+                min_value=0.0,
+                max_value=10.0,
+                value=st.session_state.get("ss_interest_value", 3.5),
+                step=0.1,
+                key="ss_interest_value",
                 help=get_tooltip("Interest Rate", "Annual interest rate earned on trust fund reserves invested in special Treasury securities")
             ) / 100
         
@@ -1218,17 +1440,29 @@ def page_social_security():
             st.markdown("**Benefit Formula Parameters**")
             custom_fra = st.number_input(
                 "Full Retirement Age", 
-                min_value=62, max_value=75, value=67, step=1,
+                min_value=62,
+                max_value=75,
+                value=int(st.session_state.get("ss_fra_value", BASE_FRA)),
+                step=1,
+                key="ss_fra_value",
                 help=get_tooltip("Full Retirement Age (FRA)", "Age at which workers can claim full retirement benefits without reduction. Currently 67 for those born 1960+. Raising FRA reduces costs by ~6.7% per year.")
             )
             custom_cola = st.number_input(
                 "Annual COLA (%)", 
-                min_value=0.0, max_value=10.0, value=3.2, step=0.1,
+                min_value=0.0,
+                max_value=10.0,
+                value=st.session_state.get("ss_cola_value", BASE_COLA_PCT),
+                step=0.1,
+                key="ss_cola_value",
                 help=get_tooltip("COLA", "Cost of Living Adjustment - annual increase in benefits to account for inflation. Based on CPI-W (Consumer Price Index for Urban Wage Earners).")
             ) / 100
             benefit_reduction = st.slider(
                 "Benefit Reduction (%)", 
-                0, 50, 0, step=5,
+                0,
+                50,
+                int(st.session_state.get("ss_benefit_reduction_value", 0)),
+                step=5,
+                key="ss_benefit_reduction_value",
                 help=get_tooltip("Benefit Reduction", "Across-the-board percentage reduction in all Social Security benefits. A painful but direct way to reduce costs.")
             )
         
@@ -1239,6 +1473,9 @@ def page_social_security():
             custom_iterations = st.slider("Monte Carlo iterations:", 100, 5000, 1000, step=100, key="custom_iterations")
         
         run_custom = st.button("Run Custom Scenario", type="primary", key="run_custom")
+        run_uploaded_policy = False
+        if ss_mechanics:
+            run_uploaded_policy = st.button("Apply Uploaded Policy & Run", type="secondary", key="run_ss_uploaded")
     
     # Determine which scenario to run
     if run_quick:
@@ -1250,7 +1487,31 @@ def page_social_security():
 
                 # Initialize model with reform parameters
                 params_display = {}
-                if selected_scenario == "Current Law (Baseline)":
+                use_policy_quick = policy_quick_label and selected_scenario == policy_quick_label
+
+                if use_policy_quick:
+                    trust_fund = TrustFundAssumptions()
+                    trust_fund.payroll_tax_rate = ss_override.get("payroll_rate") or trust_fund.payroll_tax_rate
+                    cap_change = ss_override.get("cap_change")
+                    if cap_change == "remove_cap":
+                        trust_fund.payroll_tax_cap = None
+                    elif cap_change == "increase_cap" and ss_override.get("cap_increase"):
+                        trust_fund.payroll_tax_cap = ss_override.get("cap_increase")
+                    benefit_formula = BenefitFormula()
+                    fra_value = ss_override.get("fra") or BASE_FRA
+                    benefit_formula.full_retirement_age = fra_value
+                    cola_hint = ss_override.get("cola_hint")
+                    if cola_hint == "chained_cpi":
+                        benefit_formula.annual_cola = 0.026
+                    model = SocialSecurityModel(trust_fund=trust_fund, benefit_formula=benefit_formula)
+                    reform_name = "Uploaded Policy"
+                    params_display = {
+                        "Payroll Tax Rate": f"{trust_fund.payroll_tax_rate*100:.1f}%" if trust_fund.payroll_tax_rate else "12.4%",
+                        "Payroll Tax Cap": "No Cap" if trust_fund.payroll_tax_cap is None else f"${trust_fund.payroll_tax_cap:,}",
+                        "Full Retirement Age": str(benefit_formula.full_retirement_age),
+                        "COLA": f"{benefit_formula.annual_cola*100:.1f}%",
+                    }
+                elif selected_scenario == "Current Law (Baseline)":
                     model = SocialSecurityModel()
                     reform_name = "Current Law"
                     params_display = {
@@ -1348,35 +1609,63 @@ def page_social_security():
                 st.exception(e)
                 return
     
-    elif run_custom:
+    elif run_custom or run_uploaded_policy:
         should_run = True
         with st.status("🚀 Running custom Social Security projections...", expanded=True) as status:
             progress = st.progress(0.05)
             try:
                 status.update(label="⚙️ Building custom model...", state="running", expanded=True)
                 progress.progress(0.2)
-                # Build custom model
+                # Build custom model seeded either from user sliders or uploaded mechanics
+                tf_rate = custom_tax_rate
+                tf_cap = None if use_no_cap else custom_tax_cap
+                fra_val = custom_fra
+                cola_val = custom_cola
+                benefit_reduction_val = benefit_reduction
+
+                if run_uploaded_policy and ss_mechanics:
+                    # Payroll tax rate
+                    if ss_mechanics.get("payroll_tax_rate"):
+                        tf_rate = ss_mechanics.get("payroll_tax_rate")
+                    # Cap handling
+                    cap_change = ss_mechanics.get("payroll_tax_cap_change")
+                    if cap_change == "remove_cap":
+                        tf_cap = None
+                    elif cap_change == "increase_cap" and ss_mechanics.get("payroll_tax_cap_increase"):
+                        tf_cap = ss_mechanics.get("payroll_tax_cap_increase")
+                    # FRA
+                    if ss_mechanics.get("full_retirement_age"):
+                        fra_val = ss_mechanics.get("full_retirement_age")
+                    elif ss_mechanics.get("full_retirement_age_change"):
+                        fra_val = BASE_FRA + ss_mechanics.get("full_retirement_age_change")
+                    # COLA hint
+                    cola_hint = ss_mechanics.get("cola_adjustments")
+                    if cola_hint == "chained_cpi":
+                        cola_val = 0.026
+                    elif cola_hint:
+                        cola_val = BASE_COLA_PCT / 100.0
+
                 trust_fund = TrustFundAssumptions()
-                trust_fund.payroll_tax_rate = custom_tax_rate
-                trust_fund.payroll_tax_cap = None if use_no_cap else custom_tax_cap
+                trust_fund.payroll_tax_rate = tf_rate
+                trust_fund.payroll_tax_cap = tf_cap
                 trust_fund.trust_fund_interest_rate = custom_interest
                 
                 benefit_formula = BenefitFormula()
-                benefit_formula.full_retirement_age = custom_fra
-                benefit_formula.annual_cola = custom_cola
-                if benefit_reduction > 0:
-                    benefit_formula.primary_insurance_amount_avg_2025 *= (1 - benefit_reduction / 100)
+                benefit_formula.full_retirement_age = int(fra_val)
+                benefit_formula.annual_cola = cola_val
+                if benefit_reduction_val > 0:
+                    benefit_formula.primary_insurance_amount_avg_2025 *= (1 - benefit_reduction_val / 100)
                 
                 model = SocialSecurityModel(trust_fund=trust_fund, benefit_formula=benefit_formula)
-                reform_name = "Custom Parameters"
+                reform_name = "Uploaded Policy" if run_uploaded_policy else "Custom Parameters"
                 
                 params_display = {
-                    "Payroll Tax Rate": f"{custom_tax_rate*100:.1f}%",
-                    "Payroll Tax Cap": "No Cap" if use_no_cap else f"${custom_tax_cap:,}",
-                    "Full Retirement Age": str(custom_fra),
-                    "COLA": f"{custom_cola*100:.1f}%",
+                    "Payroll Tax Rate": f"{tf_rate*100:.1f}%",
+                    "Payroll Tax Cap": "No Cap" if tf_cap is None else f"${tf_cap:,}",
+                    "Full Retirement Age": str(fra_val),
+                    "COLA": f"{cola_val*100:.1f}%",
                     "Interest Rate": f"{custom_interest*100:.1f}%",
-                    "Benefit Reduction": f"{benefit_reduction}%" if benefit_reduction > 0 else "None"
+                    "Benefit Reduction": f"{benefit_reduction_val}%" if benefit_reduction_val > 0 else "None"
                 }
                 
                 progress.progress(0.45)
@@ -1569,14 +1858,53 @@ def page_federal_revenues():
     """Federal revenues page."""
     st.title("💰 Federal Revenue Projections")
     
+    # Display uploaded policy selector
+    st.markdown("### 📋 Use an Uploaded Policy")
+    uploaded_policy, policy_name = show_uploaded_policy_selector()
+    policy_overrides = get_policy_scenario_overrides(uploaded_policy)
+    revenue_override = policy_overrides.get("revenue", {})
+    
+    tax_mechanics = None
+    ss_mechanics = None
+    if uploaded_policy:
+        st.success(f"✅ Using policy: **{policy_name}**")
+        if hasattr(uploaded_policy, "structured_mechanics") and uploaded_policy.structured_mechanics:
+            tax_mechanics = uploaded_policy.structured_mechanics.get("tax_mechanics")
+            ss_mechanics = uploaded_policy.structured_mechanics.get("social_security_mechanics")
+        if tax_mechanics:
+            with st.expander("📑 Extracted Tax Mechanics", expanded=False):
+                if tax_mechanics.get("payroll_tax_rate"):
+                    st.write(f"- Payroll tax: {tax_mechanics['payroll_tax_rate']*100:.2f}%")
+                if tax_mechanics.get("corporate_tax_rate"):
+                    st.write(f"- Corporate rate: {tax_mechanics['corporate_tax_rate']*100:.2f}%")
+                if tax_mechanics.get("consumption_tax_rate"):
+                    st.write(f"- Consumption/VAT: {tax_mechanics['consumption_tax_rate']*100:.2f}%")
+                if tax_mechanics.get("carbon_tax_per_ton"):
+                    st.write(f"- Carbon tax: ${tax_mechanics['carbon_tax_per_ton']}/ton")
+    
+    st.divider()
+    
     revenue_scenarios = load_revenue_scenarios()
     scenario_names = list(revenue_scenarios["scenarios"].keys())
+    baseline_scenario = next((n for n in scenario_names if "baseline" in n.lower()), scenario_names[0])
+
+    policy_scenario_name = None
+    if revenue_override.get("label"):
+        policy_scenario_name = f"{revenue_override['label']} ({policy_name})" if policy_name else revenue_override["label"]
     
     col1, col2 = st.columns(2)
     with col1:
+        scenario_options = scenario_names.copy()
+        default_index = 0
+        if policy_scenario_name:
+            scenario_options = [policy_scenario_name] + scenario_options
+            default_index = 0
+        else:
+            default_index = scenario_options.index(baseline_scenario) if baseline_scenario in scenario_options else 0
         selected_scenario = st.selectbox(
             "Select economic scenario:",
-            scenario_names,
+            scenario_options,
+            index=default_index,
             help=get_tooltip(
                 "revenue_economic_scenario",
                 "Pre-defined combinations of GDP growth, wage growth, and other economic assumptions that affect revenue projections",
@@ -1602,8 +1930,34 @@ def page_federal_revenues():
     )
     
     if st.button("Project Federal Revenues"):
-        model = FederalRevenueModel()
-        scenario = revenue_scenarios["scenarios"][selected_scenario]
+        from core.revenue_modeling import PayrollTaxAssumptions, CorporateIncomeTaxAssumptions
+
+        payroll_assump = PayrollTaxAssumptions.ssa_2024_trustees()
+        corp_assump = CorporateIncomeTaxAssumptions.cbo_2025_baseline()
+
+        # Map extracted mechanics to revenue assumptions
+        payroll_rate = None
+        if tax_mechanics and tax_mechanics.get("payroll_tax_rate"):
+            payroll_rate = tax_mechanics.get("payroll_tax_rate")
+        if not payroll_rate and ss_mechanics and ss_mechanics.get("payroll_tax_rate"):
+            payroll_rate = ss_mechanics.get("payroll_tax_rate")
+        if payroll_rate:
+            # Model uses employee share; split combined rate in half
+            payroll_assump.social_security_rate = payroll_rate / 2
+        if tax_mechanics and tax_mechanics.get("corporate_tax_rate"):
+            corp_assump.marginal_tax_rate = tax_mechanics.get("corporate_tax_rate")
+            corp_assump.effective_tax_rate = max(0.01, corp_assump.marginal_tax_rate * 0.65)
+        # Apply policy-derived overrides even if mechanics not explicitly mapped above
+        if revenue_override.get("payroll_rate") and not payroll_rate:
+            payroll_assump.social_security_rate = revenue_override.get("payroll_rate") / 2
+        if revenue_override.get("corporate_rate") and not (tax_mechanics and tax_mechanics.get("corporate_tax_rate")):
+            corp_assump.marginal_tax_rate = revenue_override.get("corporate_rate")
+            corp_assump.effective_tax_rate = max(0.01, corp_assump.marginal_tax_rate * 0.65)
+
+        model = FederalRevenueModel(payroll_taxes=payroll_assump, corporate_income_tax=corp_assump)
+        use_policy_scenario = policy_scenario_name and selected_scenario == policy_scenario_name
+        scenario_key = baseline_scenario if use_policy_scenario else selected_scenario
+        scenario = revenue_scenarios["scenarios"].get(scenario_key, revenue_scenarios["scenarios"][baseline_scenario])
         
         with st.spinner("Running revenue projections..."):
             gdp_growth = np.array(scenario["economic_assumptions"]["gdp_real_growth_annual"][:years])
@@ -1615,6 +1969,17 @@ def page_federal_revenues():
                 wage_growth=wage_growth,
                 iterations=iterations
             )
+
+        if use_policy_scenario:
+            with st.expander("Policy-derived revenue adjustments", expanded=False):
+                if revenue_override.get("payroll_rate"):
+                    st.write(f"- Payroll tax rate set to {revenue_override['payroll_rate']*100:.2f}%")
+                if revenue_override.get("corporate_rate"):
+                    st.write(f"- Corporate tax rate set to {revenue_override['corporate_rate']*100:.2f}%")
+                if revenue_override.get("consumption_tax"):
+                    st.write(f"- Consumption/VAT noted at {revenue_override['consumption_tax']*100:.2f}% (not yet modeled)")
+                if revenue_override.get("carbon_tax"):
+                    st.write(f"- Carbon tax detected: ${revenue_override['carbon_tax']}/ton (not yet modeled)")
         
         # Summary metrics
         latest_data = revenues[revenues['year'] == revenues['year'].max()]
@@ -1665,6 +2030,30 @@ def page_federal_revenues():
 def page_medicare_medicaid():
     """Medicare/Medicaid page."""
     st.title("🏥 Medicare & Medicaid Projections")
+    from core.medicare_medicaid import MedicareModel, MedicaidModel, MedicaidAssumptions
+    
+    # Display uploaded policy selector
+    st.markdown("### 📋 Use an Uploaded Policy")
+    uploaded_policy, policy_name = show_uploaded_policy_selector()
+    
+    medicaid_mechanics = None
+    if uploaded_policy:
+        st.success(f"✅ Using policy: **{policy_name}**")
+        medicaid_mechanics = None
+        if hasattr(uploaded_policy, "structured_mechanics") and uploaded_policy.structured_mechanics:
+            medicaid_mechanics = uploaded_policy.structured_mechanics.get("spending_mechanics")
+        if medicaid_mechanics:
+            with st.expander("📑 Extracted Medicaid/Spending Mechanics", expanded=False):
+                st.write(f"- Medicaid expansion: {'Yes' if medicaid_mechanics.get('medicaid_expansion') else 'No/Not detected'}")
+                st.write(f"- Block grant: {'Yes' if medicaid_mechanics.get('medicaid_block_grant') else 'No'}")
+                st.write(f"- Per-capita cap: {'Yes' if medicaid_mechanics.get('medicaid_per_capita_cap') else 'No'}")
+                fmap = medicaid_mechanics.get("medicaid_fmap_change")
+                if fmap is not None:
+                    st.write(f"- FMAP change: {fmap:+.1f} percentage points")
+                if medicaid_mechanics.get("medicaid_waivers"):
+                    st.write("- Section 1115/waiver activity detected")
+    
+    st.divider()
     
     tab1, tab2 = st.tabs(["Medicare", "Medicaid"])
     
@@ -1749,7 +2138,22 @@ def page_medicare_medicaid():
         )
         
         if st.button("Project Medicaid"):
-            model = MedicaidModel()
+            assumptions = MedicaidAssumptions()
+            if medicaid_mechanics:
+                if medicaid_mechanics.get("medicaid_expansion"):
+                    assumptions.medicaid_expansion_enrollment *= 1.2
+                    assumptions.total_medicaid_spending *= 1.1
+                if medicaid_mechanics.get("medicaid_block_grant"):
+                    assumptions.medicaid_cost_growth_annual = 0.02
+                if medicaid_mechanics.get("medicaid_per_capita_cap"):
+                    assumptions.medicaid_cost_growth_annual = min(assumptions.medicaid_cost_growth_annual, 0.02)
+                fmap = medicaid_mechanics.get("medicaid_fmap_change")
+                if fmap is not None:
+                    assumptions.federal_medicaid_spending *= (1 + fmap / 100)
+                if medicaid_mechanics.get("medicaid_waivers"):
+                    assumptions.long_term_care_growth_annual = max(0.025, assumptions.long_term_care_growth_annual - 0.005)
+
+            model = MedicaidModel(assumptions=assumptions)
             
             with st.spinner("Projecting Medicaid..."):
                 projections = model.project_spending(years=years, iterations=iterations)
@@ -1785,12 +2189,51 @@ def page_medicare_medicaid():
 def page_discretionary_spending():
     """Discretionary spending analysis page."""
     st.title("💰 Federal Discretionary Spending")
+    from core.discretionary_spending import DiscretionarySpendingModel, DiscretionaryAssumptions
+    
+    # Display uploaded policy selector
+    st.markdown("### 📋 Use an Uploaded Policy")
+    uploaded_policy, policy_name = show_uploaded_policy_selector()
+    
+    discretionary_mechanics = None
+    if uploaded_policy:
+        st.success(f"✅ Using policy: **{policy_name}**")
+        if hasattr(uploaded_policy, "structured_mechanics") and uploaded_policy.structured_mechanics:
+            discretionary_mechanics = uploaded_policy.structured_mechanics.get("spending_mechanics")
+        if discretionary_mechanics:
+            with st.expander("📑 Extracted Spending Mechanics", expanded=False):
+                if discretionary_mechanics.get("defense_spending_change") is not None:
+                    st.write(f"- Defense change: {discretionary_mechanics.get('defense_spending_change')*100:+.1f}%")
+                if discretionary_mechanics.get("nondefense_discretionary_change") is not None:
+                    st.write(f"- Non-defense change: {discretionary_mechanics.get('nondefense_discretionary_change')*100:+.1f}%")
+                if discretionary_mechanics.get("budget_caps_enabled"):
+                    st.write(f"- Budget caps enabled: {discretionary_mechanics.get('budget_cap_levels', {})}")
+    
+    st.divider()
     
     col1, col2, col3 = st.columns(3)
+    # Map extracted spending mechanics to default scenario suggestions
+    defense_default = "baseline"
+    nondefense_default = "baseline"
+    if discretionary_mechanics:
+        defense_delta = discretionary_mechanics.get("defense_spending_change")
+        if defense_delta is not None:
+            if defense_delta > 0.01:
+                defense_default = "growth"
+            elif defense_delta < -0.01:
+                defense_default = "reduction"
+        nondef_delta = discretionary_mechanics.get("nondefense_discretionary_change")
+        if nondef_delta is not None:
+            if nondef_delta > 0.01:
+                nondefense_default = "growth"
+            elif nondef_delta < -0.01:
+                nondefense_default = "reduction"
+
     with col1:
         defense_scenario = st.selectbox(
             "Defense Scenario:",
             ["baseline", "growth", "reduction"],
+            index=["baseline", "growth", "reduction"].index(defense_default),
             help=get_tooltip(
                 "defense_scenario",
                 "baseline=inflation only (~2%), growth=+3.5% annually, reduction=+1.5% annually. Defense is ~50% of discretionary spending",
@@ -1800,6 +2243,7 @@ def page_discretionary_spending():
         nondefense_scenario = st.selectbox(
             "Non-Defense Scenario:",
             ["baseline", "growth", "reduction", "infrastructure"],
+            index=["baseline", "growth", "reduction", "infrastructure"].index(nondefense_default) if nondefense_default in ["baseline", "growth", "reduction", "infrastructure"] else 0,
             help=get_tooltip(
                 "nondefense_scenario",
                 "baseline=inflation only (~2%), growth=+3.5% annually, reduction=+1.5% annually. Defense is ~50% of discretionary spending",
@@ -1827,7 +2271,15 @@ def page_discretionary_spending():
     )
     
     if st.button("Project Discretionary Spending"):
-        model = DiscretionarySpendingModel()
+        assumptions = DiscretionaryAssumptions()
+        if discretionary_mechanics:
+            if discretionary_mechanics.get("defense_spending_change") is not None:
+                assumptions.defense_2025_billions *= (1 + discretionary_mechanics.get("defense_spending_change"))
+            if discretionary_mechanics.get("nondefense_discretionary_change") is not None:
+                assumptions.nondefense_discretionary_2025_billions *= (1 + discretionary_mechanics.get("nondefense_discretionary_change"))
+            if discretionary_mechanics.get("budget_caps_enabled"):
+                assumptions.inflation_annual = min(assumptions.inflation_annual, 0.02)
+        model = DiscretionarySpendingModel(assumptions=assumptions)
         
         with st.spinner("Projecting discretionary spending..."):
             projections = model.project_all_discretionary(
@@ -1902,44 +2354,200 @@ def page_combined_outlook():
     - **Interest**: Federal debt service
     """)
     
-    # Scenario selectors
+    # ==========================================================================
+    # ENHANCED: Policy Selector with Baseline + Library Policies
+    # ==========================================================================
+    st.markdown("### 📋 Policy Selection")
+    
+    from core.policy_builder import PolicyLibrary
+    library = PolicyLibrary()
+    all_policies = library.list_policies()
+    
+    # Build policy options: Baseline + all library policies
+    policy_options = ["📊 Baseline (Current Law)"]
+    policy_map = {"📊 Baseline (Current Law)": None}
+    
+    for name in all_policies:
+        policy = library.get_policy(name)
+        if policy:
+            # Add category prefix for clarity
+            category = getattr(policy, "category", "General")
+            if category == "Uploaded Policies":
+                display_name = f"📄 {name}"
+            else:
+                display_name = f"📁 {name}"
+            policy_options.append(display_name)
+            policy_map[display_name] = policy
+    
+    col_policy, col_refresh = st.columns([4, 1])
+    with col_policy:
+        selected_policy_display = st.selectbox(
+            "Select Policy:",
+            policy_options,
+            index=0,
+            help="Choose 'Baseline (Current Law)' for static projections, or select a policy from your library to see how it affects fiscal outcomes."
+        )
+    with col_refresh:
+        if st.button("🔄 Refresh", key="refresh_combined_policies"):
+            st.rerun()
+    
+    # Get selected policy object
+    uploaded_policy = policy_map.get(selected_policy_display)
+    policy_name = selected_policy_display.replace("📄 ", "").replace("📁 ", "").replace("📊 ", "")
+    
+    # Extract mechanics from policy
+    discretionary_mechanics = None
+    medicaid_mechanics = None
+    tax_mechanics = None
+    ss_mechanics = None
+    policy_overrides = {"revenue": {}, "ss": {}, "medicaid": {}, "discretionary": {}}
+    
+    if uploaded_policy:
+        st.success(f"✅ Using policy: **{policy_name}**")
+        if hasattr(uploaded_policy, "structured_mechanics") and uploaded_policy.structured_mechanics:
+            discretionary_mechanics = uploaded_policy.structured_mechanics.get("spending_mechanics")
+            medicaid_mechanics = discretionary_mechanics
+            tax_mechanics = uploaded_policy.structured_mechanics.get("tax_mechanics")
+            ss_mechanics = uploaded_policy.structured_mechanics.get("social_security_mechanics")
+            
+            # Get scenario overrides from policy
+            policy_overrides = get_policy_scenario_overrides(uploaded_policy)
+        
+        # Display extracted mechanics summary
+        with st.expander("📑 Extracted Policy Mechanics", expanded=False):
+            col_tax, col_ss, col_spend = st.columns(3)
+            
+            with col_tax:
+                st.markdown("**💰 Tax Mechanics**")
+                if tax_mechanics:
+                    if tax_mechanics.get("payroll_tax_rate"):
+                        st.write(f"• Payroll tax: {tax_mechanics.get('payroll_tax_rate')*100:.1f}%")
+                    if tax_mechanics.get("financial_transaction_tax_rate"):
+                        st.write(f"• FTT: {tax_mechanics.get('financial_transaction_tax_rate')*100:.1f}%")
+                    income_changes = tax_mechanics.get("income_tax_changes", {})
+                    if income_changes.get("eitc_expansion"):
+                        st.write("• EITC expansion: Yes")
+                    if income_changes.get("dollar_for_dollar_offset"):
+                        st.write("• FICA offset: Yes")
+                else:
+                    st.write("• No tax mechanics detected")
+            
+            with col_ss:
+                st.markdown("**👴 Social Security**")
+                if ss_mechanics:
+                    if ss_mechanics.get("payroll_tax_rate"):
+                        st.write(f"• Payroll rate: {ss_mechanics.get('payroll_tax_rate')*100:.1f}%")
+                    if ss_mechanics.get("payroll_tax_cap_change"):
+                        st.write(f"• Cap change: {ss_mechanics.get('payroll_tax_cap_change')}")
+                    benefit_changes = ss_mechanics.get("benefit_formula_changes", {})
+                    if benefit_changes.get("grandfathered"):
+                        st.write("• Benefits: Grandfathered")
+                    if benefit_changes.get("health_fund_integration"):
+                        st.write("• Health fund integration: Yes")
+                else:
+                    st.write("• No SS mechanics detected")
+            
+            with col_spend:
+                st.markdown("**📊 Spending Mechanics**")
+                if discretionary_mechanics:
+                    if discretionary_mechanics.get("national_health_fund"):
+                        st.write("• National health fund: Yes")
+                    if discretionary_mechanics.get("medicare_transfer"):
+                        st.write("• Medicare redirect: Yes")
+                    if discretionary_mechanics.get("medicaid_expansion"):
+                        st.write("• Medicaid expansion: Yes")
+                    budget_caps = discretionary_mechanics.get("budget_cap_levels", {})
+                    if budget_caps.get("gdp_cap_pct"):
+                        st.write(f"• GDP cap: {budget_caps.get('gdp_cap_pct')}%")
+                else:
+                    st.write("• No spending mechanics detected")
+    else:
+        st.info("📊 Using **Baseline (Current Law)** - no policy adjustments applied")
+    
+    st.divider()
+    
+    # ==========================================================================
+    # ENHANCED: Scenario Selectors with Policy-Derived Defaults
+    # ==========================================================================
+    st.markdown("### ⚙️ Scenario Configuration")
+    
+    # Determine defaults based on policy mechanics
+    economic_default = "baseline"
+    discretionary_default = "baseline"
+    interest_default = "baseline"
+    
+    # Policy-driven economic scenario default
+    if policy_overrides.get("revenue", {}).get("payroll_rate"):
+        # If policy changes tax rates significantly, suggest strong_growth (optimistic) or baseline
+        payroll_rate = policy_overrides["revenue"]["payroll_rate"]
+        if payroll_rate and payroll_rate < 0.12:  # Lower than current ~12.4%
+            economic_default = "strong_growth"
+    
+    # Policy-driven discretionary scenario default
+    disc_override = policy_overrides.get("discretionary", {})
+    if disc_override:
+        nd = disc_override.get("nondefense_change")
+        dfc = disc_override.get("defense_change")
+        if (nd is not None and nd > 0.01) or (dfc is not None and dfc > 0.01):
+            discretionary_default = "growth"
+        elif (nd is not None and nd < -0.01) or (dfc is not None and dfc < -0.01):
+            discretionary_default = "reduction"
+        elif disc_override.get("budget_caps"):
+            discretionary_default = "reduction"
+    
+    # Policy-driven interest scenario default
+    # If policy aims for surplus/debt reduction, suggest falling rates
+    if discretionary_mechanics:
+        budget_caps = discretionary_mechanics.get("budget_cap_levels", {})
+        if budget_caps.get("surplus_allocations", {}).get("debt_reduction_pct"):
+            interest_default = "falling"
+    
     col1, col2 = st.columns(2)
     with col1:
+        # Show policy influence on economic scenario
+        econ_help = "Macro assumption set driving revenue and discretionary forecasts."
+        if economic_default != "baseline" and uploaded_policy:
+            econ_help += f" **Policy suggests: {economic_default}**"
+        
         revenue_scenario = st.selectbox(
             "Economic Scenario:",
             ["baseline", "recession_2026", "strong_growth", "demographic_challenge"],
-            help=get_tooltip(
-                "combined_revenue_scenario",
-                "Macro assumption set driving revenue and discretionary forecasts (baseline, recession, strong growth, demographic).",
-            ),
+            index=["baseline", "recession_2026", "strong_growth", "demographic_challenge"].index(economic_default),
+            help=econ_help,
         )
+
+        # Show policy influence on discretionary scenario
+        disc_help = "Growth path for discretionary spending."
+        if discretionary_default != "baseline" and uploaded_policy:
+            disc_help += f" **Policy suggests: {discretionary_default}**"
+        
         discretionary_scenario = st.selectbox(
             "Discretionary Scenario:",
             ["baseline", "growth", "reduction"],
-            help=get_tooltip(
-                "combined_discretionary_scenario",
-                "Growth path for discretionary spending (baseline, growth, reduction). Influences defense/non-defense outlays.",
-            ),
+            index=["baseline", "growth", "reduction"].index(discretionary_default),
+            help=disc_help,
         )
+    
     with col2:
+        # Show policy influence on interest scenario
+        int_help = "Projected path for interest rates on federal debt."
+        if interest_default != "baseline" and uploaded_policy:
+            int_help += f" **Policy suggests: {interest_default}**"
+        
         interest_scenario = st.selectbox(
             "Interest Rate Scenario:",
             ["baseline", "rising", "falling", "spike"],
-            help=get_tooltip(
-                "combined_interest_scenario",
-                "Projected path for interest rates on federal debt (baseline, rising, falling, spike). Affects debt service costs.",
-            ),
+            index=["baseline", "rising", "falling", "spike"].index(interest_default),
+            help=int_help,
         )
+        
         years = st.slider(
             "Projection years:",
             10,
             75,
             30,
             key="outlook_years",
-            help=get_tooltip(
-                "combined_projection_years",
-                "Years to simulate the unified federal outlook (revenue + spending + interest).",
-            ),
+            help="Years to simulate the unified federal outlook.",
         )
     
     iterations = st.slider(
@@ -1949,14 +2557,59 @@ def page_combined_outlook():
         10000,
         step=1000,
         key="outlook_iter",
-        help=get_tooltip(
-            "combined_iterations",
-            "Monte Carlo runs for the unified outlook. Higher counts give smoother confidence bands.",
-        ),
+        help="Monte Carlo runs for the unified outlook. Higher counts give smoother confidence bands.",
     )
     
     if st.button("Calculate Combined Fiscal Outlook"):
         model = CombinedFiscalOutlookModel()
+
+        # Apply extracted mechanics using unified method
+        if uploaded_policy and hasattr(uploaded_policy, "structured_mechanics") and uploaded_policy.structured_mechanics:
+            model.apply_policy_mechanics(uploaded_policy.structured_mechanics)
+            st.info("📊 Policy mechanics applied to fiscal projections")
+        else:
+            # Legacy manual application for backward compatibility
+            if tax_mechanics:
+                if tax_mechanics.get("payroll_tax_rate"):
+                    model.revenue_model.payroll.social_security_rate = tax_mechanics.get("payroll_tax_rate") / 2
+                if tax_mechanics.get("corporate_tax_rate"):
+                    model.revenue_model.corporate.marginal_tax_rate = tax_mechanics.get("corporate_tax_rate")
+            if ss_mechanics:
+                tf = model.ss_model.trust_fund
+                if ss_mechanics.get("payroll_tax_rate"):
+                    tf.payroll_tax_rate = ss_mechanics.get("payroll_tax_rate")
+                if ss_mechanics.get("payroll_tax_cap_change") == "remove_cap":
+                    tf.payroll_tax_cap = None
+                elif ss_mechanics.get("payroll_tax_cap_change") == "increase_cap" and ss_mechanics.get("payroll_tax_cap_increase"):
+                    tf.payroll_tax_cap = ss_mechanics.get("payroll_tax_cap_increase")
+                if ss_mechanics.get("full_retirement_age"):
+                    model.ss_model.benefit_formula.full_retirement_age = ss_mechanics.get("full_retirement_age")
+                elif ss_mechanics.get("full_retirement_age_change"):
+                    model.ss_model.benefit_formula.full_retirement_age = 67 + ss_mechanics.get("full_retirement_age_change")
+                cola_hint = ss_mechanics.get("cola_adjustments")
+                if cola_hint == "chained_cpi":
+                    model.ss_model.benefit_formula.annual_cola = 0.026
+            if discretionary_mechanics:
+                if discretionary_mechanics.get("defense_spending_change") is not None:
+                    model.discretionary_model.assumptions.defense_2025_billions *= (1 + discretionary_mechanics.get("defense_spending_change"))
+                if discretionary_mechanics.get("nondefense_discretionary_change") is not None:
+                    model.discretionary_model.assumptions.nondefense_discretionary_2025_billions *= (1 + discretionary_mechanics.get("nondefense_discretionary_change"))
+                if discretionary_mechanics.get("budget_caps_enabled"):
+                    model.discretionary_model.assumptions.inflation_annual = min(model.discretionary_model.assumptions.inflation_annual, 0.02)
+            if medicaid_mechanics:
+                # Apply Medicaid-related signals to Medicaid model
+                if medicaid_mechanics.get("medicaid_expansion"):
+                    model.medicaid_model.assumptions.medicaid_expansion_enrollment *= 1.2
+                    model.medicaid_model.assumptions.total_medicaid_spending *= 1.1
+                if medicaid_mechanics.get("medicaid_block_grant"):
+                    model.medicaid_model.assumptions.medicaid_cost_growth_annual = 0.02
+                if medicaid_mechanics.get("medicaid_per_capita_cap"):
+                    model.medicaid_model.assumptions.medicaid_cost_growth_annual = min(model.medicaid_model.assumptions.medicaid_cost_growth_annual, 0.02)
+                fmap = medicaid_mechanics.get("medicaid_fmap_change")
+                if fmap is not None:
+                    model.medicaid_model.assumptions.federal_medicaid_spending *= (1 + fmap / 100)
+                if medicaid_mechanics.get("medicaid_waivers"):
+                    model.medicaid_model.assumptions.long_term_care_growth_annual = max(0.025, model.medicaid_model.assumptions.long_term_care_growth_annual - 0.005)
         
         with st.spinner("Calculating unified federal budget..."):
             try:
@@ -2084,11 +2737,15 @@ def page_policy_comparison():
         num_policies = st.slider("Number of policies to compare:", 2, 5, 2, key="num_policies")
         years = st.slider("Projection years:", 10, 75, 30, key="compare_years")
     with col2:
-        comparison_mode = st.radio(
-            "Comparison type:",
-            ["Scenarios", "Custom Policies", "Mixed"],
-            key="comparison_mode"
-        )
+        st.write("Comparison type:")
+        comparison_options = ["Scenarios", "Custom Policies", "Mixed"]
+        if "comparison_mode" not in st.session_state:
+            st.session_state["comparison_mode"] = comparison_options[0]
+        cols = st.columns(len(comparison_options))
+        for idx, opt in enumerate(comparison_options):
+            if cols[idx].button(opt, key=f"comparison_mode_btn_{opt}"):
+                st.session_state["comparison_mode"] = opt
+        comparison_mode = st.session_state["comparison_mode"]
         iterations = st.slider("Monte Carlo iterations:", 1000, 50000, 10000, step=1000, key="compare_iter")
     
     # Policy/scenario selectors
@@ -2133,12 +2790,15 @@ def page_policy_comparison():
         for i in range(num_policies):
             st.subheader(f"Policy {i+1}")
             
-            policy_type = st.radio(
-                f"Type for Policy {i+1}:",
-                ["Scenario", "Custom Policy"],
-                key=f"policy_type_{i}",
-                horizontal=True
-            )
+            type_key = f"policy_type_{i}"
+            if type_key not in st.session_state:
+                st.session_state[type_key] = "Scenario"
+            col_btn1, col_btn2 = st.columns(2)
+            if col_btn1.button(f"Scenario {i+1}", key=f"btn_scenario_{i}"):
+                st.session_state[type_key] = "Scenario"
+            if col_btn2.button(f"Custom {i+1}", key=f"btn_custom_{i}"):
+                st.session_state[type_key] = "Custom Policy"
+            policy_type = st.session_state[type_key]
             
             if policy_type == "Scenario":
                 col1, col2 = st.columns(2)
@@ -2243,17 +2903,36 @@ def page_custom_policy_builder():
     
     # Load policy library - ALWAYS FRESH (not cached)
     all_policies, library = get_policy_library_policies()
+    policies = library.list_policies()
     
     col1, col2 = st.columns([1, 2])
     
     with col1:
         st.subheader("Create New Policy")
         
-        # Policy template selection
-        template_choice = st.radio(
-            "Select template:",
-            ["Healthcare Reform", "Tax Reform", "Spending Reform", "Blank Custom"]
-        )
+        st.markdown("""
+        <div style="background-color: #f0f2f6; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
+            <small><strong>💡 Tip:</strong> Start with a template that matches your policy focus. Each template includes pre-configured parameters you can customize.</small>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Policy template selection via buttons
+        template_options = ["Healthcare Reform", "Tax Reform", "Spending Reform", "Blank Custom"]
+        if "template_choice" not in st.session_state:
+            st.session_state["template_choice"] = template_options[0]
+        
+        st.markdown("""**Select template:** 
+        - 🏥 **Healthcare Reform** - Modify healthcare spending, coverage, and funding
+        - 💵 **Tax Reform** - Adjust tax rates and revenue sources  
+        - 📉 **Spending Reform** - Control discretionary and mandatory spending
+        - ⚙️ **Blank Custom** - Start from scratch with no defaults
+        """)
+        
+        cols = st.columns(len(template_options))
+        for idx, opt in enumerate(template_options):
+            if cols[idx].button(opt, key=f"template_choice_{opt}"):
+                st.session_state["template_choice"] = opt
+        template_choice = st.session_state["template_choice"]
         
         template_map = {
             "Healthcare Reform": "healthcare",
@@ -2263,7 +2942,14 @@ def page_custom_policy_builder():
         
         if template_choice != "Blank Custom":
             template_name = template_map[template_choice]
-            policy_name = st.text_input("Policy name:", f"My {template_choice}")
+            policy_name = st.text_input(
+                "Policy name:", 
+                f"My {template_choice}",
+                help=get_tooltip(
+                    "Policy Name",
+                    "Give your policy a descriptive name. This is used to identify and reference the policy across all dashboard pages."
+                )
+            )
             
             if st.button("Create from template"):
                 policy = PolicyTemplate.create_from_template(template_name, policy_name)
@@ -2275,22 +2961,37 @@ def page_custom_policy_builder():
     with col2:
         st.subheader("Manage Policies")
         
-        # Show existing policies
-        policies = library.list_policies()
+        st.markdown("""
+        <div style="background-color: #f0f2f6; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
+            <small><strong>💡 Tip:</strong> Select a policy to edit its parameters. Changes are saved automatically. Use the sliders to adjust values while seeing real-time updates.</small>
+        </div>
+        """, unsafe_allow_html=True)
         
+        # Show existing policies
+
         if policies:
             selected_policy_name = st.selectbox("Edit existing policy:", policies)
             selected_policy = library.get_policy(selected_policy_name)
             
             if selected_policy:
-                # Display policy info
-                st.write(f"**Type:** {selected_policy.policy_type.value}")
-                st.write(f"**Description:** {selected_policy.description}")
-                st.write(f"**Author:** {selected_policy.author}")
-                st.write(f"**Created:** {selected_policy.created_date[:10]}")
+                # Display policy info in a nice card format
+                st.markdown(f"""
+                <div style="background-color: #f0f2f6; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <h4>📋 Policy Details</h4>
+                    <p><strong>Name:</strong> {selected_policy_name}</p>
+                    <p><strong>Type:</strong> {selected_policy.policy_type.value}</p>
+                    <p><strong>Description:</strong> {selected_policy.description}</p>
+                    <p><strong>Author:</strong> {selected_policy.author} | <strong>Created:</strong> {selected_policy.created_date[:10]}</p>
+                </div>
+                """, unsafe_allow_html=True)
                 
                 # Parameter editor by category
                 categories = set(p.category for p in selected_policy.parameters.values())
+                
+                st.markdown("#### Adjust Parameters")
+                st.markdown("""
+                <small>💡 **Tip:** Move the sliders to adjust policy parameters. Changes are automatically saved. The unit of measurement is shown on the right.</small>
+                """, unsafe_allow_html=True)
                 
                 for category in sorted(categories):
                     with st.expander(f"📊 {category.title()} Parameters", expanded=True):
@@ -2307,6 +3008,10 @@ def page_custom_policy_builder():
                                     value=param.value,
                                     step=(param.max_value - param.min_value) / 100,
                                     key=f"slider_{param_name}",
+                                    help=get_tooltip(
+                                        param.description,
+                                        f"Range: {param.min_value} to {param.max_value} {param.unit if param.unit else ''}. Adjust this parameter to see its impact on fiscal outcomes."
+                                    )
                                 )
                                 
                                 if new_value != param.value:
@@ -2353,6 +3058,135 @@ def page_custom_policy_builder():
     else:
         st.info("Your policy library is empty. Create policies to get started!")
 
+    # Scenario builder: compare and save bundles
+    st.divider()
+    st.subheader("Scenario Builder: compare, diff, save")
+
+    from core.policy_builder import ScenarioBundleLibrary, ScenarioBundle, build_policy_comparison_table
+
+    scenario_lib = ScenarioBundleLibrary()
+    saved_scenarios = scenario_lib.list_bundles()
+
+    if "scenario_selected_policies" not in st.session_state:
+        st.session_state["scenario_selected_policies"] = policies[:2] if len(policies) >= 2 else policies
+
+    col_pick, col_saved = st.columns([2, 1])
+
+    with col_pick:
+        st.session_state["scenario_selected_policies"] = st.multiselect(
+            "Select policies to compare",
+            options=policies,
+            default=st.session_state.get("scenario_selected_policies", policies[:2] if len(policies) >= 2 else policies),
+            help="Pick two or more saved policies to see parameter deltas",
+        )
+
+    with col_saved:
+        load_choice = st.selectbox(
+            "Load saved scenario",
+            options=["<none>"] + saved_scenarios,
+            index=0,
+            help="Apply a previously saved scenario bundle",
+        )
+        if load_choice != "<none>":
+            bundle = scenario_lib.get_bundle(load_choice)
+            if bundle:
+                st.session_state["scenario_selected_policies"] = [
+                    name for name in bundle.policy_names if name in policies
+                ]
+                st.info(f"Loaded scenario '{bundle.name}'")
+        if load_choice != "<none>" and st.button("🗑️ Delete scenario", key="delete_scenario"):
+            scenario_lib.delete_bundle(load_choice)
+            st.rerun()
+
+    selected = st.session_state.get("scenario_selected_policies", [])
+
+    if selected:
+        selected_objs = [library.get_policy(name) for name in selected if library.get_policy(name)]
+        if selected_objs:
+            diff_df = build_policy_comparison_table(selected_objs)
+
+            def _highlight_deltas(data):
+                styles = pd.DataFrame("", index=data.index, columns=data.columns)
+                for col in data.columns:
+                    if "Δ" in col:
+                        styles[col] = ["color: green" if (v is not None and v >= 0) else "color: red" for v in data[col]]
+                return styles
+
+            st.dataframe(diff_df.style.apply(_highlight_deltas, axis=None), use_container_width=True)
+
+            # Quick variance chips
+            spread_rows = []
+            for param in sorted({p for policy in selected_objs for p in policy.parameters.keys()}):
+                values = [policy.parameters[param].value for policy in selected_objs if param in policy.parameters]
+                if len(values) >= 2:
+                    spread_rows.append({
+                        "Parameter": param,
+                        "Spread": float(np.max(values) - np.min(values)),
+                    })
+            if spread_rows:
+                spread_df = pd.DataFrame(spread_rows).sort_values(by="Spread", ascending=False).head(5)
+                st.caption("Top variance parameters (spread across selected policies)")
+                st.dataframe(spread_df, use_container_width=True)
+
+            csv_data = diff_df.to_csv(index=False)
+            st.download_button(
+                "Download comparison CSV",
+                data=csv_data,
+                file_name="scenario_comparison.csv",
+                mime="text/csv",
+            )
+
+            # Clone helper
+            col_clone_src, col_clone_name = st.columns([1, 2])
+            with col_clone_src:
+                clone_source = st.selectbox("Clone policy", options=policies, index=0)
+            with col_clone_name:
+                clone_target = st.text_input("New policy name", value=f"{clone_source} Copy")
+            if st.button("🔁 Clone", key="clone_policy_btn"):
+                if clone_target.strip():
+                    ok = library.clone_policy(clone_source, clone_target.strip())
+                    if ok:
+                        st.success(f"Cloned to '{clone_target}'")
+                        st.rerun()
+                    else:
+                        st.error("Clone failed (name exists?)")
+                else:
+                    st.error("Provide a new policy name")
+
+            # Save/load bundle
+            col_save_name, col_save_desc = st.columns([1, 2])
+            with col_save_name:
+                scenario_name = st.text_input("Scenario name", value="New Scenario")
+            with col_save_desc:
+                scenario_desc = st.text_input("Notes", value="")
+
+            if st.button("💾 Save scenario bundle", type="primary"):
+                if scenario_name.strip():
+                    bundle = ScenarioBundle(
+                        name=scenario_name.strip(),
+                        policy_names=selected,
+                        description=scenario_desc.strip(),
+                    )
+                    scenario_lib.save_bundle(bundle)
+                    st.success(f"Saved scenario '{scenario_name}'")
+                else:
+                    st.error("Scenario name is required")
+
+            # Zip bundle download
+            from core.policy_builder import build_scenario_bundle_zip
+
+            bundle_bytes = build_scenario_bundle_zip(selected_objs, diff_df)
+            st.download_button(
+                "⬇️ Download scenario bundle (zip)",
+                data=bundle_bytes,
+                file_name="scenario_bundle.zip",
+                mime="application/zip",
+            )
+        else:
+            st.info("No matching policies found for selection.")
+    else:
+        st.info("Select at least one policy to build a scenario.")
+
 
 def page_real_data_dashboard():
     """Real data integration dashboard showing CBO/SSA baselines."""
@@ -2364,8 +3198,54 @@ def page_real_data_dashboard():
     """)
     
     from core.data_loader import load_real_data
+    import requests
+    from ui.auth import StreamlitAuth
     
     data_loader = load_real_data()
+    
+    # CBO freshness badge via API ingestion health endpoint
+    ingestion_payload = None
+    api_base = StreamlitAuth.API_BASE
+    headers = StreamlitAuth.get_auth_header() if StreamlitAuth.is_authenticated() else {}
+
+    try:
+        resp = requests.get(f"{api_base}/api/data/ingestion-health", headers=headers, timeout=5)
+        if resp.status_code == 200:
+            ingestion_payload = resp.json().get("data", {})
+        else:
+            st.warning(f"Ingestion health API returned {resp.status_code}: {resp.text[:120]}")
+    except Exception as exc:
+        st.info(f"Ingestion health unavailable ({str(exc)[:80]}). Falling back to cached metrics.")
+
+    if ingestion_payload:
+        fetched_at = ingestion_payload.get('fetched_at') or ingestion_payload.get('last_updated')
+        freshness_hours = ingestion_payload.get('freshness_hours')
+        cache_used = ingestion_payload.get('cache_used', False)
+        cache_age_hours = ingestion_payload.get('cache_age_hours')
+        checksum = ingestion_payload.get('checksum', 'n/a')
+        source = ingestion_payload.get('data_source', 'CBO/Treasury')
+        schema_valid = ingestion_payload.get('schema_valid', True)
+        validation_errors = ingestion_payload.get('validation_errors', []) or []
+
+        status_bits = [f"Source: {source}"]
+        if fetched_at:
+            status_bits.append(f"Fetched at {fetched_at}")
+        if freshness_hours is not None:
+            status_bits.append(f"Age {freshness_hours:.1f}h")
+        if cache_age_hours is not None:
+            status_bits.append(f"Cache age {cache_age_hours:.1f}h")
+        status_bits.append(f"Checksum {checksum}")
+        status_text = " • ".join(status_bits)
+
+        if not schema_valid:
+            detail = "; ".join(validation_errors) if validation_errors else "Schema validation failed"
+            st.error(f"❌ CBO ingestion schema invalid. {detail}")
+        elif cache_used:
+            st.warning(f"⚠️ Using cached CBO data. {status_text}")
+        else:
+            st.success(f"✅ Live CBO data. {status_text}")
+    else:
+        st.info("CBO ingestion health unavailable. Showing built-in baseline metrics.")
     
     # Three main tabs
     tab_summary, tab_revenues, tab_spending, tab_demographics = st.tabs([
@@ -2511,6 +3391,21 @@ def page_library_manager():
     from core.policy_builder import PolicyLibrary
     library = PolicyLibrary()
     
+    # Get categories and determine best default (prefer category with policies)
+    categories = library.get_categories()
+    default_category = "General"
+    
+    # Find first category that has policies, prioritizing "Uploaded Policies"
+    if "Uploaded Policies" in categories and library.list_policies_by_category("Uploaded Policies"):
+        default_category = "Uploaded Policies"
+    else:
+        for cat in categories:
+            if library.list_policies_by_category(cat):
+                default_category = cat
+                break
+    
+    default_index = categories.index(default_category) if default_category in categories else 0
+    
     # Tab navigation
     tab_browse, tab_organize, tab_manage_categories = st.tabs(
         ["📖 Browse & Edit", "🔄 Reorder", "🏷️ Categories"]
@@ -2522,13 +3417,19 @@ def page_library_manager():
         with col1:
             selected_category = st.selectbox(
                 "Select Category:",
-                options=library.get_categories(),
+                options=categories,
+                index=default_index,
                 key="browse_category"
             )
         
         with col2:
             if st.button("🔄 Refresh", width="stretch"):
                 st.rerun()
+        
+        # Show total policy count summary
+        total_policies = len(library.list_policies())
+        if total_policies > 0:
+            st.success(f"📚 **{total_policies} total policies** in library")
         
         category_policies = library.list_policies_by_category(selected_category)
         
@@ -2834,6 +3735,18 @@ def page_policy_upload():
             # Show structured mechanics if available
             if has_structured:
                 mechanics = params["structured_mechanics"]
+
+                domains = []
+                if mechanics.get("tax_mechanics"):
+                    domains.append("Tax")
+                if mechanics.get("social_security_mechanics"):
+                    domains.append("Social Security")
+                if mechanics.get("spending_mechanics"):
+                    domains.append("Spending/Medicaid")
+                if mechanics.get("target_spending_pct_gdp"):
+                    domains.append("Healthcare")
+                if domains:
+                    st.info("Detected domains: " + ", ".join(domains))
                 
                 # Funding mechanisms
                 if mechanics.get("funding_mechanisms"):
@@ -2871,12 +3784,69 @@ def page_policy_upload():
                         st.write(f"- **Prize Range:** ${fund['prize_min_dollars']:,.0f} - ${fund['prize_max_dollars']:,.0f}")
                         st.write(f"- **Annual Cap:** {fund['annual_cap_pct']}%")
                 
-                # Spending targets
-                with st.expander("🎯 Policy Targets"):
+                # Healthcare targets
+                with st.expander("🎯 Healthcare Targets"):
                     st.write(f"**Healthcare Spending Target:** {mechanics.get('target_spending_pct_gdp', 'N/A')}% GDP")
                     st.write(f"**Target Year:** {mechanics.get('target_spending_year', 'N/A')}")
                     st.write(f"**Zero Out-of-Pocket:** {'✓ Yes' if mechanics.get('zero_out_of_pocket') else '✗ No'}")
                     st.write(f"**Universal Coverage:** {'✓ Yes' if mechanics.get('universal_coverage') else '✗ No'}")
+
+                # Tax mechanics
+                if mechanics.get("tax_mechanics"):
+                    tax = mechanics["tax_mechanics"]
+                    with st.expander("💵 Tax Mechanics"):
+                        if tax.get("wealth_tax_rate"):
+                            st.write(f"- Wealth tax rate: {tax['wealth_tax_rate']*100:.2f}%")
+                        if tax.get("consumption_tax_rate"):
+                            st.write(f"- Consumption tax: {tax['consumption_tax_rate']*100:.2f}%")
+                        if tax.get("carbon_tax_per_ton"):
+                            st.write(f"- Carbon tax: ${tax['carbon_tax_per_ton']}/ton")
+                        if tax.get("financial_transaction_tax_rate"):
+                            st.write(f"- FTT: {tax['financial_transaction_tax_rate']*100:.2f}%")
+                        if tax.get("income_tax_changes"):
+                            st.json(tax.get("income_tax_changes"))
+
+                # Social Security mechanics
+                if mechanics.get("social_security_mechanics"):
+                    ss = mechanics["social_security_mechanics"]
+                    with st.expander("🧓 Social Security Mechanics"):
+                        if ss.get("payroll_tax_rate"):
+                            st.write(f"- Payroll tax rate: {ss['payroll_tax_rate']*100:.2f}%")
+                        if ss.get("payroll_tax_cap_change"):
+                            st.write(f"- Payroll tax cap change: {ss['payroll_tax_cap_change']}")
+                        if ss.get("full_retirement_age"):
+                            st.write(f"- FRA: {ss['full_retirement_age']}")
+                        if ss.get("cola_adjustments"):
+                            st.write(f"- COLA: {ss['cola_adjustments']}")
+                        if ss.get("benefit_formula_changes"):
+                            st.json(ss.get("benefit_formula_changes"))
+                        if ss.get("means_testing_enabled"):
+                            threshold = ss.get("means_testing_threshold")
+                            st.write(f"- Means testing: enabled{f' at ${threshold:,.0f}' if threshold else ''}")
+
+                # Spending/Medicaid mechanics
+                if mechanics.get("spending_mechanics"):
+                    sp = mechanics["spending_mechanics"]
+                    with st.expander("🏛️ Spending/Medicaid Mechanics"):
+                        if sp.get("defense_spending_change") is not None:
+                            st.write(f"- Defense change: {sp['defense_spending_change']*100:+.1f}%")
+                        if sp.get("nondefense_discretionary_change") is not None:
+                            st.write(f"- Non-defense change: {sp['nondefense_discretionary_change']*100:+.1f}%")
+                        st.write(f"- Medicaid expansion: {'Yes' if sp.get('medicaid_expansion') else 'No/Not detected'}")
+                        st.write(f"- Block grant: {'Yes' if sp.get('medicaid_block_grant') else 'No'}")
+                        st.write(f"- Per-capita cap: {'Yes' if sp.get('medicaid_per_capita_cap') else 'No'}")
+                        if sp.get("medicaid_fmap_change") is not None:
+                            st.write(f"- FMAP change: {sp['medicaid_fmap_change']:+.1f} pp")
+                        if sp.get("medicaid_waivers"):
+                            st.write("- Waivers detected")
+                        if sp.get("national_health_fund"):
+                            st.write("- National health fund detected (consolidated financing)")
+                        if sp.get("medicare_transfer"):
+                            st.write("- Medicare funding redirected into health fund")
+                        if sp.get("social_security_health_transfer"):
+                            st.write("- Social Security payroll redirected to health fund")
+                        if sp.get("payroll_to_health_fund") and not sp.get("social_security_health_transfer"):
+                            st.write("- Payroll contributions allocated to health fund")
             else:
                 # Legacy format - show old parameters
                 with st.expander("📊 Extracted Parameters"):
@@ -2965,6 +3935,16 @@ def page_policy_recommendations():
         PolicyRecommendationEngine, 
         FiscalGoal
     )
+    
+    # Display uploaded policy selector
+    st.markdown("### 📋 Use an Uploaded Policy")
+    uploaded_policy, policy_name = show_uploaded_policy_selector()
+    
+    if uploaded_policy:
+        st.success(f"✅ Using policy: **{policy_name}**")
+        st.info("Your uploaded policy will be evaluated against the selected fiscal goal.")
+    
+    st.divider()
     
     # Goal selector
     goal = st.selectbox(
@@ -3081,6 +4061,16 @@ def page_scenario_explorer():
     
     from core.policy_enhancements import InteractiveScenarioExplorer, PolicyImpactCalculator
     
+    # Display uploaded policy selector
+    st.markdown("### 📋 Use an Uploaded Policy")
+    uploaded_policy, policy_name = show_uploaded_policy_selector()
+    
+    if uploaded_policy:
+        st.success(f"✅ Using policy: **{policy_name}**")
+        st.info("Your uploaded policy will be used as the baseline for scenario comparison.")
+    
+    st.divider()
+    
     explorer = InteractiveScenarioExplorer()
     
     # Pre-configured scenarios
@@ -3136,6 +4126,40 @@ def page_scenario_explorer():
     st.subheader("Scenario Comparison")
     summary_df = explorer.get_scenario_summary()
     st.dataframe(summary_df, width="stretch")
+    
+    # Add scenario diff viewer
+    st.subheader("Scenario Diff View")
+    from ui.scenario_diff_viewer import ScenarioDiffViewer
+    
+    diff_viewer = ScenarioDiffViewer()
+    
+    # Add all scenarios to diff viewer
+    for name, params in scenarios.items():
+        diff_viewer.add_scenario(name, params)
+    
+    # Two-scenario comparison
+    col1, col2 = st.columns(2)
+    with col1:
+        scenario_1 = st.selectbox("Compare scenario 1:", list(scenarios.keys()), key="scenario_1")
+    with col2:
+        scenario_2 = st.selectbox("Compare scenario 2:", list(scenarios.keys()), key="scenario_2", index=1 if len(scenarios) > 1 else 0)
+    
+    if scenario_1 != scenario_2:
+        diff = diff_viewer.calculate_diff(scenario_1, scenario_2)
+        diff_viewer.render_streamlit_diff(diff)
+    
+    # Multi-scenario comparison
+    st.write("---")
+    st.write("**Multi-Scenario Comparison** (Compare 3+ scenarios)")
+    selected_scenarios = st.multiselect(
+        "Select scenarios to compare:",
+        list(scenarios.keys()),
+        default=list(scenarios.keys())[:3] if len(scenarios) >= 3 else list(scenarios.keys()),
+        key="multi_scenario_comparison"
+    )
+    
+    if len(selected_scenarios) >= 2:
+        diff_viewer.render_streamlit_multi_comparison(selected_scenarios)
     
     # Chart: Deficit by scenario
     st.subheader("10-Year Cumulative Deficit by Scenario")
@@ -3194,6 +4218,16 @@ def page_impact_calculator():
     
     from core.policy_enhancements import PolicyImpactCalculator
     from core.data_loader import load_real_data
+    
+    # Display uploaded policy selector
+    st.markdown("### 📋 Use an Uploaded Policy")
+    uploaded_policy, policy_name = show_uploaded_policy_selector()
+    
+    if uploaded_policy:
+        st.success(f"✅ Using policy: **{policy_name}**")
+        st.info("The impact calculator will evaluate this policy's fiscal effects.")
+    
+    st.divider()
     
     # Get baseline data
     data = load_real_data()
@@ -3345,6 +4379,16 @@ def page_monte_carlo_scenarios():
         PolicySensitivityAnalyzer,
         StressTestAnalyzer,
     )
+    
+    # Display uploaded policy selector
+    st.markdown("### 📋 Use an Uploaded Policy")
+    uploaded_policy, policy_name = show_uploaded_policy_selector()
+    
+    if uploaded_policy:
+        st.success(f"✅ Using policy: **{policy_name}**")
+        st.info("Monte Carlo analysis will stress-test this policy under various economic scenarios.")
+    
+    st.divider()
     
     tabs = st.tabs(["Monte Carlo", "Sensitivity", "Stress Test"])
     
@@ -3535,12 +4579,53 @@ def page_report_generation():
     # Report generation page
     st.title("Report Generation")
     st.write("Generate comprehensive PDF and Excel reports from policy analysis.")
-    
-    # Report type selection
-    report_type = st.radio(
-        "Select Report Type:",
-        ["Policy Summary", "Full Analysis", "Comparative Analysis"]
+
+    from core.policy_builder import (
+        ScenarioBundleLibrary,
+        build_policy_comparison_table,
+        build_scenario_bundle_zip,
     )
+
+    _, policy_library = get_policy_library_policies()
+    available_policies = policy_library.list_policies()
+    scenario_lib = ScenarioBundleLibrary()
+    saved_bundles = scenario_lib.list_bundles()
+
+    st.subheader("Select policies for this report")
+    col_pick, col_load = st.columns([2, 1])
+    with col_pick:
+        st.multiselect(
+            "Policies to include",
+            options=available_policies,
+            default=available_policies[:2] if len(available_policies) >= 2 else available_policies,
+            help="These policies will be compared and exported in the report",
+            key="report_policy_picker",
+        )
+        selected_policy_names = st.session_state.get("report_policy_picker", [])
+    with col_load:
+        bundle_choice = st.selectbox(
+            "Load saved scenario",
+            options=["<none>"] + saved_bundles,
+            index=0,
+        )
+        if bundle_choice != "<none>":
+            bundle = scenario_lib.get_bundle(bundle_choice)
+            if bundle:
+                selected_policy_names = [name for name in bundle.policy_names if name in available_policies]
+                st.session_state["report_policy_picker"] = selected_policy_names
+                st.info(f"Loaded bundle '{bundle_choice}'")
+                st.rerun()
+    
+    # Report type selection (buttons)
+    report_options = ["Policy Summary", "Full Analysis", "Comparative Analysis"]
+    if "report_type" not in st.session_state:
+        st.session_state["report_type"] = report_options[0]
+    st.write("Select Report Type:")
+    report_cols = st.columns(len(report_options))
+    for idx, opt in enumerate(report_options):
+        if report_cols[idx].button(opt, key=f"report_type_{opt}"):
+            st.session_state["report_type"] = opt
+    report_type = st.session_state["report_type"]
     
     col1, col2 = st.columns(2)
     
@@ -3567,6 +4652,7 @@ def page_report_generation():
         
         export_pdf = st.checkbox("Export as PDF", value=True)
         export_excel = st.checkbox("Export as Excel", value=True)
+        export_html = st.checkbox("Export as HTML", value=True)
         export_json = st.checkbox("Export as JSON", value=False)
         
         st.write("**Report Sections:**")
@@ -3575,6 +4661,23 @@ def page_report_generation():
         include_scenarios = st.checkbox("Scenario Comparison", value=True)
         include_monte_carlo = st.checkbox("Monte Carlo Results", value=True)
         include_recommendations = st.checkbox("Recommendations", value=True)
+
+    # Precompute bundle download for convenience
+    selected_policies_for_bundle = [
+        policy_library.get_policy(name)
+        for name in st.session_state.get("report_policy_picker", [])
+        if policy_library.get_policy(name)
+    ]
+    if selected_policies_for_bundle:
+        bundle_preview_df = build_policy_comparison_table(selected_policies_for_bundle)
+        bundle_zip = build_scenario_bundle_zip(selected_policies_for_bundle, bundle_preview_df)
+        st.download_button(
+            "⬇️ Download scenario bundle (zip)",
+            data=bundle_zip,
+            file_name="report_scenario_bundle.zip",
+            mime="application/zip",
+            help="Bundle of selected policies plus comparison CSV/JSON for external tools",
+        )
     
     if st.button("Generate Report", type="primary"):
         with st.status("📄 Building report...", expanded=True) as status:
@@ -3591,96 +4694,125 @@ def page_report_generation():
                 progress.progress(0.2)
                 status.update(label="🧭 Preparing report metadata...", state="running", expanded=True)
                 
+                selected_policies = [
+                    policy_library.get_policy(name)
+                    for name in selected_policy_names
+                    if policy_library.get_policy(name)
+                ]
+
+                if not selected_policies:
+                    st.error("Select at least one policy to generate a report.")
+                    return
+
                 # Create builder
                 builder = ComprehensiveReportBuilder(metadata)
                 progress.progress(0.3)
                 status.update(label="✍️ Drafting content sections...", state="running", expanded=True)
                 
                 # Add executive summary based on report type
+                scenario_label = ", ".join(selected_policy_names) if selected_policy_names else "No policies"
                 if report_type == "Policy Summary":
                     summary_text = (
-                        "This report summarizes the key findings of a fiscal policy analysis. "
-                        "The analysis includes revenue impacts, spending changes, and deficit effects "
-                        "across a 10-year projection horizon."
+                        f"This report summarizes the selected policies ({scenario_label}). "
+                        "It captures parameter deltas, metadata, and comparison tables derived from "
+                        "the Custom Policy Builder."
                     )
                 elif report_type == "Full Analysis":
                     summary_text = (
-                        "This comprehensive report presents a detailed analysis of fiscal policy scenarios. "
-                        "It includes baseline projections, sensitivity analyses, Monte Carlo simulations, "
-                        "and policy recommendations based on multiple fiscal goals."
+                        f"This comprehensive report uses the Custom Policy Builder data for: {scenario_label}. "
+                        "It includes metadata snapshots, parameter spreads, and comparison tables to inform "
+                        "downstream fiscal simulations."
                     )
                 else:
                     summary_text = (
-                        "This report compares multiple policy scenarios to identify optimal approaches "
-                        "for achieving fiscal objectives. Results include comparative metrics, ranking, "
-                        "and scenario-specific recommendations."
+                        f"This report compares multiple policy scenarios ({scenario_label}) to highlight "
+                        "differences across parameters and categories for rapid review."
                     )
                 
                 builder.add_executive_summary(summary_text)
                 
-                # Add sample policy overview
+                # Derive simple impact proxies from the first selected policy
+                base_policy = selected_policies[0]
+                values = [param.value for param in base_policy.parameters.values()]
+                revenue_impact = float(sum(v for v in values if v >= 0))
+                spending_impact = float(sum(v for v in values if v < 0))
+                deficit_impact = revenue_impact + spending_impact
+
                 builder.add_policy_overview(
-                    policy_name="Sample Policy Scenario",
-                    revenue_impact=50.0,
-                    spending_impact=-30.0,
-                    deficit_impact=-80.0,
+                    policy_name=base_policy.name,
+                    revenue_impact=revenue_impact,
+                    spending_impact=spending_impact,
+                    deficit_impact=deficit_impact,
                 )
                 progress.progress(0.45)
                 status.update(label="📊 Adding projections and analysis...", state="running", expanded=True)
                 
-                # Add projections if selected
-                if include_projections:
-                    projection_data = {
-                        "Year": list(range(2025, 2035)),
-                        "Revenue (B)": [6000 + i*50 for i in range(10)],
-                        "Spending (B)": [6900 - i*20 for i in range(10)],
-                        "Deficit (B)": [900 - i*70 for i in range(10)],
-                    }
-                    projections_df = pd.DataFrame(projection_data)
-                    builder.add_fiscal_projections(projections_df)
+                # Prepare derived tables from selected policies
+                comparison_df = build_policy_comparison_table(selected_policies)
+
+                metadata_rows = []
+                for policy in selected_policies:
+                    metadata_rows.append({
+                        "Policy": policy.name,
+                        "Type": policy.policy_type.value,
+                        "Parameters": len(policy.parameters),
+                        "Author": policy.author,
+                        "Created": policy.created_date,
+                    })
+                metadata_df = pd.DataFrame(metadata_rows)
+
+                # Parameter spread table to show where policies diverge most
+                spread_rows = []
+                spread_df = pd.DataFrame()  # Initialize as empty
                 
-                # Add sensitivity if selected
-                if include_sensitivity:
-                    sensitivity_data = {
-                        "Parameter": ["Revenue Growth", "Spending Change", "GDP Growth", "Interest Rate"],
-                        "Impact on Deficit": [-150, 200, -80, 120],
-                        "Elasticity": [-0.25, 0.35, -0.15, 0.20],
-                    }
-                    sensitivity_df = pd.DataFrame(sensitivity_data)
-                    builder.add_sensitivity_analysis(sensitivity_df)
+                # Only calculate spread if we have multiple policies
+                if len(selected_policies) > 1:
+                    for param in sorted({p for policy in selected_policies for p in policy.parameters.keys()}):
+                        values = [policy.parameters[param].value for policy in selected_policies if param in policy.parameters]
+                        if len(values) >= 2:
+                            spread_rows.append({
+                                "Parameter": param,
+                                "Min": float(np.min(values)),
+                                "Max": float(np.max(values)),
+                                "Spread": float(np.max(values) - np.min(values)),  # Renamed from "Range" to avoid Excel keyword
+                                "Policies": len(values),
+                            })
+                    if spread_rows:
+                        spread_df = pd.DataFrame(spread_rows).sort_values(by="Spread", ascending=False).reset_index(drop=True)
+
+                # Add projections if selected (metadata snapshot)
+                if include_projections and not metadata_df.empty:
+                    builder.add_fiscal_projections(metadata_df)
+                
+                # Add sensitivity if selected (only if we have multiple policies with variance)
+                if include_sensitivity and not spread_df.empty:
+                    builder.add_sensitivity_analysis(spread_df)
                 
                 # Add scenarios if selected
-                if include_scenarios:
-                    scenarios_data = {
-                        "Scenario": ["Status Quo", "Tax Reform", "Spending Cut", "Balanced"],
-                        "10-Year Deficit (B)": [9200, 8500, 8200, 7800],
-                        "Avg Annual (B)": [920, 850, 820, 780],
-                        "Final Year Deficit (B)": [650, 450, 300, 200],
-                    }
-                    scenarios_df = pd.DataFrame(scenarios_data)
-                    builder.add_scenario_comparison(scenarios_df)
+                if include_scenarios and not comparison_df.empty:
+                    builder.add_scenario_comparison(comparison_df)
                 
-                # Add Monte Carlo if selected
+                # Add Monte Carlo if selected (use spread stats as proxy)
                 if include_monte_carlo:
-                    mc_data = {
-                        "Metric": ["Mean Deficit", "Median Deficit", "Std Dev", "P10", "P90"],
-                        "Value (B)": [850, 825, 120, 600, 1100],
-                        "Probability": [100, 100, 100, 100, 100],
-                    }
-                    mc_df = pd.DataFrame(mc_data)
+                    mc_rows = []
+                    if not spread_df.empty and "Spread" in spread_df.columns:
+                        try:
+                            mc_rows.append({"Metric": "Mean Spread", "Value": spread_df["Spread"].mean()})
+                            mc_rows.append({"Metric": "Max Spread", "Value": spread_df["Spread"].max()})
+                        except Exception:
+                            pass
+                        mc_rows.append({"Metric": "Parameters Compared", "Value": len(spread_df)})
+                    else:
+                        mc_rows.append({"Metric": "Parameters Compared", "Value": 0})
+                    mc_df = pd.DataFrame(mc_rows)
                     builder.add_monte_carlo_results(mc_df)
                 
                 # Add recommendations if selected
                 if include_recommendations:
                     recommendations_text = (
-                        "<b>1. Revenue Enhancement:</b> Consider targeted tax reforms to increase federal revenue. "
-                        "A 5% increase in revenue would reduce the 10-year deficit by approximately $300B.<br/><br/>"
-                        "<b>2. Spending Efficiency:</b> Implement spending controls in discretionary categories. "
-                        "A 3% reduction in growth would save approximately $200B over 10 years.<br/><br/>"
-                        "<b>3. Balanced Approach:</b> Combine modest revenue increases with targeted spending reforms "
-                        "for the most sustainable fiscal path.<br/><br/>"
-                        "<b>4. Risk Management:</b> Monitor Monte Carlo results for adverse scenarios and maintain "
-                        "policy flexibility for economic changes."
+                        "<b>1. Focus analysis on parameters with the widest ranges.</b> These are the biggest levers across your selected policies.<br/><br/>"
+                        "<b>2. Export the scenario CSV/JSON bundle.</b> Feed it into downstream simulators for quantified fiscal impacts.<br/><br/>"
+                        "<b>3. Tighten assumptions iteratively.</b> Use the Custom Policy Builder to converge on aligned parameter values before running Monte Carlo engines."
                     )
                     builder.add_recommendations(recommendations_text)
                 
@@ -3694,6 +4826,19 @@ def page_report_generation():
                 timestamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
                 
                 generated_files = []
+
+                # Persist scenario comparison data for downstream tools
+                scenario_dir = report_dir / "scenario_data"
+                scenario_dir.mkdir(parents=True, exist_ok=True)
+                scenario_timestamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
+                comparison_csv = scenario_dir / f"scenario_comparison_{scenario_timestamp}.csv"
+                comparison_json = scenario_dir / f"scenario_comparison_{scenario_timestamp}.json"
+
+                if not comparison_df.empty:
+                    comparison_df.to_csv(comparison_csv, index=False)
+                    comparison_df.to_json(comparison_json, orient="records", indent=2)
+                    generated_files.append(("Scenario CSV", comparison_csv))
+                    generated_files.append(("Scenario JSON", comparison_json))
                 
                 # PDF export
                 if export_pdf:
@@ -3702,8 +4847,8 @@ def page_report_generation():
                         builder.generate_pdf(str(pdf_path))
                         generated_files.append(("PDF", pdf_path))
                         st.success(f"PDF report generated: {pdf_path.name}")
-                    except Exception:
-                        st.warning("PDF generation requires reportlab: pip install reportlab")
+                    except Exception as e:
+                        st.error(f"PDF generation failed: {type(e).__name__}: {str(e)}\n\nMake sure reportlab is installed: pip install reportlab")
                 
                 # Excel export
                 if export_excel:
@@ -3712,8 +4857,18 @@ def page_report_generation():
                         builder.generate_excel(str(excel_path))
                         generated_files.append(("Excel", excel_path))
                         st.success(f"Excel report generated: {excel_path.name}")
-                    except Exception:
-                        st.warning("Excel generation requires openpyxl: pip install openpyxl")
+                    except Exception as e:
+                        st.error(f"Excel generation failed: {type(e).__name__}: {str(e)}\n\nMake sure openpyxl is installed: pip install openpyxl")
+
+                # HTML export
+                if export_html:
+                    try:
+                        html_path = report_dir / f"report_{timestamp}.html"
+                        builder.generate_html(str(html_path))
+                        generated_files.append(("HTML", html_path))
+                        st.success(f"HTML report generated: {html_path.name}")
+                    except Exception as e:
+                        st.error(f"HTML generation failed: {e}")
                 
                 # JSON export
                 if export_json:
@@ -3746,8 +4901,9 @@ def page_report_generation():
         
             except Exception as e:
                 status.update(label="❌ Report generation failed", state="error", expanded=True)
-                st.error(f"Error generating report: {e}")
-                st.write(f"Make sure you have reportlab and openpyxl installed:")
+                st.error(f"Error generating report: {type(e).__name__}")
+                st.write(f"**Details:** {str(e)}")
+                st.write(f"**Solution:** Make sure you have reportlab and openpyxl installed:")
                 st.code("pip install reportlab openpyxl")
 
 

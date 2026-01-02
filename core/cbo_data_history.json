@@ -508,5 +508,1535 @@
       "deficit": 1.1260000000000003
     },
     "hash": "b76202d3035b"
+  },
+  {
+    "timestamp": "2025-12-27T19:38:04.943671",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2025-12-27T19:38:04.943637",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "29acba60ed64"
+  },
+  {
+    "timestamp": "2025-12-31T21:03:07.111401",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2025-12-31T21:03:07.111365",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "de9f90da4b65"
+  },
+  {
+    "timestamp": "2025-12-31T21:07:19.086865",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2025-12-31T21:07:19.086808",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "1b2ba599bfad"
+  },
+  {
+    "timestamp": "2025-12-31T21:08:25.366180",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2025-12-31T21:08:25.366153",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "d82d8ba18692"
+  },
+  {
+    "timestamp": "2025-12-31T21:09:19.174335",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2025-12-31T21:09:19.174300",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "6015517603d9"
+  },
+  {
+    "timestamp": "2025-12-31T21:11:32.970176",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2025-12-31T21:11:32.970145",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "172e71af6fa8"
+  },
+  {
+    "timestamp": "2025-12-31T21:12:16.387106",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2025-12-31T21:12:16.387077",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "4c0ce0f42d47"
+  },
+  {
+    "timestamp": "2025-12-31T21:13:28.927588",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2025-12-31T21:13:28.927562",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "bb5023144767"
+  },
+  {
+    "timestamp": "2025-12-31T21:14:54.997030",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2025-12-31T21:14:54.997000",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "9175148bb040"
+  },
+  {
+    "timestamp": "2025-12-31T21:18:01.330198",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2025-12-31T21:18:01.330167",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "4be4ccb81225"
+  },
+  {
+    "timestamp": "2025-12-31T22:04:20.004374",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2025-12-31T22:04:20.004325",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "e8f579bb504b"
+  },
+  {
+    "timestamp": "2025-12-31T22:42:41.673520",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2025-12-31T22:42:41.673475",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "97261f2aa1e4"
+  },
+  {
+    "timestamp": "2025-12-31T23:13:18.190003",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2025-12-31T23:13:18.189921",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "963ee3702f09"
+  },
+  {
+    "timestamp": "2026-01-01T00:24:19.210047",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2026-01-01T00:24:19.209979",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "46a6fe94b018"
+  },
+  {
+    "timestamp": "2026-01-01T01:17:38.740992",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2026-01-01T01:17:38.740922",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "d85035880f7d"
+  },
+  {
+    "timestamp": "2026-01-01T01:19:11.719835",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2026-01-01T01:19:11.719778",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "b44ba4caced8"
+  },
+  {
+    "timestamp": "2026-01-01T06:35:26.853775",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2026-01-01T06:35:26.853709",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "772cf814bf5d"
+  },
+  {
+    "timestamp": "2026-01-01T06:35:54.147972",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2026-01-01T06:35:54.147918",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "c3880a18ea85"
+  },
+  {
+    "timestamp": "2026-01-01T09:04:47.678402",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2026-01-01T09:04:47.678315",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "20c2be676ea6"
+  },
+  {
+    "timestamp": "2026-01-01T09:09:19.632638",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2026-01-01T09:09:19.632582",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "3d10a1fbbe67"
+  },
+  {
+    "timestamp": "2026-01-01T09:16:50.193149",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2026-01-01T09:16:50.193098",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "4780a7458d9e"
+  },
+  {
+    "timestamp": "2026-01-01T09:19:00.945608",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2026-01-01T09:19:00.945559",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "566d770313ff"
+  },
+  {
+    "timestamp": "2026-01-01T09:26:24.918216",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2026-01-01T09:26:24.918144",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "19ff6b259f54"
+  },
+  {
+    "timestamp": "2026-01-01T09:32:25.360375",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2026-01-01T09:32:25.360308",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "d085c67e990d"
+  },
+  {
+    "timestamp": "2026-01-01T09:37:20.941303",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2026-01-01T09:37:20.941248",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "57a5c69697f6"
+  },
+  {
+    "timestamp": "2026-01-01T09:41:15.582251",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2026-01-01T09:41:15.582203",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "3d3b83fc4a29"
+  },
+  {
+    "timestamp": "2026-01-01T17:16:23.354118",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2026-01-01T17:16:23.354063",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "c52828fccb72"
+  },
+  {
+    "timestamp": "2026-01-01T17:45:23.269652",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2026-01-01T17:45:23.269603",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "8c94c2ee3909"
+  },
+  {
+    "timestamp": "2026-01-01T17:51:59.847349",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2026-01-01T17:51:59.847287",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "46d29a45478f"
+  },
+  {
+    "timestamp": "2026-01-01T17:52:15.692969",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2026-01-01T17:52:15.692915",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "4edcf2a0b9e5"
+  },
+  {
+    "timestamp": "2026-01-01T17:57:01.488103",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2026-01-01T17:57:01.488040",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "dfb3c1043bcc"
+  },
+  {
+    "timestamp": "2026-01-01T18:00:42.377477",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2026-01-01T18:00:42.377430",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "d3b7068211ec"
+  },
+  {
+    "timestamp": "2026-01-01T18:29:13.241936",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2026-01-01T18:29:13.241869",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "ba55aaf187d5"
+  },
+  {
+    "timestamp": "2026-01-01T18:31:30.623614",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2026-01-01T18:31:30.623556",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "6f398dd57348"
+  },
+  {
+    "timestamp": "2026-01-01T18:47:27.947924",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2026-01-01T18:47:27.947845",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "7d4ce2ece33f"
+  },
+  {
+    "timestamp": "2026-01-01T18:49:11.969445",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2026-01-01T18:49:11.969381",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "771cd6cf1e07"
+  },
+  {
+    "timestamp": "2026-01-01T19:02:45.864581",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2026-01-01T19:02:45.864535",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "b8b71b87c702"
+  },
+  {
+    "timestamp": "2026-01-01T19:20:19.574208",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2026-01-01T19:20:19.574150",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "e2da9b8c1ef5"
+  },
+  {
+    "timestamp": "2026-01-01T19:25:36.062727",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2026-01-01T19:25:36.062681",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "21b69395968d"
+  },
+  {
+    "timestamp": "2026-01-01T19:35:45.052994",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2026-01-01T19:35:45.052944",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "db43b064477c"
+  },
+  {
+    "timestamp": "2026-01-01T19:49:03.221278",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2026-01-01T19:49:03.221230",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "39bba4f64ebd"
+  },
+  {
+    "timestamp": "2026-01-02T05:02:56.647479",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2026-01-02T05:02:56.647436",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "013f3316f5a7"
+  },
+  {
+    "timestamp": "2026-01-02T05:15:24.224346",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2026-01-02T05:15:24.224287",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "05413645badf"
+  },
+  {
+    "timestamp": "2026-01-02T05:37:16.529414",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2026-01-02T05:37:16.529366",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "0924d016a021"
+  },
+  {
+    "timestamp": "2026-01-02T05:38:51.196257",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2026-01-02T05:38:51.196199",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "a54657782ccd"
+  },
+  {
+    "timestamp": "2026-01-02T05:51:36.820696",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2026-01-02T05:51:36.820652",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "3c1324b06ee4"
+  },
+  {
+    "timestamp": "2026-01-02T06:08:20.444382",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2026-01-02T06:08:20.444334",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "1d4bbdf5e811"
+  },
+  {
+    "timestamp": "2026-01-02T06:12:02.224319",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2026-01-02T06:12:02.224261",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "b4bad284ee75"
+  },
+  {
+    "timestamp": "2026-01-02T06:22:48.741779",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2026-01-02T06:22:48.741731",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "663601a6cf2d"
+  },
+  {
+    "timestamp": "2026-01-02T07:49:47.642114",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2026-01-02T07:49:47.642052",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "b2c6e8bf8a38"
+  },
+  {
+    "timestamp": "2026-01-02T07:51:36.435525",
+    "data": {
+      "gdp": 30.5,
+      "revenues": {
+        "income_tax": 2.5,
+        "payroll_tax": 1.6,
+        "corporate_tax": 0.6,
+        "other_revenues": 1.1
+      },
+      "spending": {
+        "social_security": 1.4,
+        "medicare": 0.848,
+        "medicaid": 0.616,
+        "defense": 0.82,
+        "veterans_benefits": 0.301,
+        "education_training": 0.345,
+        "transportation": 0.137,
+        "other_mandatory": 0.8,
+        "other_discretionary": 1.0,
+        "interest_debt": 0.659
+      },
+      "debt": 38.0,
+      "interest_rate": 4.0,
+      "last_updated": "2026-01-02T07:51:36.435473",
+      "data_source": "CBO/Treasury/OMB",
+      "deficit": 1.1260000000000003
+    },
+    "hash": "3a205d29db05"
   }
 ]

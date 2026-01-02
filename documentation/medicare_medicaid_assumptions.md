@@ -302,7 +302,7 @@ For questions about model assumptions or data sources:
 - Review test suite: `tests/test_medicare_medicaid.py`
 - Check source code: `core/medicare_medicaid.py`
 - Consult integration: `core/combined_outlook.py`
-- See Phase 3 documentation: `documentation/PHASES.md`
+- See Phase 3 documentation: `docs/PHASES.md`
 
 **Model Maintainer**: Polisim Development Team  
 **Last Validation**: December 25, 2025  

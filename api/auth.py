@@ -1,6 +1,8 @@
 """
 Authentication and authorization for POLISIM API
 JWT-based authentication with role-based access control.
+
+Phase 6.2.3: Secrets are managed centrally through the secrets_manager module.
 """
 
 import os
@@ -13,12 +15,15 @@ from flask import request, jsonify, current_app
 from sqlalchemy.orm import Session
 
 from api.models import User, APIKey, UsageLog
+from api.secrets_manager import get_jwt_secret, get_secrets_manager
 
 
 # JWT Configuration
-JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'dev-secret-key-change-in-production')
+# Phase 6.2.3: Load from secrets manager with fallback
+_secrets = get_secrets_manager()
+JWT_SECRET_KEY = _secrets.get('JWT_SECRET_KEY') or os.environ.get('JWT_SECRET_KEY', 'dev-secret-key-change-in-production')
 JWT_ALGORITHM = 'HS256'
-JWT_EXPIRATION_HOURS = 24
+JWT_EXPIRATION_HOURS = int(os.environ.get('JWT_EXPIRATION_HOURS', '24'))  # Configurable
 
 
 class AuthError(Exception):

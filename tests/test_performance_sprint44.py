@@ -16,8 +16,8 @@ from core.medicare_medicaid import MedicareModel
 from core.combined_outlook import CombinedFiscalOutlookModel
 
 
-def test_medicare_performance():
-    """Test Performance #1: Medicare Monte Carlo vectorization."""
+def run_medicare_performance():
+    """Execute Medicare performance test and return metrics and pass flag."""
     print("=" * 80)
     print("  Performance #1: Medicare Monte Carlo Optimization")
     print("=" * 80)
@@ -72,12 +72,20 @@ def test_medicare_performance():
     print("  - Used numpy broadcasting for calculations")
     print("  - Single DataFrame creation instead of incremental building")
     print()
-    
-    return elapsed < target_time and throughput > target_throughput
+
+    passed = elapsed < target_time and throughput > target_throughput
+    return passed, elapsed, throughput, target_time, target_throughput
 
 
-def test_combined_model_caching():
-    """Test Performance #2: Combined model caching."""
+def test_medicare_performance():
+    passed, elapsed, throughput, target_time, target_throughput = run_medicare_performance()
+    assert elapsed < target_time, f"Medicare projection took {elapsed:.2f}s (target < {target_time}s)"
+    assert throughput > target_throughput, f"Throughput {throughput:.0f} iter/s below target {target_throughput} iter/s"
+    assert passed
+
+
+def run_combined_model_caching():
+    """Execute combined model caching test and return pass flag and speedup."""
     print("=" * 80)
     print("  Performance #2: Combined Model Caching")
     print("=" * 80)
@@ -158,12 +166,17 @@ def test_combined_model_caching():
     print("  - Medicaid projections cached by (years, iterations)")
     print("  - Revenue projections recomputed (vary by scenario)")
     print()
-    
-    return cache_hits
+
+    return cache_hits, speedup
 
 
-def test_combined_performance():
-    """Test combined performance improvements."""
+def test_combined_model_caching():
+    cache_hits, speedup = run_combined_model_caching()
+    assert cache_hits, f"Cache speedup only {speedup:.1f}x (target > 1.5x)"
+
+
+def run_combined_performance():
+    """Execute combined performance test and return pass flag and elapsed time."""
     print("=" * 80)
     print("  Combined Performance Test")
     print("=" * 80)
@@ -207,8 +220,13 @@ def test_combined_performance():
     print("  2. Component caching: 1.5-3x faster on repeated calls")
     print("  3. Combined: Sub-linear scaling for multi-scenario analysis")
     print()
-    
-    return elapsed < target_time
+
+    return elapsed < target_time, elapsed, target_time
+
+
+def test_combined_performance():
+    passed, elapsed, target_time = run_combined_performance()
+    assert passed, f"Unified budget projection took {elapsed:.2f}s (target < {target_time}s)"
 
 
 def main():
@@ -223,9 +241,9 @@ def main():
     print()
     
     # Run tests
-    test1_pass = test_medicare_performance()
-    test2_pass = test_combined_model_caching()
-    test3_pass = test_combined_performance()
+    test1_pass, _, _, _, _ = run_medicare_performance()
+    test2_pass, _ = run_combined_model_caching()
+    test3_pass, _, _ = run_combined_performance()
     
     # Summary
     print("=" * 80)

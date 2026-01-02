@@ -8,11 +8,12 @@ Provides:
 - 75-year sustainability metrics
 - Debt trajectory and fiscal gap analysis
 - Performance optimization with caching (Performance #2)
+- Policy-driven projections from uploaded legislative mechanics
 """
 
 import numpy as np
 import pandas as pd
-from typing import Dict, Tuple, Optional
+from typing import Dict, Tuple, Optional, Any, TYPE_CHECKING
 import logging
 import hashlib
 import pickle
@@ -25,6 +26,9 @@ from core.medicare_medicaid import MedicareModel, MedicaidModel
 from core.healthcare import get_policy_by_type, PolicyType
 from core.discretionary_spending import DiscretionarySpendingModel
 from core.interest_spending import InterestOnDebtModel
+
+if TYPE_CHECKING:
+    from core.policy_mechanics_extractor import PolicyMechanics
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +54,7 @@ class CombinedFiscalOutlookModel:
     Performance Optimization:
     - Component-level caching reduces redundant calculations (Performance #2)
     - Vectorized Medicare projections for 42% speedup (Performance #1)
+    - Policy mechanics integration for context-aware projections
     """
     
     def __init__(self, enable_cache: bool = True):
@@ -66,7 +71,13 @@ class CombinedFiscalOutlookModel:
         self.discretionary_model = DiscretionarySpendingModel()
         self.interest_model = InterestOnDebtModel()
         self.enable_cache = enable_cache
-        self._cache = {}  # Manual cache for component results
+        self._cache: Dict[str, Any] = {}  # Manual cache for component results
+        
+        # Policy mechanics storage for context-aware projections
+        self._policy_mechanics: Optional[Dict[str, Any]] = None
+        self._healthcare_gdp_target: Optional[float] = None  # Target % GDP for healthcare spending
+        self._healthcare_target_year: Optional[int] = None  # Year to achieve target
+        self._funding_mechanisms: list = []  # Extracted funding mechanisms
         
         logger.info(f"CombinedFiscalOutlookModel initialized (caching: {'enabled' if enable_cache else 'disabled'})")
     
@@ -75,11 +86,177 @@ class CombinedFiscalOutlookModel:
         self._cache.clear()
         logger.info("Cache cleared")
     
+    def apply_policy_mechanics(self, mechanics: Optional[Dict[str, Any]] = None) -> None:
+        """
+        Apply extracted policy mechanics to adjust model parameters.
+        
+        This enables context-aware projections based on uploaded legislative policies.
+        The mechanics dict should contain structured extraction from PolicyMechanicsExtractor.
+        
+        Args:
+            mechanics: Dictionary containing structured policy mechanics with keys like:
+                - funding_mechanisms: List of funding sources with GDP percentages
+                - target_spending_pct_gdp: Healthcare spending target as % of GDP
+                - target_spending_year: Year to achieve spending target
+                - tax_mechanics: Tax reform parameters
+                - social_security_mechanics: SS reform parameters
+                - spending_mechanics: Discretionary spending parameters
+        """
+        if mechanics is None:
+            self._policy_mechanics = None
+            self._healthcare_gdp_target = None
+            self._healthcare_target_year = None
+            self._funding_mechanisms = []
+            return
+        
+        self._policy_mechanics = mechanics
+        
+        # Extract healthcare spending target
+        self._healthcare_gdp_target = mechanics.get("target_spending_pct_gdp")
+        self._healthcare_target_year = mechanics.get("target_spending_year")
+        self._funding_mechanisms = mechanics.get("funding_mechanisms", [])
+        
+        # Apply tax mechanics to revenue model
+        tax_mech = mechanics.get("tax_mechanics")
+        if tax_mech:
+            if tax_mech.get("payroll_tax_rate"):
+                # Split combined payroll rate between employer/employee
+                rate = tax_mech["payroll_tax_rate"]
+                if hasattr(self.revenue_model, 'payroll'):
+                    self.revenue_model.payroll.social_security_rate = rate / 2
+                    logger.info(f"Applied payroll tax rate: {rate:.1%}")
+            
+            if tax_mech.get("corporate_tax_rate"):
+                if hasattr(self.revenue_model, 'corporate'):
+                    self.revenue_model.corporate.marginal_tax_rate = tax_mech["corporate_tax_rate"]
+                    logger.info(f"Applied corporate tax rate: {tax_mech['corporate_tax_rate']:.1%}")
+        
+        # Apply Social Security mechanics
+        ss_mech = mechanics.get("social_security_mechanics")
+        if ss_mech:
+            tf = self.ss_model.trust_fund
+            if ss_mech.get("payroll_tax_rate"):
+                tf.payroll_tax_rate = ss_mech["payroll_tax_rate"]
+            if ss_mech.get("payroll_tax_cap_change") == "remove_cap":
+                tf.payroll_tax_cap = float('inf')  # No cap = effectively infinite
+            elif ss_mech.get("payroll_tax_cap_change") == "increase_cap" and ss_mech.get("payroll_tax_cap_increase"):
+                tf.payroll_tax_cap = ss_mech["payroll_tax_cap_increase"]
+            if ss_mech.get("full_retirement_age"):
+                self.ss_model.benefit_formula.full_retirement_age = ss_mech["full_retirement_age"]
+            elif ss_mech.get("full_retirement_age_change"):
+                self.ss_model.benefit_formula.full_retirement_age = 67 + ss_mech["full_retirement_age_change"]
+            if ss_mech.get("cola_adjustments") == "chained_cpi":
+                self.ss_model.benefit_formula.annual_cola = 0.026
+        
+        # Apply spending mechanics
+        spend_mech = mechanics.get("spending_mechanics")
+        if spend_mech:
+            if spend_mech.get("defense_spending_change") is not None:
+                self.discretionary_model.assumptions.defense_2025_billions *= (1 + spend_mech["defense_spending_change"])
+            if spend_mech.get("nondefense_discretionary_change") is not None:
+                self.discretionary_model.assumptions.nondefense_discretionary_2025_billions *= (1 + spend_mech["nondefense_discretionary_change"])
+            if spend_mech.get("budget_caps_enabled"):
+                self.discretionary_model.assumptions.inflation_annual = min(
+                    self.discretionary_model.assumptions.inflation_annual, 0.02
+                )
+            
+            # Apply Medicaid mechanics
+            if spend_mech.get("medicaid_expansion"):
+                self.medicaid_model.assumptions.medicaid_expansion_enrollment *= 1.2
+                self.medicaid_model.assumptions.total_medicaid_spending *= 1.1
+            if spend_mech.get("medicaid_block_grant"):
+                self.medicaid_model.assumptions.medicaid_cost_growth_annual = 0.02
+            if spend_mech.get("medicaid_per_capita_cap"):
+                self.medicaid_model.assumptions.medicaid_cost_growth_annual = min(
+                    self.medicaid_model.assumptions.medicaid_cost_growth_annual, 0.02
+                )
+            fmap = spend_mech.get("medicaid_fmap_change")
+            if fmap is not None:
+                self.medicaid_model.assumptions.federal_medicaid_spending *= (1 + fmap / 100)
+            if spend_mech.get("medicaid_waivers"):
+                self.medicaid_model.assumptions.long_term_care_growth_annual = max(
+                    0.025, self.medicaid_model.assumptions.long_term_care_growth_annual - 0.005
+                )
+        
+        # Clear cache since parameters changed
+        self.clear_cache()
+        logger.info(f"Applied policy mechanics: healthcare_target={self._healthcare_gdp_target}, target_year={self._healthcare_target_year}")
+    
+    def _calculate_policy_healthcare_spending(self, years: int, base_gdp_billions: float = 28000.0) -> np.ndarray:
+        """
+        Calculate healthcare spending based on policy mechanics.
+        
+        If a policy has a healthcare GDP target, spending is projected to transition
+        from current levels to the target over the policy timeline.
+        
+        Args:
+            years: Number of projection years
+            base_gdp_billions: Starting GDP (default ~$28T for 2026)
+            
+        Returns:
+            Array of healthcare spending values in billions
+        """
+        # Default healthcare spending model (current baseline)
+        # VA (~$300B) + CHIP (~$20B) + ACA subsidies (~$30B) = ~$350B baseline
+        base_other_health = 350.0
+        default_growth = 0.055  # 5.5% annual growth (healthcare inflation)
+        
+        # GDP growth assumption for calculating % GDP targets
+        gdp_growth = 0.025  # 2.5% real GDP growth
+        
+        if self._healthcare_gdp_target is None:
+            # No policy target - use default growth
+            return base_other_health * np.power(1 + default_growth, np.arange(years))
+        
+        # Calculate GDP trajectory
+        gdp_trajectory = base_gdp_billions * np.power(1 + gdp_growth, np.arange(years))
+        
+        # Current total healthcare spending is ~18% of GDP (~$5T total)
+        # "Other health" (VA, CHIP, ACA) is ~$350B (~1.25% GDP)
+        # Medicare + Medicaid are separate and ~$1.8T (~6.4% GDP)
+        # Together: ~7.65% GDP in federal health programs
+        
+        # Target spending as percentage of total healthcare
+        target_pct = self._healthcare_gdp_target
+        if target_pct > 1:
+            target_pct = target_pct / 100.0  # Convert from percentage to decimal
+        
+        # Calculate target year transition
+        target_year = self._healthcare_target_year or (2026 + years)
+        years_to_target = max(1, target_year - 2026)
+        
+        # Current "other health" is ~1.25% GDP
+        current_other_health_pct = 0.0125
+        
+        # If policy targets 7% total federal health, allocate proportionally
+        # "Other health" should scale with overall target reduction
+        # Current total federal health: ~7.65% GDP
+        # Ratio: 1.25 / 7.65 = 0.163 (16.3% of federal health is "other health")
+        federal_health_ratio = 0.163
+        
+        target_other_health_pct = target_pct * federal_health_ratio
+        
+        # Linear interpolation to target
+        spending = np.zeros(years)
+        for i in range(years):
+            if i < years_to_target:
+                # Transition period - interpolate
+                progress = i / years_to_target
+                current_pct = current_other_health_pct * (1 - progress) + target_other_health_pct * progress
+            else:
+                # After transition - use target with modest growth
+                current_pct = target_other_health_pct * (1 + 0.01 * (i - years_to_target))
+            
+            spending[i] = gdp_trajectory[i] * current_pct
+        
+        return spending
+    
     def _get_cache_key(self, component: str, **kwargs) -> str:
         """Generate cache key from component name and parameters."""
-        # Create deterministic hash of parameters
+        # Create deterministic hash of parameters using SHA-256
+        # MD5 was replaced with SHA-256 for security (CWE-327)
         param_str = f"{component}:" + ":".join(f"{k}={v}" for k, v in sorted(kwargs.items()))
-        return hashlib.md5(param_str.encode()).hexdigest()[:16]
+        return hashlib.sha256(param_str.encode()).hexdigest()[:16]
     
     def _get_cached(self, component: str, **kwargs) -> Optional[pd.DataFrame]:
         """Get cached result if available."""
@@ -152,7 +329,8 @@ class CombinedFiscalOutlookModel:
             years=years,
             gdp_growth=None,  # Uses default 2% baseline
             wage_growth=None,  # Uses default 3% baseline
-            iterations=iterations
+            iterations=iterations,
+            scenario=revenue_scenario  # Pass the scenario parameter
         )
         # Group by year and calculate mean across iterations
         revenue_by_year = revenue_df.groupby('year').agg({
@@ -161,11 +339,17 @@ class CombinedFiscalOutlookModel:
         revenue_billions = revenue_by_year['total_revenues'].values
         
         # Other federal healthcare spending (VA, CHIP, ACA, Public Health, etc.)
-        # Baseline ~$350B/year (2025), grows with healthcare inflation
-        # Separate from Medicare/Medicaid which are modeled explicitly
-        base_other_health = 350  # Billions: VA (~$300B) + CHIP (~$20B) + ACA subsidies (~$30B)
-        other_health_growth = 0.055  # 5.5% annual growth (healthcare inflation)
-        healthcare_spending = base_other_health * np.power(1 + other_health_growth, np.arange(years))
+        # Uses policy mechanics if applied, otherwise baseline growth
+        if self._policy_mechanics is not None:
+            # Use policy-driven healthcare spending trajectory
+            healthcare_spending = self._calculate_policy_healthcare_spending(years)
+            logger.info(f"Using policy-driven healthcare spending (target: {self._healthcare_gdp_target}% GDP)")
+        else:
+            # Baseline ~$350B/year (2025), grows with healthcare inflation
+            # Separate from Medicare/Medicaid which are modeled explicitly
+            base_other_health = 350  # Billions: VA (~$300B) + CHIP (~$20B) + ACA subsidies (~$30B)
+            other_health_growth = 0.055  # 5.5% annual growth (healthcare inflation)
+            healthcare_spending = base_other_health * np.power(1 + other_health_growth, np.arange(years))
         
         # Social Security
         ss_df = self._get_ss_spending(years, iterations, ss_scenario)
@@ -210,7 +394,7 @@ class CombinedFiscalOutlookModel:
             # Revenue
             "total_revenue": revenue_billions,
             # Spending
-            "other_health_spending": healthcare_spending,  # VA, CHIP, ACA, Public Health
+            "healthcare_spending": healthcare_spending,  # VA, CHIP, ACA, Public Health (other health beyond Medicare/Medicaid)
             "social_security_spending": _safe_extract_spending(ss_df, "spending", years),
             "medicare_spending": _safe_extract_spending(medicare_df, "spending", years),
             "medicaid_spending": _safe_extract_spending(medicaid_df, "spending", years),
@@ -219,7 +403,7 @@ class CombinedFiscalOutlookModel:
         })
         
         # Calculate totals
-        mandatory_cols = ["social_security_spending", "medicare_spending", "medicaid_spending", "other_health_spending"]
+        mandatory_cols = ["social_security_spending", "medicare_spending", "medicaid_spending", "healthcare_spending"]
         unified["mandatory_spending"] = unified[mandatory_cols].sum(axis=1)
         
         unified["total_spending"] = (

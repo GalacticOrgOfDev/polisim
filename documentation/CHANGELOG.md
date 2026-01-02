@@ -4,6 +4,22 @@
 
 ---
 
+## December 31, 2025 - Documentation & Roadmap Refresh (Phase 5.4) 📚
+
+### Highlights
+- Relocated and expanded roadmap to `docs/PHASES.md` (Phases 1–18 with objectives, exit criteria, and risks).
+- Cleaned documentation references across README, documentation index, and sprint summaries to point to the canonical roadmap.
+- Updated main README to reflect current status (Phase 5.4), align test counts, and keep the front page accurate.
+- Added clarity in documentation/README about roadmap location; reinforced maintenance guidance in documentation/INDEX.
+- Consolidated theme docs into `documentation/THEME_SYSTEM.md`; removed legacy audit/testing/quick-reference/CSS fix files.
+- Retired sprint/performance/verification one-offs (SPRINT4 summary, Sprint 4.4 performance, Phase 5 verification) now covered in CHANGELOG and core validation docs.
+
+### Rationale
+- Reduce link rot and keep a single source of truth for the roadmap.
+- Present an accurate project front page for contributors and users as we proceed through Phase 5.4.
+
+---
+
 ## December 25, 2025 - SPRINT 4 COMPLETE: Performance Optimization (100%) 🚀
 
 ### 🎯 Performance #1: Medicare Monte Carlo Vectorization

@@ -5,23 +5,23 @@ Tests the new extractor against USGHA text to validate mechanics extraction.
 
 from pathlib import Path
 import json
+import sys
+import pytest
 from core.policy_mechanics_extractor import extract_policy_mechanics, PolicyMechanics
 
 
-def test_usgha_extraction():
-    """Test extraction against actual USGHA PDF file."""
-    
+def run_usgha_extraction():
+    """Run USGHA extraction and return mechanics, pass rate, and error reason."""
     # Load USGHA PDF
     usgha_path = Path("project guidelines/policies and legislation/V1.22 United States Galactic Health Act of 2025.pdf")
     if not usgha_path.exists():
-        print(f"ERROR: USGHA PDF not found at: {usgha_path}")
-        return
-    
+        return None, None, f"USGHA PDF not found at: {usgha_path}"
+
     # Extract text from PDF
     from core.pdf_policy_parser import PolicyPDFProcessor
     processor = PolicyPDFProcessor()
     usgha_text = processor.extract_text_from_pdf(usgha_path)
-    
+
     if "[PDF extraction requires" in usgha_text or "[Error extracting PDF" in usgha_text:
         print(f"ERROR: {usgha_text}")
         print("\nAttempting to install PDF library...")
@@ -30,9 +30,8 @@ def test_usgha_extraction():
         # Try again after install
         usgha_text = processor.extract_text_from_pdf(usgha_path)
         if "[PDF extraction requires" in usgha_text or "[Error extracting PDF" in usgha_text:
-            print(f"ERROR: Still failed: {usgha_text}")
-            return
-    
+            return None, None, f"Extraction failed after install: {usgha_text}"
+
     print("="*80)
     print("TESTING POLICY MECHANICS EXTRACTION FROM PDF")
     print("="*80)
@@ -255,7 +254,16 @@ def test_usgha_extraction():
     else:
         print("✗ EXTRACTION QUALITY: POOR - Major issues detected")
     
-    return mechanics
+    return mechanics, pass_rate, None
+
+
+def test_usgha_extraction():
+    """Test extraction against actual USGHA PDF file."""
+    mechanics, pass_rate, error_reason = run_usgha_extraction()
+    if error_reason:
+        pytest.skip(error_reason)
+    assert mechanics is not None, "Policy mechanics extraction returned no results"
+    assert pass_rate is not None and pass_rate >= 0.8, f"Pass rate {pass_rate:.1%} below threshold"
 
 
 def save_extraction_as_json(mechanics: PolicyMechanics, output_path: str = "extracted_mechanics_test.json"):
@@ -327,7 +335,9 @@ def save_extraction_as_json(mechanics: PolicyMechanics, output_path: str = "extr
 
 
 if __name__ == "__main__":
-    mechanics = test_usgha_extraction()
-    if mechanics:
-        save_extraction_as_json(mechanics)
+    mechanics, _, error_reason = run_usgha_extraction()
+    if mechanics is None:
+        print(error_reason)
+        sys.exit(1)
+    save_extraction_as_json(mechanics)
 

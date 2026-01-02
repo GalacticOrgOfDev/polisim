@@ -624,38 +624,55 @@ def apply_theme(theme_id: str, custom_colors: Optional[Dict[str, str]] = None):
     
     # Get transparency settings from session state for animated themes
     settings = st.session_state.get('settings', {})
+    # Default opacity is lighter for animated themes so sidebar/header stay translucent
     bg_opacity = _clamp_opacity(settings.get('bg_opacity', 0.6))
     content_opacity = _clamp_opacity(settings.get('content_opacity', 0.8))
-    sidebar_opacity = _clamp_opacity(settings.get('sidebar_opacity', 0.9))
-    header_opacity = _clamp_opacity(settings.get('header_opacity', 1.0))
+    sidebar_default = 0.75 if theme.needs_transparency else 0.9
+    header_default = 0.65 if theme.needs_transparency else 1.0
+    sidebar_opacity = _clamp_opacity(settings.get('sidebar_opacity', sidebar_default))
+    header_opacity = _clamp_opacity(settings.get('header_opacity', header_default))
     
     # Calculate background colors
     if theme.needs_transparency:
-        # Guard against excessive transparency on dark themes for readability
-        bg_opacity = _clamp_opacity(bg_opacity, minimum=0.55)
-        content_opacity = _clamp_opacity(content_opacity, minimum=0.65)
-        sidebar_opacity = _clamp_opacity(sidebar_opacity, minimum=0.7)
-        header_opacity = _clamp_opacity(header_opacity, minimum=0.75)
+        # Keep a safety floor for readability but let sliders stay effective for the visual layer
+        raw_bg = _clamp_opacity(bg_opacity)
+        raw_content = _clamp_opacity(content_opacity)
+        raw_sidebar = _clamp_opacity(sidebar_opacity)
+        raw_header = _clamp_opacity(header_opacity)
+
+        safe_bg_opacity = _clamp_opacity(raw_bg, minimum=0.55)
+        safe_sidebar_opacity = _clamp_opacity(raw_sidebar, minimum=0.55)
+        safe_header_opacity = _clamp_opacity(raw_header, minimum=0.75)
+
+        visual_bg_opacity = _clamp_opacity(raw_bg, minimum=0.35)
+        visual_content_opacity = _clamp_opacity(raw_content, minimum=0.45)
+        visual_sidebar_opacity = _clamp_opacity(raw_sidebar, minimum=0.35)
+        visual_header_opacity = _clamp_opacity(raw_header, minimum=0.45)
+
         bg_color = theme.background_color.lstrip('#')
         r, g, b = int(bg_color[0:2], 16), int(bg_color[2:4], 16), int(bg_color[4:6], 16)
-        main_bg = f"rgba({r}, {g}, {b}, {bg_opacity})"
-        content_bg = f"rgba({min(r+10, 255)}, {min(g+10, 255)}, {min(b+10, 255)}, {content_opacity})"
-        sidebar_bg = f"rgba({min(r+10, 255)}, {min(g+10, 255)}, {min(b+10, 255)}, {sidebar_opacity})"
+        main_bg_safe = f"rgba({r}, {g}, {b}, {safe_bg_opacity})"
+        main_bg = f"rgba({r}, {g}, {b}, {visual_bg_opacity})"
+        content_bg = f"rgba({min(r+10, 255)}, {min(g+10, 255)}, {min(b+10, 255)}, {visual_content_opacity})"
+        sidebar_bg_safe = f"rgba({min(r+10, 255)}, {min(g+10, 255)}, {min(b+10, 255)}, {safe_sidebar_opacity})"
+        sidebar_bg = f"rgba({min(r+10, 255)}, {min(g+10, 255)}, {min(b+10, 255)}, {visual_sidebar_opacity})"
+
+        header_color = theme.secondary_background_color.lstrip('#')
+        try:
+            hr, hg, hb = int(header_color[0:2], 16), int(header_color[2:4], 16), int(header_color[4:6], 16)
+            header_bg_safe = f"rgba({hr}, {hg}, {hb}, {safe_header_opacity})"
+            header_bg = f"rgba({hr}, {hg}, {hb}, {visual_header_opacity})"
+        except Exception:
+            header_bg_safe = header_bg = theme.secondary_background_color
     else:
-        main_bg = theme.background_color
+        main_bg = main_bg_safe = theme.background_color
         content_bg = theme.secondary_background_color
-        sidebar_bg = theme.secondary_background_color
+        sidebar_bg = sidebar_bg_safe = theme.secondary_background_color
+        header_bg = header_bg_safe = theme.secondary_background_color
 
     # Sidebar respects transparency slider even if theme defines a static background
+    sidebar_background_safe = sidebar_bg_safe if theme.needs_transparency or theme.sidebar.background is None else theme.sidebar.background
     sidebar_background = sidebar_bg if theme.needs_transparency or theme.sidebar.background is None else theme.sidebar.background
-
-    # Header background respects transparency slider and uses secondary background color
-    header_color = theme.secondary_background_color.lstrip('#')
-    try:
-        hr, hg, hb = int(header_color[0:2], 16), int(header_color[2:4], 16), int(header_color[4:6], 16)
-        header_bg = f"rgba({hr}, {hg}, {hb}, {header_opacity})"
-    except Exception:
-        header_bg = theme.secondary_background_color
 
     # Title glow colors per theme
     title_glow_map = {
@@ -685,29 +702,50 @@ def apply_theme(theme_id: str, custom_colors: Optional[Dict[str, str]] = None):
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@400;500;600;700&family=Source+Code+Pro:wght@400;500;600&display=swap');
     
     /* Allow theme background/animation layers (no hard reset) */
+    :root {{
+        --polisim-main-bg: {main_bg};
+        --polisim-content-bg: {content_bg};
+        --polisim-sidebar-bg: {sidebar_background};
+        --polisim-header-bg: {header_bg};
+    }}
     
     /* Core theme: Light Mode - Windows 2000 Classic */
     { 'body {{ background-color: transparent !important; }}' if theme.needs_transparency else '' }
     .stApp {{
-        background-color: {main_bg} !important;
+        background-color: {main_bg_safe} !important;
+        background-color: var(--polisim-main-bg) !important;
         color: {theme.text_color} !important;
         font-family: {theme.font_family};
     }}
     
     [data-testid="stAppViewContainer"] {{
-        background-color: {main_bg} !important;
+        background-color: {main_bg_safe} !important;
+        background-color: var(--polisim-main-bg) !important;
+    }}
+
+    /* Main content wrapper respects content transparency */
+    [data-testid="stAppViewContainer"] .main .block-container {{
+        background-color: {content_bg} !important;
+        background-color: var(--polisim-content-bg) !important;
     }}
     
     [data-testid="stHeader"] {{
         position: relative;
-        background-color: {header_bg} !important;
+        background-color: {header_bg_safe} !important;
+        background-color: var(--polisim-header-bg) !important;
         border-bottom: 1px solid {theme.text_color}33 !important;
         box-shadow: inset 0 1px 0 {theme.text_color}11 !important;
         z-index: 100;
     }}
+
+    /* Header inner container inherits transparency */
+    [data-testid="stHeader"] > div {{
+        background-color: var(--polisim-header-bg) !important;
+    }}
     
     [data-testid="stToolbar"] {{
-        background-color: {header_bg} !important;
+        background-color: {header_bg_safe} !important;
+        background-color: var(--polisim-header-bg) !important;
         z-index: 99;
     }}
     
@@ -733,8 +771,15 @@ def apply_theme(theme_id: str, custom_colors: Optional[Dict[str, str]] = None):
     
     /* Sidebar */
     section[data-testid="stSidebar"] {{
-        background-color: {sidebar_background} !important;
+        background-color: {sidebar_background_safe} !important;
+        background-color: var(--polisim-sidebar-bg) !important;
         color: {theme.sidebar.color or theme.text_color} !important;
+    }}
+
+    /* Sidebar inner wrappers inherit transparency to avoid opaque shells */
+    section[data-testid="stSidebar"] > div:first-child,
+    section[data-testid="stSidebar"] [data-testid="stSidebarNav"] {{
+        background-color: var(--polisim-sidebar-bg) !important;
     }}
 
     /* Sidebar nav header positioned near collapse control */
@@ -1384,13 +1429,64 @@ def apply_plotly_theme(fig, theme_id: str, custom_colors: Optional[Dict[str, str
     
     # Update trace colors to match theme palette
     chart_colors = get_chart_colors(theme_id)
+
+    def _expand_palette(base: list, needed: int) -> list:
+        if needed <= len(base):
+            return base[:needed]
+        def _blend(hex_color: str, factor: float) -> str:
+            try:
+                r = int(hex_color[1:3], 16)
+                g = int(hex_color[3:5], 16)
+                b = int(hex_color[5:7], 16)
+                r = min(255, int(r + (255 - r) * factor))
+                g = min(255, int(g + (255 - g) * factor))
+                b = min(255, int(b + (255 - b) * factor))
+                return f"#{r:02X}{g:02X}{b:02X}"
+            except Exception:
+                return hex_color
+
+        expanded = []
+        rounds = (needed // len(base)) + 1
+        for round_idx in range(rounds):
+            shift = min(0.25, 0.08 * round_idx)
+            for color in base:
+                expanded.append(_blend(color, shift))
+        return expanded[:needed]
+
+    neg_color = "#D83B01" if theme.id != "light" else "#D83B01"
     if fig.data:
         for i, trace in enumerate(fig.data):
+            trace_type = getattr(trace, 'type', '').lower()
+            series_color = chart_colors[i % len(chart_colors)] if chart_colors else None
+
             if hasattr(trace, 'marker'):
-                trace.marker.color = chart_colors[i % len(chart_colors)]
-            if hasattr(trace, 'line'):
+                if trace_type == 'pie':
+                    # Pie expects marker.colors (list), not marker.color (scalar)
+                    sector_count = 0
+                    for candidate in [getattr(trace, 'labels', None), getattr(trace, 'values', None), getattr(trace, 'ids', None)]:
+                        if candidate is not None:
+                            sector_count = len(candidate)
+                            break
+                    if sector_count == 0:
+                        sector_count = 1
+                    palette = _expand_palette(chart_colors, sector_count)
+                    trace.marker.colors = palette
+                elif trace_type in {"bar", "barpolar"} and hasattr(trace, 'y') and isinstance(trace.y, (list, tuple)):
+                    colors = []
+                    palette = _expand_palette([series_color], len(trace.y)) if series_color else []
+                    for idx, val in enumerate(trace.y):
+                        try:
+                            v = float(val)
+                            colors.append(neg_color if v < 0 else (palette[idx] if palette else series_color))
+                        except Exception:
+                            colors.append(series_color)
+                    trace.marker.color = colors
+                else:
+                    trace.marker.color = series_color
+
+            if trace_type != 'pie' and hasattr(trace, 'line'):
                 if hasattr(trace.line, 'color'):
-                    trace.line.color = chart_colors[i % len(chart_colors)]
+                    trace.line.color = series_color
     
     return fig
 
@@ -1413,23 +1509,41 @@ def get_chart_colors(theme_id: str, custom_colors: Optional[list] = None) -> lis
     
     # Theme-specific color palettes - carefully chosen for distinction and aesthetics
     if theme.id == "matrix":
-        # Matrix: Shades of green with occasional cyan for contrast
-        return ["#00FF41", "#39FF14", "#00CC33", "#7FFF00", "#00FFFF", "#00FF7F", "#ADFF2F", "#32CD32"]
+        # Matrix: ensure first entries are clearly separated (green, cyan, amber, magenta)
+        return [
+            "#00FF41", "#00E5FF", "#FFB000", "#FF3B8D",
+            "#39FF14", "#00BFA5", "#FFD166", "#B388FF",
+        ]
     elif theme.id == "cyberpunk":
-        # Cyberpunk: Neon yellow, magenta, cyan rotation
-        return ["#FFFF00", "#FF00FF", "#00FFFF", "#FF6600", "#FF0099", "#00FF66", "#FF3366", "#FFCC00"]
+        # Cyberpunk: high-contrast neons rotating hue
+        return [
+            "#FF00FF", "#00E5FF", "#FFEA00", "#FF6E40",
+            "#7C4DFF", "#64DD17", "#FF4081", "#00B8D4",
+        ]
     elif theme.id == "nord":
-        # Nord: Frost blues and Aurora colors
-        return ["#88C0D0", "#81A1C1", "#5E81AC", "#BF616A", "#A3BE8C", "#EBCB8B", "#D08770", "#B48EAD"]
+        # Nord: spread aurora hues, ensure first two differ
+        return [
+            "#5E81AC", "#A3BE8C", "#BF616A", "#88C0D0",
+            "#EBCB8B", "#D08770", "#B48EAD", "#81A1C1",
+        ]
     elif theme.id == "solarized":
-        # Solarized: Official accent colors
-        return ["#268BD2", "#2AA198", "#859900", "#B58900", "#CB4B16", "#DC322F", "#D33682", "#6C71C4"]
+        # Solarized: rotate through distinct official accents first
+        return [
+            "#268BD2", "#CB4B16", "#2AA198", "#DC322F",
+            "#859900", "#B58900", "#D33682", "#6C71C4",
+        ]
     elif theme.id == "dark":
-        # Dark: Red spectrum with complementary colors
-        return ["#FF4B4B", "#FF6B6B", "#FF8C8C", "#FFA0A0", "#FFB4B4", "#FFC0C0", "#FFD0D0", "#FFE0E0"]
+        # Dark: high contrast with red for negatives, cyan/amber/green for separation
+        return [
+            "#FF4B4B", "#00C6FF", "#FFC107", "#4CAF50",
+            "#FF8C8C", "#80DEEA", "#FFD54F", "#9CCC65",
+        ]
     else:  # light
-        # Light: Professional Windows-style palette
-        return ["#0078D4", "#106EBE", "#005A9E", "#107C10", "#FFB900", "#D83B01", "#8764B8", "#00B7C3"]
+        # Light: distinct professional palette with early contrast
+        return [
+            "#0078D4", "#D83B01", "#107C10", "#FFB900",
+            "#C239B3", "#00B7C3", "#605E7E", "#498205",
+        ]
 
 
 def customize_theme_colors(theme_id: str) -> Dict[str, str]:

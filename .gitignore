@@ -1,3 +1,45 @@
+# ============================================================================
+# PoliSim .gitignore - Excludes private information and build artifacts
+# ============================================================================
+
+# ============================================================================
+# SECURITY & SECRETS (CRITICAL - Never track these)
+# ============================================================================
+.env
+.env.local
+.env.*.local
+.env.production
+.env.staging
+*.key
+*.pem
+*.crt
+*.p12
+*.pfx
+secrets/
+*_secret*.json
+*_secrets*.json
+*_credentials*.json
+*_password*.txt
+*_token*.txt
+*_api_key*.txt
+.aws/
+.gcloud/
+.oauth2/
+redis.conf
+postgresql.conf
+mysql.conf
+
+# API Runtime/Session Files (generated at runtime)
+api/.auth_audit.json
+api/.sessions.json
+api/.token_metadata.json
+api/.rbac_cache.json
+api/.rate_limit_cache.json
+.secret_rotation_schedule.json
+
+# ============================================================================
+# PYTHON & VIRTUAL ENVIRONMENTS
+# ============================================================================
 __pycache__/
 *.py[cod]
 *$py.class
@@ -9,43 +51,111 @@ env/
 venv/
 .venv/
 ENV/
+env.bak/
+venv.bak/
+pip-log.txt
+pip-delete-this-directory.txt
 
-# Data files
-*.csv
-*.xlsx
-*.log
-databases/
-*.db
+# Python distribution & installation
+*.egg-info/
+*.egg
+dist/
+build/
+*.whl
 
-# OS files
-.DS_Store
-Thumbs.db
-
-# IDE and editor files
+# ============================================================================
+# IDE & EDITOR
+# ============================================================================
 .vscode/
+.vscode/**
 .idea/
+.idea/**
 *.swp
 *.swo
 *~
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+.AppleDouble
+.LSOverride
+*.sw[a-z]
+*~
+.project
+.pydevproject
+.settings/
+*.sublime-workspace
 
-# Python distribution
-*.egg-info/
-dist/
-build/
-*.egg
-
-# Testing
+# ============================================================================
+# TESTING & COVERAGE
+# ============================================================================
 .pytest_cache/
 .coverage
+.coverage.*
 htmlcov/
 *.cover
 .hypothesis/
+.tox/
+.tox/
+test-results/
+coverage.xml
+*.xml
 
-# MCP config (local only)
-.claude_mcp_config.json
-mcp_config.json
+# Test temporary & debug files
+tests/extracted_mechanics_test.json
+tests/section6_temp.txt
+tests/__pycache__/
+tests/.pytest_cache/
+test_output.txt
+test_results*.txt
+full_test_results.txt
+pytest_output.txt
+*_test_output.txt
 
-# Reports and outputs
+# ============================================================================
+# CACHE & COMPILED
+# ============================================================================
+*.cache
+.cache/
+.mypy_cache/
+.ruff_cache/
+*.pyc
+*.pyo
+*.pyd
+.webassets-cache
+instance/
+.warp/
+
+# CBO Data Cache (fetched at runtime, not source code)
+core/cbo_data_cache.json
+core/cbo_data_history.json
+
+# ============================================================================
+# DATA & DATABASES (Local testing only)
+# ============================================================================
+*.db
+*.sqlite
+*.sqlite3
+databases/
+*.csv
+*.xlsx
+*.xls
+data/
+*.dump
+*.sql
+
+# ============================================================================
+# LOGS
+# ============================================================================
+*.log
+logs/
+*.log.*
+debug.log
+audit.log
+api_requests.log
+
+# ============================================================================
+# REPORTS & OUTPUTS (Generated locally)
+# ============================================================================
 reports/generated/
 reports/test_outputs/
 reports/charts/
@@ -54,49 +164,16 @@ reports/*.xlsx
 reports/*.html
 reports/*.png
 reports/*.pdf
+*.pdf
+*.docx
+*.doc
 
-# Test temporary files
-tests/extracted_mechanics_test.json
-tests/section6_temp.txt
-tests/__pycache__/
+# Keep reports/__init__.py if it exists
+!reports/__init__.py
 
-# Config files with local paths
-config.yaml
-
-# Local copilot instructions
-.github/copilot-instructions.md
-
-# Project guidelines (internal only)
-project guidelines/
-
-# Streamlit
-.streamlit/
-.polisim/
-
-# Sphinx documentation build
-docs/build/
-docs/_build/
-*.doctree
-
-# Profiling outputs
-*.prof
-profile_output.prof
-*_profile.txt
-*.pstats
-
-# Jupyter Notebooks
-*.ipynb_checkpoints/
-.ipynb_checkpoints/
-
-# Cache files
-*.cache
-.cache/
-.mypy_cache/
-.ruff_cache/
-core/cbo_data_cache.json
-*.pyc
-
-# Temporary files
+# ============================================================================
+# TEMPORARY & DEBUG FILES
+# ============================================================================
 *.tmp
 *.temp
 tmp/
@@ -104,39 +181,174 @@ temp/
 extracted_pdf_text_debug.txt
 *_debug.txt
 *_temp.txt
-
-# Backup files
+*_test.txt
 *.bak
 *.backup
-*~
+*.orig
+*.rej
 
-# Test regenerated files (local testing only)
-policies/test_*_regenerated.json
-policies/test_*_with_*.json
+# ============================================================================
+# JUPYTER & NOTEBOOK
+# ============================================================================
+.ipynb_checkpoints/
+*.ipynb_checkpoints/
+.jupyter/
 
-# Policy uploads (user content, not versioned)
+# ============================================================================
+# DOCUMENTATION BUILD
+# ============================================================================
+docs/build/
+docs/_build/
+*.doctree
+site/
+
+# ============================================================================
+# PROFILING & MONITORING
+# ============================================================================
+*.prof
+profile_output.prof
+*_profile.txt
+*.pstats
+*.trace
+flamegraph.txt
+*.gz
+
+# ============================================================================
+# BUILD & DISTRIBUTION
+# ============================================================================
+dist/
+build/
+*.egg-info/
+*.whl
+*.tar.gz
+
+# ============================================================================
+# MCP & CONFIG (Local only)
+# ============================================================================
+.claude_mcp_config.json
+mcp_config.json
+.github/copilot-instructions.md
+
+# Local config overrides (config.yaml is tracked if needed for defaults)
+config.local.yaml
+*.local.yaml
+
+# ============================================================================
+# INTERNAL DOCUMENTATION (Guidelines, not public docs)
+# ============================================================================
+project guidelines/
+
+# Debug doc (used locally, can have sensitive info)
+docs/debug.md
+
+# ============================================================================
+# STREAMLIT & UI
+# ============================================================================
+.streamlit/
+.streamlit/**
+.polisim/
+.polisim/**
+.polisim_cache/
+
+# ============================================================================
+# POLICIES & USER CONTENT (Not versioned)
+# ============================================================================
 policies/uploads/
 policies/custom_policies/*.json
+!policies/custom_policies/_library_metadata.json
+policies/test_*_regenerated.json
+policies/test_*_with_*.json
+policies/scenarios.json
 
-# Local environment files
-.env
-.env.local
-.env.*.local
-
-# Node modules (if any frontend work)
+# ============================================================================
+# NODE MODULES (Frontend, if applicable)
+# ============================================================================
 node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.eslintcache
 
-# Mac specific
+# ============================================================================
+# OS-SPECIFIC FILES
+# ============================================================================
+# macOS
 .DS_Store
 .AppleDouble
 .LSOverride
+._*
+.Spotlight-V100
+.Trashes
 
-# Windows specific
+# Windows
 Thumbs.db
 ehthumbs.db
 Desktop.ini
 $RECYCLE.BIN/
+*.lnk
+*.exe
 
-# Git specific
-*.orig
-*.rej
+# Linux
+.directory
+
+# ============================================================================
+# GENERATED FILES NOT IN REPO
+# ============================================================================
+.pytest_cache
+.tox
+.coverage
+htmlcov
+*.egg-info
+__pycache__
+
+# ============================================================================
+# DOCKER & CONTAINER
+# ============================================================================
+.docker/
+docker-compose.override.yml
+.dockerignore.local
+*.tar
+docker-volumes/
+
+# ============================================================================
+# PACKAGE MANAGERS
+# ============================================================================
+poetry.lock
+package-lock.json
+yarn.lock
+Pipfile.lock
+
+# ============================================================================
+# MISC LOCAL FILES
+# ============================================================================
+*.swp
+*.swo
+*~
+.tags
+.tags_sorted_by_file
+.vimrc
+.Rhistory
+
+# Timing/profiling scripts (local dev)
+measure_timing.py
+
+# ============================================================================
+# SCENARIO BUNDLE LIBRARIES (Runtime-generated)
+# ============================================================================
+*.bundle.json
+bundles.json
+scenario_bundles/
+
+# ============================================================================
+# REDIS & DATABASE RUNTIME
+# ============================================================================
+dump.rdb
+*.rdb
+*.aof
+
+# ============================================================================
+# FLASK/API RUNTIME
+# ============================================================================
+flask_session/
+.flask_session/

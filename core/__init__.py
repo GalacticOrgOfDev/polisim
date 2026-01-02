@@ -106,6 +106,10 @@ from core.policy_builder import (
     PolicyTemplate,
     PolicyLibrary,
     PolicyType as BuilderPolicyType,
+    ScenarioBundle,
+    ScenarioBundleLibrary,
+    build_policy_comparison_table,
+    build_scenario_bundle_zip,
 )
 
 from core.pdf_policy_parser import (
@@ -209,6 +213,10 @@ __all__ = [
     'PolicyParameter',
     'PolicyTemplate',
     'PolicyLibrary',
+    'ScenarioBundle',
+    'ScenarioBundleLibrary',
+    'build_policy_comparison_table',
+    'build_scenario_bundle_zip',
     'PolicyPDFProcessor',
     'PolicyKeywordMatcher',
     'PolicyExtraction',

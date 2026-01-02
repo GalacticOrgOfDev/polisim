@@ -111,7 +111,8 @@ def test_usgha_context_aware():
     print("✓ USGHA context-aware simulation successful")
     print("=" * 80)
     
-    return results
+    assert not results.empty
+    assert set(['Year']).issubset(results.columns)
 
 
 def test_current_us_context_aware():
@@ -190,7 +191,8 @@ def test_current_us_context_aware():
     print("✓ Current US context-aware simulation successful")
     print("=" * 80)
     
-    return results
+    assert not results.empty
+    assert set(['Year']).issubset(results.columns)
 
 
 if __name__ == "__main__":

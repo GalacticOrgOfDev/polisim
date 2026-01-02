@@ -12,6 +12,7 @@ Phase 5.2: Comprehensive testing of data integration features
 import pytest
 import json
 import time
+import os
 from pathlib import Path
 from datetime import datetime, timedelta
 from unittest.mock import Mock, patch, MagicMock
@@ -181,6 +182,53 @@ class TestDataValidation:
         
         assert not is_valid
         assert any('revenue' in e.lower() for e in errors)
+
+
+class TestSchemaValidation:
+    """Test schema validation and cache handling."""
+
+    def test_schema_validation_detects_missing_fields(self):
+        scraper = CBODataScraper()
+        ok, errors = scraper._validate_schema({'gdp': 30.0})
+        assert not ok
+        assert any('missing field' in e for e in errors)
+
+    def test_invalid_cache_is_dropped(self, tmp_path):
+        cache_file = tmp_path / "cbo_data_cache.json"
+        cache_file.write_text(json.dumps({'gdp': 'thirty'}))
+
+        with patch.object(CBODataScraper, 'CACHE_FILE', cache_file):
+            scraper = CBODataScraper(use_cache=True)
+            assert scraper.cached_data == {}
+            assert scraper.cached_data_valid is False
+
+    def test_live_invalid_falls_back_to_valid_cache(self, tmp_path):
+        cache_file = tmp_path / "cbo_data_cache.json"
+        cache_payload = {
+            'gdp': 30.0,
+            'debt': 35.0,
+            'deficit': 5.0,
+            'revenues': {'income_tax': 2.0},
+            'spending': {'healthcare': 2.5},
+            'interest_rate': 4.0,
+            'last_updated': datetime.now().isoformat(),
+        }
+        cache_file.write_text(json.dumps(cache_payload))
+
+        with patch.object(CBODataScraper, 'CACHE_FILE', cache_file):
+            scraper = CBODataScraper(use_cache=True)
+
+            # Force live path to be invalid (non-numeric GDP)
+            scraper._get_gdp_data = lambda: "bad-gdp"
+            scraper._get_revenue_data = lambda: {'income_tax': 2.0}
+            scraper._get_spending_data = lambda: {'healthcare': 2.5}
+            scraper._get_national_debt = lambda: 35.0
+            scraper._get_interest_rate = lambda: 4.0
+            payload = scraper.get_current_us_budget_data()
+
+            assert payload['cache_used'] is True
+            assert payload['schema_valid'] is True
+            assert payload['data_source'].lower().endswith('(cache)')
 
 
 class TestHistoricalData:
@@ -398,6 +446,141 @@ class TestCacheFallback:
                                     
                                     # Should return cached data due to validation failure
                                     assert data['gdp'] == 30.0
+
+
+class TestMetadataAndFreshness:
+    """Test metadata attachment and freshness tracking."""
+
+    def test_compute_freshness_uses_last_updated(self, tmp_path):
+        cache_file = tmp_path / "cbo_data_cache.json"
+        with patch.object(CBODataScraper, 'CACHE_FILE', cache_file):
+            scraper = CBODataScraper(use_cache=True)
+            ts = (datetime.now() - timedelta(hours=5)).isoformat()
+            data = {'last_updated': ts}
+            freshness = scraper._compute_freshness_hours(data)
+            assert 4.5 <= freshness <= 5.5
+
+    def test_compute_freshness_falls_back_to_mtime(self, tmp_path):
+        cache_file = tmp_path / "cbo_data_cache.json"
+        cache_file.write_text("{}")
+        past = datetime.now() - timedelta(hours=3)
+        os.utime(cache_file, (past.timestamp(), past.timestamp()))
+
+        with patch.object(CBODataScraper, 'CACHE_FILE', cache_file):
+            scraper = CBODataScraper(use_cache=True)
+            data = {}
+            freshness = scraper._compute_freshness_hours(data)
+            assert 2.5 <= freshness <= 3.5
+
+    def test_live_fetch_includes_checksum_and_zero_freshness(self, tmp_path):
+        cache_file = tmp_path / "cbo_data_cache.json"
+        history_file = tmp_path / "cbo_data_history.json"
+
+        with patch.object(CBODataScraper, 'CACHE_FILE', cache_file):
+            with patch.object(CBODataScraper, 'HISTORY_FILE', history_file):
+                scraper = CBODataScraper(use_cache=True)
+
+                with patch.multiple(
+                    scraper,
+                    _get_gdp_data=Mock(return_value=30.0),
+                    _get_revenue_data=Mock(return_value={
+                        'income_tax': 2.5,
+                        'payroll_tax': 1.5,
+                        'corporate_tax': 0.6,
+                        'other_revenues': 1.0,
+                    }),
+                    _get_spending_data=Mock(return_value={
+                        'social_security': 1.4,
+                        'medicare': 0.8,
+                        'medicaid': 0.6,
+                        'defense': 0.8,
+                        'interest_debt': 0.65,
+                        'other_mandatory': 0.5,
+                        'other_discretionary': 0.5,
+                    }),
+                    _get_national_debt=Mock(return_value=35.0),
+                    _get_interest_rate=Mock(return_value=4.0),
+                ):
+                    data = scraper.get_current_us_budget_data()
+
+                assert data['checksum']
+                assert data['cache_used'] is False
+                assert data['freshness_hours'] == 0.0
+                assert data.get('cache_age_hours', 0.0) == 0.0
+                assert 'live' in data['data_source'].lower()
+
+    def test_cache_fallback_sets_freshness_and_checksum(self, tmp_path):
+        cache_file = tmp_path / "cbo_data_cache.json"
+        history_file = tmp_path / "cbo_data_history.json"
+
+        last_updated = (datetime.now() - timedelta(hours=4)).isoformat()
+        cache_data = {
+            'gdp': 30.0,
+            'debt': 35.0,
+            'deficit': 1.5,
+            'revenues': {'income_tax': 2.5},
+            'spending': {'healthcare': 2.0},
+            'interest_rate': 4.0,
+            'last_updated': last_updated,
+            'data_source': 'Cache',
+        }
+        with open(cache_file, 'w') as f:
+            json.dump(cache_data, f)
+
+        with patch.object(CBODataScraper, 'CACHE_FILE', cache_file):
+            with patch.object(CBODataScraper, 'HISTORY_FILE', history_file):
+                scraper = CBODataScraper(use_cache=True)
+
+                with patch.object(scraper, '_validate_data', return_value=(False, ['invalid'])):
+                    with patch.multiple(
+                        scraper,
+                        _get_gdp_data=Mock(return_value=999.0),
+                        _get_revenue_data=Mock(return_value={}),
+                        _get_spending_data=Mock(return_value={}),
+                        _get_national_debt=Mock(return_value=35.0),
+                        _get_interest_rate=Mock(return_value=4.0),
+                    ):
+                        data = scraper.get_current_us_budget_data()
+
+                assert data['cache_used'] is True
+                assert data['checksum']
+                assert data['freshness_hours'] >= 3.9
+                assert data.get('cache_age_hours', 0.0) >= 3.9
+                assert 'cache' in data['data_source'].lower()
+
+    def test_cache_fallback_includes_age_from_mtime(self, tmp_path):
+        cache_file = tmp_path / "cbo_data_cache.json"
+        history_file = tmp_path / "cbo_data_history.json"
+
+        cache_data = {
+            'gdp': 30.0,
+            'debt': 35.0,
+            'deficit': 1.5,
+            'revenues': {'income_tax': 2.5},
+            'spending': {'healthcare': 2.0},
+            'interest_rate': 4.0,
+            'data_source': 'Cache',
+        }
+        with open(cache_file, 'w') as f:
+            json.dump(cache_data, f)
+
+        # set mtime ~5 hours ago
+        past = datetime.now() - timedelta(hours=5)
+        os.utime(cache_file, (past.timestamp(), past.timestamp()))
+
+        with patch.object(CBODataScraper, 'CACHE_FILE', cache_file):
+            with patch.object(CBODataScraper, 'HISTORY_FILE', history_file):
+                scraper = CBODataScraper(use_cache=True)
+
+                # Force fallback by raising from live getters
+                with patch.object(scraper, '_get_gdp_data', side_effect=Exception("network")):
+                    data = scraper.get_current_us_budget_data()
+
+        assert data['cache_used'] is True
+        assert data['checksum']
+        assert 4.0 <= data['freshness_hours'] <= 6.5
+        assert 4.0 <= data['cache_age_hours'] <= 6.5
+        assert 'cache' in data['data_source'].lower()
 
 
 if __name__ == "__main__":

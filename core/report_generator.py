@@ -12,6 +12,7 @@ Features:
 import os
 import io
 import json
+from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass, field
@@ -34,8 +35,9 @@ try:
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
     from openpyxl.utils.dataframe import dataframe_to_rows
     OPENPYXL_AVAILABLE = True
-except ImportError:
+except ImportError as e:
     OPENPYXL_AVAILABLE = False
+    OPENPYXL_ERROR = str(e)
 
 
 @dataclass
@@ -211,7 +213,8 @@ class ExcelReportGenerator:
     def __init__(self, metadata: Optional[ReportMetadata] = None):
         """Initialize Excel generator."""
         if not OPENPYXL_AVAILABLE:
-            raise ImportError("openpyxl required for Excel generation. Install with: pip install openpyxl")
+            error_msg = f"openpyxl required for Excel generation. Install with: pip install openpyxl\nError: {OPENPYXL_ERROR if 'OPENPYXL_ERROR' in globals() else 'Unknown import error'}"
+            raise ImportError(error_msg)
         
         self.metadata = metadata or ReportMetadata(title="Policy Analysis Report")
     
@@ -232,66 +235,160 @@ class ExcelReportGenerator:
         Returns:
             Path to generated Excel file
         """
-        wb = Workbook()
-        ws = wb.active
-        ws.title = "Summary"
-        
-        # Summary sheet
-        row = 1
-        ws[f'A{row}'] = self.metadata.title
-        self._style_header_cell(ws[f'A{row}'])
-        row += 1
-        
-        ws[f'A{row}'] = f"Generated: {self.metadata.date}"
-        row += 1
-        ws[f'A{row}'] = f"Author: {self.metadata.author}"
-        row += 2
-        
-        if summary:
-            ws[f'A{row}'] = "Summary Statistics"
-            self._style_subheader_cell(ws[f'A{row}'])
+        try:
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "Summary"
+            
+            # Summary sheet
+            row = 1
+            try:
+                ws[f'A{row}'] = self.metadata.title
+                self._style_header_cell(ws[f'A{row}'])
+            except (TypeError, AttributeError, ValueError) as e:
+                # Skip styling if cell access fails
+                pass
             row += 1
             
-            for key, value in summary.items():
-                ws[f'A{row}'] = str(key)
-                ws[f'B{row}'] = value
-                row += 1
-        
-        # Data sheets
-        for sheet_name, df in sections.items():
-            if len(sheet_name) > 31:
-                sheet_name = sheet_name[:31]
+            try:
+                ws[f'A{row}'] = f"Generated: {self.metadata.date}"
+            except (TypeError, AttributeError, ValueError):
+                pass
+            row += 1
             
-            ws = wb.create_sheet(sheet_name)
-            self._write_dataframe_to_sheet(ws, df)
-        
-        wb.save(output_path)
-        return output_path
+            try:
+                ws[f'A{row}'] = f"Author: {self.metadata.author}"
+            except (TypeError, AttributeError, ValueError):
+                pass
+            row += 2
+            
+            if summary:
+                try:
+                    ws[f'A{row}'] = "Summary Statistics"
+                    self._style_subheader_cell(ws[f'A{row}'])
+                except (TypeError, AttributeError, ValueError):
+                    pass
+                row += 1
+                
+                for key, value in summary.items():
+                    try:
+                        ws[f'A{row}'] = str(key)
+                        ws[f'B{row}'] = value
+                    except (TypeError, AttributeError, ValueError):
+                        pass
+                    row += 1
+            
+            # Data sheets
+            for sheet_name, df in sections.items():
+                if len(sheet_name) > 31:
+                    sheet_name = sheet_name[:31]
+                
+                # Skip empty dataframes
+                if df is None or (isinstance(df, pd.DataFrame) and df.empty):
+                    continue
+                
+                ws = wb.create_sheet(sheet_name)
+                self._write_dataframe_to_sheet(ws, df)
+            
+            wb.save(output_path)
+            return output_path
+        except KeyError as ke:
+            # Re-raise with more context for debugging
+            raise RuntimeError(f"KeyError in Excel generation: '{ke}' - this usually means a column name is invalid or a dictionary key doesn't exist") from ke
+        except Exception as e:
+            # Re-raise with more context
+            raise RuntimeError(f"Excel generation failed: {type(e).__name__}: {str(e)}") from e
     
     def _write_dataframe_to_sheet(self, ws, df: pd.DataFrame):
         """Write DataFrame to worksheet with formatting."""
-        # Headers
-        for col_idx, col_name in enumerate(df.columns, 1):
-            cell = ws.cell(row=1, column=col_idx, value=col_name)
-            self._style_header_cell(cell)
-        
-        # Data
-        for row_idx, (_, row) in enumerate(df.iterrows(), 2):
-            for col_idx, value in enumerate(row.values, 1):
-                cell = ws.cell(row=row_idx, column=col_idx, value=value)
-                self._style_data_cell(cell)
-        
-        # Adjust column widths
-        for col_idx in range(1, len(df.columns) + 1):
-            max_length = 0
-            column_letter = self._get_column_letter(col_idx)
+        try:
+            # Headers
+            for col_idx, col_name in enumerate(df.columns, 1):
+                try:
+                    cell = ws.cell(row=1, column=col_idx, value=str(col_name))
+                    self._style_header_cell(cell)
+                except Exception:
+                    # Skip header if it fails
+                    pass
             
-            for row_idx in range(1, len(df) + 2):
-                cell = ws[f'{column_letter}{row_idx}']
-                if cell.value:
-                    max_length = max(max_length, len(str(cell.value)))
+            # Data - with robust type conversion
+            for row_idx, (_, row) in enumerate(df.iterrows(), 2):
+                for col_idx, value in enumerate(row.values, 1):
+                    try:
+                        # Convert problematic types before writing
+                        cell_value = self._sanitize_cell_value(value)
+                        cell = ws.cell(row=row_idx, column=col_idx, value=cell_value)
+                        self._style_data_cell(cell)
+                    except Exception as cell_error:
+                        # If even sanitized value fails, skip this cell
+                        pass
             
-            ws.column_dimensions[column_letter].width = min(max_length + 2, 50)
+            # Adjust column widths
+            for col_idx in range(1, len(df.columns) + 1):
+                max_length = 0
+                column_letter = self._get_column_letter(col_idx)
+                
+                for row_idx in range(1, len(df) + 2):
+                    try:
+                        cell = ws.cell(row=row_idx, column=col_idx)
+                        if cell.value:
+                            max_length = max(max_length, len(str(cell.value)))
+                    except Exception:
+                        pass
+                
+                try:
+                    ws.column_dimensions[column_letter].width = min(max_length + 2, 50)
+                except Exception:
+                    pass
+        except Exception as e:
+            # Log and re-raise with context
+            import traceback
+            error_msg = f"Error writing dataframe to sheet: {type(e).__name__}: {str(e)}\n{traceback.format_exc()}"
+            raise RuntimeError(error_msg) from e
+    
+    def _sanitize_cell_value(self, value):
+        """Convert any value to something Excel can handle."""
+        import numpy as np
+        
+        # Handle None and NaN
+        if value is None:
+            return None
+        if pd.isna(value):
+            return None
+        
+        # Handle numpy types
+        if isinstance(value, np.integer):
+            return int(value)
+        if isinstance(value, np.floating):
+            if np.isnan(value) or np.isinf(value):
+                return None
+            return float(value)
+        
+        # Handle Python numbers
+        if isinstance(value, (int, float)):
+            if isinstance(value, float) and (np.isnan(value) or np.isinf(value)):
+                return None
+            return value
+        
+        # Handle booleans
+        if isinstance(value, (bool, np.bool_)):
+            return bool(value)
+        
+        # Handle datetime
+        if isinstance(value, (pd.Timestamp, pd.datetime)):
+            return value
+        
+        # For everything else, convert to string (safest fallback)
+        try:
+            # Try to convert to string, but check if it looks like a Range object
+            str_value = str(value)
+            if 'Range' in str_value or 'Cell' in str_value:
+                # Looks like an openpyxl object, skip it
+                return None
+            return str_value
+        except Exception:
+            # Last resort: return None
+            return None
     
     def _style_header_cell(self, cell):
         """Style a header cell."""
@@ -474,4 +571,25 @@ class ComprehensiveReportBuilder:
         with open(output_path, 'w') as f:
             json.dump(report_data, f, indent=2, default=str)
         
+        return output_path
+
+    def generate_html(self, output_path: str) -> str:
+        """Generate a simple HTML report (no external deps)."""
+        parts: List[str] = []
+        parts.append("<html><head><meta charset='utf-8'><title>{}</title>".format(self.metadata.title))
+        parts.append("<style>body{font-family:Arial, sans-serif; margin:24px;} h1,h2{color:#1f4788;} table{border-collapse:collapse; width:100%; margin-bottom:16px;} th,td{border:1px solid #ccc; padding:6px;} th{background:#2e5c8a; color:#fff;}</style>")
+        parts.append("</head><body>")
+        parts.append(f"<h1>{self.metadata.title}</h1>")
+        parts.append(f"<p><strong>Date:</strong> {self.metadata.date}<br/><strong>Author:</strong> {self.metadata.author}<br/><strong>Description:</strong> {self.metadata.description}</p>")
+
+        for section in self.sections:
+            parts.append(f"<h2>{section.title}</h2>")
+            if section.content:
+                parts.append(f"<p>{section.content}</p>")
+            if section.data is not None and isinstance(section.data, pd.DataFrame):
+                parts.append(section.data.to_html(index=False, border=0))
+
+        parts.append("</body></html>")
+
+        Path(output_path).write_text("\n".join(parts), encoding="utf-8")
         return output_path

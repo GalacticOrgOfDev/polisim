@@ -2,14 +2,32 @@
 Tests for API authentication (Phase 5, Sprint 5.1)
 """
 
+import os
 import pytest
 import json
 from datetime import datetime, timedelta, timezone
 
 from api.rest_server import create_api_app
-from api.models import User, APIKey
-from api.database import get_db_session, init_database
+from api.models import User, APIKey, Base
+from api.database import get_db_session, configure_engine, dispose_engine
 from api.auth import create_jwt_token, decode_jwt_token, AuthError
+
+
+@pytest.fixture(autouse=True)
+def in_memory_db():
+    """Configure isolated in-memory SQLite database for each test."""
+    os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
+    engine = configure_engine(os.environ['DATABASE_URL'])
+    Base.metadata.create_all(engine)
+    try:
+        yield
+    finally:
+        try:
+            Base.metadata.drop_all(engine)
+        except Exception:
+            pass
+        finally:
+            dispose_engine()
 
 
 @pytest.fixture
@@ -29,22 +47,11 @@ def client(app):
 @pytest.fixture
 def db_session():
     """Create test database session with cleanup."""
-    import os
-    from api.database import engine
-    from api.models import Base
-    
-    # Use in-memory database for tests
-    os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
-    
-    # Recreate tables for each test
-    Base.metadata.create_all(engine)
-    
     session = get_db_session()
-    yield session
-    
-    session.close()
-    # Clean up tables after test
-    Base.metadata.drop_all(engine)
+    try:
+        yield session
+    finally:
+        session.close()
 
 
 @pytest.fixture

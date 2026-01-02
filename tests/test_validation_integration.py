@@ -19,7 +19,7 @@ class TestCombinedOutlookValidation:
         """Valid parameters should work without error"""
         df = self.model.project_unified_budget(
             years=10,
-            iterations=1000,
+            iterations=100,
             revenue_scenario='baseline',
             discretionary_scenario='baseline',
             interest_scenario='baseline'
@@ -30,12 +30,12 @@ class TestCombinedOutlookValidation:
     def test_invalid_years_too_low(self):
         """Years < 1 should raise ValidationError"""
         with pytest.raises(ValidationError, match="below minimum"):
-            self.model.project_unified_budget(years=0, iterations=1000)
+            self.model.project_unified_budget(years=0, iterations=100)
     
     def test_invalid_years_too_high(self):
         """Years > 75 should raise ValidationError"""
         with pytest.raises(ValidationError, match="exceeds maximum"):
-            self.model.project_unified_budget(years=100, iterations=1000)
+            self.model.project_unified_budget(years=100, iterations=100)
     
     def test_invalid_iterations_too_low(self):
         """Iterations < 100 should raise ValidationError"""
@@ -52,7 +52,7 @@ class TestCombinedOutlookValidation:
         with pytest.raises(ValidationError, match="not a valid option"):
             self.model.project_unified_budget(
                 years=10,
-                iterations=1000,
+                iterations=100,
                 revenue_scenario='invalid_scenario'
             )
     
@@ -61,7 +61,7 @@ class TestCombinedOutlookValidation:
         with pytest.raises(ValidationError, match="not a valid option"):
             self.model.project_unified_budget(
                 years=10,
-                iterations=1000,
+                iterations=100,
                 discretionary_scenario='invalid_scenario'
             )
     
@@ -70,7 +70,7 @@ class TestCombinedOutlookValidation:
         with pytest.raises(ValidationError, match="not a valid option"):
             self.model.project_unified_budget(
                 years=10,
-                iterations=1000,
+                iterations=100,
                 interest_scenario='invalid_scenario'
             )
     
@@ -81,21 +81,21 @@ class TestCombinedOutlookValidation:
         assert len(df) == 1
         
         # Maximum values (use smaller values for performance)
-        df = self.model.project_unified_budget(years=30, iterations=1000)
+        df = self.model.project_unified_budget(years=30, iterations=100)
         assert len(df) == 30
     
     def test_typical_usage_patterns(self):
         """Common usage patterns should work correctly"""
         # Short-term projection
-        df = self.model.project_unified_budget(years=5, iterations=1000)
+        df = self.model.project_unified_budget(years=5, iterations=100)
         assert len(df) == 5
         
         # Medium-term projection (CBO 10-year)
-        df = self.model.project_unified_budget(years=10, iterations=1000)
+        df = self.model.project_unified_budget(years=10, iterations=100)
         assert len(df) == 10
         
         # Long-term projection (CBO 30-year)
-        df = self.model.project_unified_budget(years=30, iterations=1000)
+        df = self.model.project_unified_budget(years=30, iterations=100)
         assert len(df) == 30
     
     def test_all_revenue_scenarios(self):
@@ -103,7 +103,7 @@ class TestCombinedOutlookValidation:
         for scenario in ['baseline', 'recession', 'strong_growth', 'demographic_challenge']:
             df = self.model.project_unified_budget(
                 years=5,
-                iterations=500,
+                iterations=100,
                 revenue_scenario=scenario
             )
             assert len(df) == 5
@@ -113,7 +113,7 @@ class TestCombinedOutlookValidation:
         for scenario in ['baseline', 'growth', 'reduction']:
             df = self.model.project_unified_budget(
                 years=5,
-                iterations=500,
+                iterations=100,
                 discretionary_scenario=scenario
             )
             assert len(df) == 5
@@ -123,7 +123,7 @@ class TestCombinedOutlookValidation:
         for scenario in ['baseline', 'rising', 'falling', 'spike']:
             df = self.model.project_unified_budget(
                 years=5,
-                iterations=500,
+                iterations=100,
                 interest_scenario=scenario
             )
             assert len(df) == 5

@@ -1,6 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/microsoft/pyright/main/packages/pyright-internal/schemas/pyrightconfig.schema.json",
-  "pythonVersion": "3.9",
+  "pythonVersion": "3.11",
   "typeCheckingMode": "basic",
   "reportMissingTypeStubs": "none",
   "reportMissingImports": "warning",

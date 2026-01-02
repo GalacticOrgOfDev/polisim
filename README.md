@@ -2,7 +2,7 @@
 
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-458/460%20passing-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-417/419%20passing-brightgreen.svg)](tests/)
 [![Production Ready](https://img.shields.io/badge/status-production%20ready-brightgreen.svg)](documentation/VALIDATION_REPORT_DEC26.md)
 [![Documentation](https://img.shields.io/badge/docs-comprehensive-blue.svg)](documentation/INDEX.md)
 
@@ -12,8 +12,8 @@ Polisim enables researchers, policymakers, and citizens to independently model a
 
 ## 🛰️ Project Status
 
-- **Current:** Phase 5.4 (Web UI + Data Integration) — launcher/bootstrap hardening and dashboard refresh
-- **Complete:** Phases 1-4 (see [documentation/PHASES.md](documentation/PHASES.md) for history)
+- **Current:** Phase 6.2.5 (Security Hardening & Policy Extraction) — DDoS protection complete, policy-adaptive scenarios
+- **Complete:** Phases 1-6.2.5 (see [docs/PHASES.md](docs/PHASES.md) for full roadmap)
 
 ## 🎯 Core Purpose
 
@@ -26,7 +26,7 @@ Polisim enables researchers, policymakers, and citizens to independently model a
 - **✅ Validated:** Projections validated against government baselines (CBO, SSA, CMS) within ±2-5%
 - **🌐 Democratic:** Open source (MIT license), accessible to everyone
 - **🔧 Extensible:** Modular architecture enables community contributions
-- **🚀 Production Ready:** 458/460 tests passing, comprehensive error handling, optimized performance
+- **🚀 Production Ready:** 417/419 tests passing, comprehensive error handling, optimized performance
 
 ## 💡 Why Uncertainty Matters
 
@@ -70,6 +70,7 @@ Monte Carlo simulations reveal how economic shocks, demographic changes, and par
 - **Context-Aware Extraction** - PDF policy documents → structured mechanisms
 - **Baseline Validation** - Automated comparison against CBO/SSA/CMS projections
 - **Interactive Dashboard** - Streamlit web interface with educational tooltips
+- **Scenario Bundles** - Save/load custom policy bundles, diff parameters, export zip bundles and report-ready comparison CSV/JSON
 - **AI Integration** - MCP server for Claude/LLM-powered analysis
 - **Report Generation** - HTML charts, CSV exports, comprehensive metrics
 
@@ -80,15 +81,44 @@ Monte Carlo simulations reveal how economic shocks, demographic changes, and par
 ### Installation
 
 ```powershell
-# Clone and install
+# Clone repository
 git clone https://github.com/GalacticOrgOfDev/polisim.git
 cd polisim
+
+# Recommended: Use the launcher (validates dependencies automatically)
+python launcher.py
+```
+
+### Launcher (Recommended ✅)
+
+The **launcher** is the recommended way to start PoliSim:
+
+```powershell
+python launcher.py
+```
+
+**Benefits:**
+- ✅ Validates all dependencies before starting
+- ✅ Checks CBO data ingestion and API prerequisites  
+- ✅ Auto-installs missing packages (with your approval)
+- ✅ Non-blocking UI - no freezing during operations
+- ✅ Real-time activity log with timestamps
+- ✅ One-click access to Dashboard, API, or MCP Server
+
+See [docs/LAUNCHER_GUIDE.md](docs/LAUNCHER_GUIDE.md) for full documentation.
+
+### Alternative Setup Methods
+
+```powershell
+# Manual installation (advanced users)
 pip install -r requirements.txt
+python main.py --startup-check-only  # Important: validate dependencies
+streamlit run ui/dashboard.py        # Start dashboard
 ```
 
 ### Friendly Startup Check
 
-- Run dependency check only: `python main.py --startup-check-only` (adds `--auto-install-deps` to skip prompts).
+- Run dependency + data ingestion check: `python main.py --startup-check-only` (adds `--auto-install-deps` to skip prompts). Reports CBO data source, cache use, freshness hours, and checksum.
 - The installer/launcher plan is outlined in [docs/startup_check_plan.md](docs/startup_check_plan.md).
 - Windows one-liner bootstrap: `powershell -ExecutionPolicy Bypass -File scripts/bootstrap_windows.ps1 -LaunchDashboard` (downloads embeddable Python if needed, builds venv, installs deps, runs startup check, then launches Streamlit).
 - Launcher shell (Windows, Tk-based): `python launcher.py` (cyberpunk splash, calls bootstrap for install + launch, opens mobile links).
@@ -156,7 +186,87 @@ python mcp_server.py
 
 ---
 
-## 🎨 Interactive Web Dashboard
+## � Public API (Slice 5.7)
+
+**Programmatic access to simulations, scenarios, and policy analysis.**
+
+The REST API enables external applications and services to leverage POLISIM's fiscal modeling capabilities.
+
+### Quick Start
+
+```bash
+# Start the API server
+python api/rest_server.py
+
+# Endpoint base URL
+BASE_URL = http://localhost:5000/api/v1
+```
+
+### Core Endpoints
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/v1/simulate` | POST | Run Monte Carlo policy simulation |
+| `/v1/scenarios` | GET | List available policy scenarios |
+| `/v1/data/ingestion-health` | GET | Check CBO data status (source, freshness, schema) |
+
+### Example Usage
+
+```bash
+# Run simulation via curl
+curl -X POST http://localhost:5000/api/v1/simulate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "policy_name": "Tax Reform 2025",
+    "revenue_change_pct": 10.5,
+    "spending_change_pct": -5.0,
+    "years": 10,
+    "iterations": 5000
+  }'
+
+# List scenarios
+curl http://localhost:5000/api/v1/scenarios?filter_type=baseline&page=1&per_page=20
+
+# Check data ingestion status
+curl http://localhost:5000/api/v1/data/ingestion-health
+```
+
+### Configuration Flags
+
+Control API behavior via environment variables:
+
+```bash
+# Authentication & Rate Limiting
+PUBLIC_API_ENABLED=true              # Enable/disable public endpoints
+API_REQUIRE_AUTH=false               # Require auth (default: optional)
+API_RATE_LIMIT_ENABLED=false         # Enable rate limiting
+API_RATE_LIMIT_PER_MINUTE=60         # Requests per minute limit
+API_MAX_PAYLOAD_MB=10                # Max request size (MB)
+API_TIMEOUT_SECONDS=300              # Request timeout
+
+# Versioning
+API_VERSION=1.0                      # Current API version
+```
+
+### Features
+
+- **Versioned Endpoints** - `/api/v1/` with clear upgrade paths
+- **Request Validation** - Pydantic models enforce schema compliance
+- **Rate Limiting** - Optional per-user/key throttling
+- **Auth Toggle** - API key or JWT (optional, configurable)
+- **Structured Errors** - Consistent error format with field-level details
+- **Observability** - Structured JSON logging, metrics collection, SLO tracking
+- **Request Tracing** - X-Request-ID header for debugging
+
+### Full Documentation
+
+**[API Contract & Reference →](docs/SLICE_5_7_API_CONTRACT.md)**
+
+**[API Test Suite →](tests/test_slice_5_7_api.py)**
+
+---
+
+## �🎨 Interactive Web Dashboard
 
 Launch the Streamlit interface for interactive analysis:
 
@@ -226,7 +336,7 @@ polisim/
 ├── policies/             # Policy definitions & scenarios
 ├── scripts/              # Analysis & utility scripts
 ├── ui/                   # Streamlit dashboard
-├── tests/                # Comprehensive test suite (417+ tests)
+├── tests/                # Comprehensive test suite (419 tests; 417 passing)
 ├── documentation/        # Technical guides & references
 └── reports/              # Generated outputs (HTML, CSV, charts)
 ```
@@ -243,14 +353,30 @@ polisim/
 - [MCP Integration Guide](MCP_INTEGRATION.md) - AI agent integration
 - [Sprint 5.4 Slice Work Plan](docs/slice%2054%20work%20plan.md) - Current UI enhancement tasks
 
+**Slice 5.7 (Public API & Hardening):**
+- [API Contract & Reference](docs/SLICE_5_7_API_CONTRACT.md) - Versioned endpoints, schemas, auth, rate limits, SLOs
+- [API Test Suite](tests/test_slice_5_7_api.py) - Integration and contract tests
+- [v1 Middleware](api/v1_middleware.py) - Auth, rate limiting, validation, observability
+- [Observability Guide](api/observability.py) - Logging, metrics, SLO reporting
+
+**Phase 6.2 (Security Hardening):**
+- [Security Hardening Guide](docs/PHASE_6_2_SECURITY_HARDENING_GUIDE.md) - CORS, security headers, input validation, rate limiting
+- [Security Audit Report](docs/PHASE_6_2_SECURITY_AUDIT_REPORT.md) - CVE findings, remediation plan, compliance checklist
+- [Secrets Management & Configuration](documentation/PHASE_6_2_3_SECRETS_MANAGEMENT.md) - Multi-backend secrets manager, configuration management, secret rotation
+
 **Technical:**
 - [Context Framework](documentation/CONTEXT_FRAMEWORK.md) - Policy extraction system
+- [Unified Extraction Architecture](docs/UNIFIED_EXTRACTION_ARCHITECTURE.md) - Multi-domain policy analysis (healthcare, tax, social security, spending)
+- [Extraction Implementation Complete](docs/EXTRACTION_IMPLEMENTATION_COMPLETE.md) - Status report, test results, integration guide
 - [Type Hints Guide](documentation/TYPE_HINTS_GUIDE.md) - Code standards
 - [Naming Conventions](documentation/NAMING_CONVENTIONS.md) - Style guide
+- [Theme System](documentation/THEME_SYSTEM.md) - Consolidated themes, fixes, and testing
+- [Phase 5 Slice Plan](docs/phase%205%20slices.md) - Remaining Phase 5 slices and exit checklist
+- [Ingestion Health Endpoint](docs/ingestion_health_endpoint.md) - API checksum/freshness/schema status (optional auth + rate-limit flags)
 
 **Reference:**
 - [Changelog](documentation/CHANGELOG.md) - Version history
-- [Project Phases](documentation/PHASES.md) - Roadmap
+- [Project Phases](docs/PHASES.md) - Roadmap
 - [Validation Report](documentation/VALIDATION_REPORT_DEC26.md) - System health (A+ grade, 417/419 tests passing)
 
 ---
@@ -258,7 +384,7 @@ polisim/
 ## 🧪 Testing
 
 ```powershell
-# Run full test suite (417+ tests)
+# Run full test suite (419 tests; 417 passing)
 pytest tests/
 
 # Run with coverage report
@@ -315,7 +441,7 @@ Permissive license enabling fork, modify, and redistribute freely—including fo
 - **Discussions:** Methodology questions, model improvements, collaboration
 - **Email:** galacticorgofdev@gmail.com
 
-**Built with rigor. Validated with 417+ tests. Ready for policy analysis at scale.**
+**Built with rigor. Validated with 417/419 tests. Ready for policy analysis at scale.**
 
 ---
 

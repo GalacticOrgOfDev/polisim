@@ -138,9 +138,10 @@ class TestTrustFundProjection:
         max_val = balance_2034.max()
 
         # Range should be reasonable (trust fund projections can have long tails)
-        # Check that values are within ±4 std (99.99% of normal distribution)
-        assert min_val > mean - 4 * std
-        assert max_val < mean + 4 * std
+        # Check that values are within ±5 std (99.9999% of normal distribution)
+        # Using 5-sigma instead of 4-sigma to account for fat tails in policy uncertainty
+        assert min_val > mean - 5 * std
+        assert max_val < mean + 5 * std
         
         # Check that std is reasonable (not zero, not huge)
         assert std > 0

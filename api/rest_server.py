@@ -11,7 +11,9 @@ Features:
 """
 
 import json
-from datetime import datetime
+import os
+import uuid
+from datetime import datetime, timezone
 from typing import Dict, List, Any, Optional
 from pathlib import Path
 
@@ -22,6 +24,9 @@ try:
 except ImportError:
     HAS_FLASK = False
 
+from pydantic import ValidationError
+
+from api.config_manager import get_config
 from core.policy_builder import CustomPolicy, PolicyLibrary
 from core.monte_carlo_scenarios import MonteCarloPolicySimulator, PolicySensitivityAnalyzer, StressTestAnalyzer
 from core.policy_enhancements import PolicyRecommendationEngine, PolicyImpactCalculator, InteractiveScenarioExplorer, FiscalGoal
@@ -34,12 +39,37 @@ try:
     from api.models import User, APIKey, UserPreferences
     from api.auth import (
         create_jwt_token, authenticate_user, authenticate_api_key,
-        require_auth, AuthError
+        require_auth, require_rate_limit, AuthError
     )
     from api.database import init_database, get_db_session
     HAS_AUTH = True
 except ImportError:
     HAS_AUTH = False
+
+# Validation models (Slice 5.7)
+try:
+    from api.validation_models import (
+        SimulateRequest, ScenariosListRequest, IngestionHealthRequest,
+        SimulateResponse, ScenariosListResponse, IngestionHealthResponse,
+        SimulationResults, SensitivityParameter, SensitivityAnalysis,
+        SimulationMetadata, ScenarioListItem, PaginationInfo, ScenariosListMetadata,
+        IngestionInfo, ValidationInfo, IngestionMetrics, HistoryEntry,
+        IngestionHealthMetadata, ErrorResponse, ErrorCode, FieldError,
+        create_error_response
+    )
+    HAS_VALIDATION = True
+except ImportError:
+    HAS_VALIDATION = False
+
+# V1 middleware (Slice 5.7)
+try:
+    from api.v1_middleware import (
+        get_api_config, before_v1_request, after_v1_request,
+        require_v1_auth, init_rate_limiter, apply_rate_limit
+    )
+    HAS_V1_MIDDLEWARE = True
+except ImportError:
+    HAS_V1_MIDDLEWARE = False
 
 
 class APIError(Exception):
@@ -49,17 +79,49 @@ class APIError(Exception):
         self.status_code = status_code
 
 
+def _get_cors_origins() -> list:
+    """
+    Get list of allowed CORS origins from environment configuration.
+    
+    Phase 6.2 Security Hardening: Implement whitelist-based CORS
+    instead of allowing all origins.
+    """
+    config = get_config()
+    return config.api.get_cors_origins()
+
+
 def create_api_app() -> "Flask":
     """Create and configure Flask application."""
     if not HAS_FLASK:
         raise ImportError("Flask and flask-cors required. Install with: pip install flask flask-cors")
     
     app = Flask(__name__)
-    CORS(app)  # Enable CORS for all routes
+    
+    # Configure CORS (6.2.2 - Security Hardening)
+    # Define allowed origins for CORS - restrict to trusted domains
+    cors_config = {
+        "origins": _get_cors_origins(),
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+        "allow_headers": ["Content-Type", "Authorization", "X-API-Key"],
+        "expose_headers": ["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset"],
+        "supports_credentials": True,
+        "max_age": 3600,  # Cache preflight for 1 hour
+    }
+    CORS(app, resources={r"/api/*": cors_config})
     
     # Initialize database (Phase 5)
     if HAS_AUTH:
         init_database()
+    
+    # Initialize v1 middleware (Slice 5.7) and configuration
+    if HAS_V1_MIDDLEWARE:
+        config_mgr = get_config()
+        init_rate_limiter(
+            config_mgr.api.rate_limit_per_minute,
+            config_mgr.api.rate_limit_burst
+        )
+        app.before_request(before_v1_request)
+        app.after_request(after_v1_request)
     
     # Error handler
     @app.errorhandler(APIError)
@@ -81,6 +143,42 @@ def create_api_app() -> "Flask":
             })
             response.status_code = error.status_code
             return response
+    
+    # Security headers handler (Phase 6.2 - Security Hardening)
+    @app.after_request
+    def apply_security_headers(response):
+        """Apply security headers to all responses."""
+        # Enforce HTTPS
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+        
+        # Prevent MIME type sniffing
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        
+        # Prevent clickjacking attacks
+        response.headers['X-Frame-Options'] = 'DENY'
+        
+        # XSS protection (legacy, but still useful for older browsers)
+        response.headers['X-XSS-Protection'] = '1; mode=block'
+        
+        # Content Security Policy - restrict resource loading
+        response.headers['Content-Security-Policy'] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data: https:; "
+            "font-src 'self'; "
+            "connect-src 'self'; "
+            "frame-ancestors 'none'; "
+            "upgrade-insecure-requests"
+        )
+        
+        # Referrer policy
+        response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        
+        # Feature policy / Permissions policy
+        response.headers['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=()'
+        
+        return response
     
     # ==================== AUTHENTICATION ENDPOINTS (Phase 5) ====================
     
@@ -400,10 +498,135 @@ def create_api_app() -> "Flask":
         except Exception as e:
             raise APIError(f"Failed to get policy template: {str(e)}")
     
-    # Simulation endpoints
+    # ==================== SLICE 5.7: V1 API ENDPOINTS ====================
+    
+    # Simulation endpoint (POST /api/v1/simulate)
+    @app.route('/api/v1/simulate', methods=['POST'])
+    def simulate_v1():
+        """
+        Run policy simulation with Monte Carlo analysis.
+        
+        Slice 5.7: Versioned, validated, observable.
+        """
+        request_id = str(uuid.uuid4())
+        api_version = "1.0"
+        
+        try:
+            # Parse and validate request
+            request_data = request.get_json()
+            if not request_data:
+                raise ValidationError({"": ["Request body must be valid JSON"]})
+            
+            if not HAS_VALIDATION:
+                raise APIError("Validation models not available", 500)
+            
+            req = SimulateRequest(**request_data)
+            
+            # Run simulation
+            simulator = MonteCarloPolicySimulator()
+            start_time = datetime.now(timezone.utc)
+            
+            result = simulator.simulate_policy(
+                policy_name=req.policy_name,
+                revenue_change_pct=req.revenue_change_pct,
+                spending_change_pct=req.spending_change_pct,
+                years=req.years,
+                iterations=req.iterations,
+            )
+            
+            duration_ms = int((datetime.now(timezone.utc) - start_time).total_seconds() * 1000)
+            
+            # Build response
+            sensitivity = None
+            if req.include_sensitivity:
+                try:
+                    analyzer = PolicySensitivityAnalyzer()
+                    sens_df = analyzer.tornado_analysis(
+                        base_revenue=5980,
+                        base_spending=6911,
+                        parameter_ranges={"Revenue": (-10, 20), "Spending": (-30, 10)},
+                    )
+                    sensitivity = SensitivityAnalysis(
+                        parameters=[
+                            SensitivityParameter(
+                                name=str(row['Parameter']),
+                                impact_low=float(row.get('Low', 0)),
+                                impact_high=float(row.get('High', 0)),
+                                tornado_rank=int(idx) + 1,
+                            )
+                            for idx, (_, row) in enumerate(sens_df.iterrows())
+                        ]
+                    )
+                except Exception as e:
+                    # Log sensitivity failure, but don't fail the entire request
+                    print(f"Warning: Sensitivity analysis failed: {e}")
+            
+            response = SimulateResponse(
+                status="success",
+                simulation_id=str(uuid.uuid4()),
+                policy_name=req.policy_name,
+                years=req.years,
+                iterations=req.iterations,
+                results=SimulationResults(
+                    mean_deficit=float(result.mean_deficit),
+                    median_deficit=float(result.median_deficit),
+                    std_dev=float(result.std_dev_deficit),
+                    p10_deficit=float(result.p10_deficit),
+                    p90_deficit=float(result.p90_deficit),
+                    probability_balanced=float(result.probability_balanced) / 100.0,  # Convert percentage to probability
+                    confidence_bounds=[float(result.p10_deficit), float(result.p90_deficit)],
+                ),
+                sensitivity=sensitivity,
+                metadata=SimulationMetadata(
+                    timestamp=datetime.now(timezone.utc),
+                    api_version=api_version,
+                    duration_ms=duration_ms,
+                ),
+            )
+            
+            return jsonify(response.model_dump()), 200
+            
+        except ValidationError as e:
+            """Handle Pydantic validation errors."""
+            field_errors = []
+            for error in e.errors():
+                field_name = ".".join(str(x) for x in error['loc'])
+                field_errors.append(
+                    FieldError(
+                        field=field_name,
+                        message=error['msg'],
+                        value=request_data.get(field_name) if 'field_name' in locals() else None,
+                    )
+                )
+            error_resp = create_error_response(
+                error_code=ErrorCode.VALIDATION_ERROR,
+                message="Request validation failed",
+                request_id=request_id,
+                api_version=api_version,
+                field_errors=field_errors,
+            )
+            return jsonify(error_resp.model_dump()), 400
+        except APIError as e:
+            error_resp = create_error_response(
+                error_code=ErrorCode.INTERNAL_ERROR if e.status_code >= 500 else ErrorCode.VALIDATION_ERROR,
+                message=e.message,
+                request_id=request_id,
+                api_version=api_version,
+            )
+            return jsonify(error_resp.model_dump()), e.status_code
+        except Exception as e:
+            error_resp = create_error_response(
+                error_code=ErrorCode.INTERNAL_ERROR,
+                message=f"Simulation failed: {str(e)}",
+                request_id=request_id,
+                api_version=api_version,
+            )
+            return jsonify(error_resp.model_dump()), 500
+    
+    # Backward compatibility: old /api/simulate/policy endpoint
     @app.route('/api/simulate/policy', methods=['POST'])
     def simulate_policy():
-        """Run policy simulation."""
+        """Run policy simulation (legacy endpoint, redirect to v1)."""
         try:
             data = request.get_json()
             
@@ -442,6 +665,195 @@ def create_api_app() -> "Flask":
             raise
         except Exception as e:
             raise APIError(f"Simulation failed: {str(e)}")
+    
+    # Scenarios listing endpoint (GET /api/v1/scenarios)
+    @app.route('/api/v1/scenarios', methods=['GET'])
+    def scenarios_list_v1():
+        """
+        List available policy scenarios with filtering and pagination.
+        
+        Slice 5.7: Versioned, validated, observable.
+        """
+        request_id = str(uuid.uuid4())
+        api_version = "1.0"
+        
+        try:
+            # Parse and validate query params
+            if not HAS_VALIDATION:
+                raise APIError("Validation models not available", 500)
+            
+            req = ScenariosListRequest(
+                page=request.args.get('page', 1, type=int),
+                per_page=request.args.get('per_page', 20, type=int),
+                filter_type=request.args.get('filter_type', 'all', type=str),
+                search=request.args.get('search', None, type=str),
+                sort_by=request.args.get('sort_by', 'created_at', type=str),
+                sort_order=request.args.get('sort_order', 'desc', type=str),
+            )
+            
+            # Load scenarios from proper scenarios file, not catalog (which contains PDFs)
+            # Try multiple possible scenario file locations
+            scenarios_files = [
+                Path('policies/scenarios.json'),
+                Path('policies/scenario_usgha_base.json'),
+            ]
+            scenarios_data = []
+            
+            for scenarios_file in scenarios_files:
+                if scenarios_file.exists():
+                    try:
+                        with open(scenarios_file, 'r', encoding='utf-8') as f:
+                            data = json.load(f)
+                            # Handle both list and dict formats
+                            if isinstance(data, list):
+                                # If it's a list of scenario objects
+                                scenarios_data = [s for s in data if isinstance(s, dict)]
+                            elif isinstance(data, dict):
+                                # If it's a dict with 'scenarios' key
+                                if 'scenarios' in data and isinstance(data['scenarios'], list):
+                                    scenarios_data = [s for s in data['scenarios'] if isinstance(s, dict)]
+                                else:
+                                    # Single scenario object
+                                    scenarios_data = [data] if 'name' in data else []
+                            
+                            if scenarios_data:
+                                break  # Found valid scenarios, stop searching
+                    except (json.JSONDecodeError, UnicodeDecodeError) as e:
+                        # Log error and try next file
+                        import logging
+                        logging.getLogger(__name__).warning(f"Failed to load {scenarios_file}: {e}")
+                        continue
+            
+            # If no scenarios found, return empty list with proper response
+            if not scenarios_data:
+                response = ScenariosListResponse(
+                    status="success",
+                    scenario_count=0,
+                    returned_count=0,
+                    pagination=PaginationInfo(page=1, per_page=20, total_pages=0),
+                    scenarios=[],
+                    metadata=ScenariosListMetadata(
+                        timestamp=datetime.now(timezone.utc),
+                        api_version=api_version,
+                    ),
+                )
+                return jsonify(response.model_dump()), 200
+            
+            # Apply filtering - safely handle dict items
+            if req.filter_type.value != 'all':
+                scenarios_data = [
+                    s for s in scenarios_data 
+                    if isinstance(s, dict) and s.get('type') == req.filter_type.value
+                ]
+            
+            # Apply search - safely handle dict items
+            if req.search:
+                search_lower = req.search.lower()
+                scenarios_data = [
+                    s for s in scenarios_data
+                    if isinstance(s, dict) and search_lower in (
+                        (s.get('name', '') or '') + (s.get('description', '') or '')
+                    ).lower()
+                ]
+            
+            # Apply sorting
+            sort_field_map = {
+                'name': 'name',
+                'created_at': 'created_at',
+                'impact_deficit': 'projected_deficit',
+            }
+            sort_field = sort_field_map.get(req.sort_by.value, 'created_at')
+            
+            try:
+                scenarios_data.sort(
+                    key=lambda x: x.get(sort_field, ''),
+                    reverse=(req.sort_order.value == 'desc')
+                )
+            except (TypeError, ValueError) as e:
+                # Sorting failed, likely due to type mismatch in sort field
+                import logging
+                logging.getLogger(__name__).debug(f"Failed to sort scenarios by {sort_field}: {e}")
+                # Return unsorted data rather than raising error
+            
+            # Pagination
+            total_count = len(scenarios_data)
+            total_pages = (total_count + req.per_page - 1) // req.per_page
+            start_idx = (req.page - 1) * req.per_page
+            end_idx = start_idx + req.per_page
+            paginated_data = scenarios_data[start_idx:end_idx]
+            
+            # Build response
+            scenario_items = [
+                ScenarioListItem(
+                    id=s.get('id', str(uuid.uuid4())),
+                    name=s.get('name', 'Unnamed Scenario'),
+                    type=s.get('type', 'custom'),
+                    description=s.get('description', ''),
+                    revenue_change_pct=float(s.get('revenue_change_pct', 0)),
+                    spending_change_pct=float(s.get('spending_change_pct', 0)),
+                    projected_deficit=float(s.get('projected_deficit', 0)),
+                    created_at=datetime.fromisoformat(s.get('created_at', datetime.now(timezone.utc).isoformat())),
+                    created_by=s.get('created_by', 'system'),
+                    is_public=s.get('is_public', True),
+                    tags=s.get('tags', []),
+                )
+                for s in paginated_data
+            ]
+            
+            response = ScenariosListResponse(
+                status="success",
+                scenario_count=total_count,
+                returned_count=len(scenario_items),
+                pagination=PaginationInfo(
+                    page=req.page,
+                    per_page=req.per_page,
+                    total_pages=max(1, total_pages),
+                ),
+                scenarios=scenario_items,
+                metadata=ScenariosListMetadata(
+                    timestamp=datetime.now(timezone.utc),
+                    api_version=api_version,
+                ),
+            )
+            
+            return jsonify(response.model_dump()), 200
+            
+        except ValidationError as e:
+            """Handle Pydantic validation errors."""
+            field_errors = []
+            for error in e.errors():
+                field_name = ".".join(str(x) for x in error['loc'])
+                field_errors.append(
+                    FieldError(
+                        field=field_name,
+                        message=error['msg'],
+                        value=request.args.get(field_name),
+                    )
+                )
+            error_resp = create_error_response(
+                error_code=ErrorCode.VALIDATION_ERROR,
+                message="Query parameter validation failed",
+                request_id=request_id,
+                api_version=api_version,
+                field_errors=field_errors,
+            )
+            return jsonify(error_resp.model_dump()), 400
+        except APIError as e:
+            error_resp = create_error_response(
+                error_code=ErrorCode.INTERNAL_ERROR if e.status_code >= 500 else ErrorCode.VALIDATION_ERROR,
+                message=e.message,
+                request_id=request_id,
+                api_version=api_version,
+            )
+            return jsonify(error_resp.model_dump()), e.status_code
+        except Exception as e:
+            error_resp = create_error_response(
+                error_code=ErrorCode.INTERNAL_ERROR,
+                message=f"Scenario listing failed: {str(e)}",
+                request_id=request_id,
+                api_version=api_version,
+            )
+            return jsonify(error_resp.model_dump()), 500
     
     # Sensitivity analysis
     @app.route('/api/analyze/sensitivity', methods=['POST'])
@@ -603,6 +1015,197 @@ def create_api_app() -> "Flask":
             })
         except Exception as e:
             raise APIError(f"Failed to load historical data: {str(e)}")
+
+    # Optional security knobs for ingestion health endpoint
+    ingestion_health_require_auth = os.getenv("INGESTION_HEALTH_REQUIRE_AUTH", "false").lower() in {"1", "true", "yes", "on"}
+    ingestion_health_rate_limit = os.getenv("INGESTION_HEALTH_RATE_LIMIT", "false").lower() in {"1", "true", "yes", "on"}
+
+    # Ingestion health endpoint v1 (GET /api/v1/data/ingestion-health)
+    @app.route('/api/v1/data/ingestion-health', methods=['GET'])
+    def get_ingestion_health_v1():
+        """
+        Report CBO data ingestion status, freshness, and schema validity.
+        
+        Slice 5.7: Versioned, validated, observable.
+        """
+        request_id = str(uuid.uuid4())
+        api_version = "1.0"
+        
+        try:
+            # Parse and validate query params
+            if not HAS_VALIDATION:
+                raise APIError("Validation models not available", 500)
+            
+            req = IngestionHealthRequest(
+                include_history=request.args.get('include_history', 'false', type=str).lower() in {'1', 'true', 'yes', 'on'}
+            )
+            
+            # If history requested and not authenticated, return 401
+            if req.include_history and ingestion_health_require_auth and HAS_AUTH:
+                # Check if user is authenticated (simplified check)
+                auth_header = request.headers.get('Authorization', '')
+                if not auth_header.startswith('Bearer '):
+                    error_resp = create_error_response(
+                        error_code=ErrorCode.AUTH_REQUIRED,
+                        message="Authentication required for historical data",
+                        request_id=request_id,
+                        api_version=api_version,
+                    )
+                    return jsonify(error_resp.model_dump()), 401
+            
+            from core.cbo_scraper import CBODataScraper
+            
+            scraper = CBODataScraper(use_cache=True)
+            payload = None
+            history = []
+            
+            # Try cached data first
+            if scraper.cached_data:
+                payload = scraper._attach_metadata(
+                    scraper.cached_data,
+                    cache_used=True,
+                    schema_valid=getattr(scraper, 'cached_data_valid', True)
+                )
+            
+            # Fall back to live fetch
+            if payload is None:
+                payload = scraper.get_current_us_budget_data()
+            
+            if not payload:
+                error_resp = create_error_response(
+                    error_code=ErrorCode.SERVICE_UNAVAILABLE,
+                    message="No CBO data available",
+                    request_id=request_id,
+                    api_version=api_version,
+                )
+                return jsonify(error_resp.model_dump()), 503
+            
+            # Build history if requested
+            if req.include_history and hasattr(scraper, 'history') and scraper.history:
+                history = [
+                    HistoryEntry(
+                        timestamp=datetime.fromisoformat(entry.get('timestamp', datetime.now(timezone.utc).isoformat())),
+                        checksum=entry.get('checksum', ''),
+                        is_live=entry.get('is_live', False),
+                        schema_valid=entry.get('schema_valid', True),
+                    )
+                    for entry in scraper.history[-30:]  # Last 30 entries
+                ]
+            
+            # Build response
+            response = IngestionHealthResponse(
+                status="success",
+                ingestion=IngestionInfo(
+                    data_source=payload.get("data_source", "unknown"),
+                    is_live=not payload.get("cache_used", False),
+                    freshness_hours=float(payload.get("freshness_hours", 0)),
+                    cache_age_hours=float(payload.get("cache_age_hours", 0)),
+                    last_updated=datetime.fromisoformat(payload.get("last_updated", datetime.now(timezone.utc).isoformat())),
+                    fetched_at=datetime.fromisoformat(payload.get("fetched_at", datetime.now(timezone.utc).isoformat())),
+                ),
+                validation=ValidationInfo(
+                    schema_valid=payload.get("schema_valid", True),
+                    checksum=payload.get("checksum", ""),
+                    validation_errors=payload.get("validation_errors", []),
+                ),
+                metrics=IngestionMetrics(
+                    data_points_ingested=len(payload.get("revenues", {})) + len(payload.get("spending", {})),
+                    schema_version=payload.get("schema_version", "1.0"),
+                ),
+                history=history if req.include_history else None,
+                metadata=IngestionHealthMetadata(
+                    api_version=api_version,
+                    timestamp=datetime.now(timezone.utc),
+                ),
+            )
+            
+            return jsonify(response.model_dump(exclude_none=True)), 200
+            
+        except ValidationError as e:
+            """Handle Pydantic validation errors."""
+            field_errors = []
+            for error in e.errors():
+                field_name = ".".join(str(x) for x in error['loc'])
+                field_errors.append(
+                    FieldError(
+                        field=field_name,
+                        message=error['msg'],
+                        value=request.args.get(field_name),
+                    )
+                )
+            error_resp = create_error_response(
+                error_code=ErrorCode.VALIDATION_ERROR,
+                message="Query parameter validation failed",
+                request_id=request_id,
+                api_version=api_version,
+                field_errors=field_errors,
+            )
+            return jsonify(error_resp.model_dump()), 400
+        except APIError as e:
+            error_resp = create_error_response(
+                error_code=ErrorCode.INTERNAL_ERROR if e.status_code >= 500 else ErrorCode.VALIDATION_ERROR,
+                message=e.message,
+                request_id=request_id,
+                api_version=api_version,
+            )
+            return jsonify(error_resp.model_dump()), e.status_code
+        except Exception as e:
+            error_resp = create_error_response(
+                error_code=ErrorCode.INTERNAL_ERROR,
+                message=f"Ingestion health check failed: {str(e)}",
+                request_id=request_id,
+                api_version=api_version,
+            )
+            return jsonify(error_resp.model_dump()), 500
+
+    # Legacy endpoint (backward compatibility)
+    @app.route('/api/data/ingestion-health', methods=['GET'])
+    def get_ingestion_health():
+        """Report CBO ingestion/cache status including checksum and freshness (legacy)."""
+        try:
+            from core.cbo_scraper import CBODataScraper
+
+            scraper = CBODataScraper(use_cache=True)
+            payload = None
+
+            if scraper.cached_data:
+                payload = scraper._attach_metadata(
+                    scraper.cached_data,
+                    cache_used=True,
+                    schema_valid=getattr(scraper, 'cached_data_valid', True)
+                )
+
+            if payload is None:
+                payload = scraper.get_current_us_budget_data()
+
+            if not payload:
+                raise APIError("No CBO data available", 503)
+
+            return jsonify({
+                "status": "success",
+                "data": {
+                    "data_source": payload.get("data_source"),
+                    "checksum": payload.get("checksum"),
+                    "cache_used": payload.get("cache_used"),
+                    "freshness_hours": payload.get("freshness_hours"),
+                    "cache_age_hours": payload.get("cache_age_hours"),
+                    "last_updated": payload.get("last_updated"),
+                    "fetched_at": payload.get("fetched_at"),
+                    "schema_valid": payload.get("schema_valid", True),
+                    "validation_errors": payload.get("validation_errors", []),
+                },
+            })
+        except ImportError:
+            raise APIError("CBO scraper module not available", 500)
+        except Exception as e:
+            raise APIError(f"Failed to load ingestion status: {str(e)}", 500)
+
+    # Apply optional auth/rate-limit wrappers only when enabled and auth stack is present
+    if HAS_AUTH and ingestion_health_require_auth:
+        get_ingestion_health = require_auth()(get_ingestion_health)
+        if ingestion_health_rate_limit:
+            get_ingestion_health = require_rate_limit(get_ingestion_health)
+    
     
     @app.route('/api/data/refresh', methods=['POST'])
     @require_auth(roles=['admin'])

@@ -2,6 +2,7 @@ import types
 import builtins
 import importlib
 import main
+import sys
 
 
 def test_parse_ver_and_version_ok():
@@ -55,3 +56,81 @@ def test_ensure_dependencies_prompts_on_missing(monkeypatch):
 
     deps = [("missing", "missing", "Missing", "1.0.0", False)]
     assert main.ensure_dependencies(auto_install=False, headless=True, deps=deps) is False
+
+
+def test_check_data_ingestion_ok(monkeypatch):
+    class FakeScraper:
+        def __init__(self, use_cache=True):
+            pass
+
+        def get_current_us_budget_data(self):
+            return {
+                'cache_used': False,
+                'freshness_hours': 1.0,
+                'data_source': 'test-live',
+                'checksum': 'abc123',
+            }
+
+    fake_module = types.SimpleNamespace(CBODataScraper=FakeScraper)
+    monkeypatch.setitem(sys.modules, 'core.cbo_scraper', fake_module)
+
+    assert main.check_data_ingestion(headless=True) is True
+
+
+def test_check_data_ingestion_fails_on_stale_cache(monkeypatch):
+    class FakeScraper:
+        def __init__(self, use_cache=True):
+            pass
+
+        def get_current_us_budget_data(self):
+            return {
+                'cache_used': True,
+                'freshness_hours': 100.0,
+                'data_source': 'test-cache',
+                'checksum': 'abc123',
+            }
+
+    fake_module = types.SimpleNamespace(CBODataScraper=FakeScraper)
+    monkeypatch.setitem(sys.modules, 'core.cbo_scraper', fake_module)
+
+    assert main.check_data_ingestion(headless=True) is False
+
+
+def test_check_data_ingestion_fails_on_missing_checksum(monkeypatch):
+    class FakeScraper:
+        def __init__(self, use_cache=True):
+            pass
+
+        def get_current_us_budget_data(self):
+            return {
+                'cache_used': False,
+                'freshness_hours': 1.0,
+                'data_source': 'test-live',
+                'checksum': None,
+            }
+
+    fake_module = types.SimpleNamespace(CBODataScraper=FakeScraper)
+    monkeypatch.setitem(sys.modules, 'core.cbo_scraper', fake_module)
+
+    assert main.check_data_ingestion(headless=True) is False
+
+
+def test_check_data_ingestion_fails_on_schema(monkeypatch):
+    class FakeScraper:
+        def __init__(self, use_cache=True):
+            pass
+
+        def get_current_us_budget_data(self):
+            return {
+                'cache_used': False,
+                'freshness_hours': 1.0,
+                'data_source': 'test-live',
+                'checksum': 'abc123',
+                'schema_valid': False,
+                'validation_errors': ['missing field: gdp'],
+            }
+
+    fake_module = types.SimpleNamespace(CBODataScraper=FakeScraper)
+    monkeypatch.setitem(sys.modules, 'core.cbo_scraper', fake_module)
+
+    assert main.check_data_ingestion(headless=True) is False

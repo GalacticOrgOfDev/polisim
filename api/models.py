@@ -37,7 +37,8 @@ class JSONBCompat(TypeDecorator):
                 from sqlalchemy.dialects.postgresql import JSONB as JSONBTypeRuntime
 
                 return dialect.type_descriptor(JSONBTypeRuntime())
-            except Exception:
+            except ImportError:
+                # PostgreSQL JSONB not available, fall back to standard JSON
                 pass
         return dialect.type_descriptor(JSON())
 

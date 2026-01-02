@@ -26,6 +26,7 @@ import json
 from functools import lru_cache
 import time
 import hashlib
+from copy import deepcopy
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +69,19 @@ class CBODataScraper:
         self.use_cache = use_cache
         self.enable_notifications = enable_notifications
         self.cached_data = self._load_cache()
+        self.cached_data_valid = False
         self.history = self._load_history()
+        self._metadata_keys = {"checksum", "cache_used", "freshness_hours", "fetched_at", "cache_age_hours"}
+
+        # Validate cached payload at startup; drop it if schema/range checks fail
+        if self.cached_data:
+            schema_ok, schema_errors = self._validate_schema(self.cached_data)
+            if schema_ok:
+                self.cached_data_valid = True
+            else:
+                reasons = schema_errors
+                logger.warning(f"Cached CBO data failed validation: {'; '.join(reasons) or 'unknown error'}; discarding cache")
+                self.cached_data = {}
     
     def _load_cache(self) -> Dict:
         """Load cached CBO data if available."""
@@ -86,8 +99,75 @@ class CBODataScraper:
         try:
             with open(self.CACHE_FILE, 'w') as f:
                 json.dump(data, f, indent=2, default=str)
+            self.cached_data = data
+            self.cached_data_valid = True
         except Exception as e:
             logger.warning(f"Could not save cache: {e}")
+
+    def _validate_schema(self, data: Dict) -> Tuple[bool, List[str]]:
+        """Validate presence and types of required fields before range checks."""
+        errors: List[str] = []
+
+        required_fields = [
+            'gdp', 'debt', 'revenues', 'spending'
+        ]
+        for field in required_fields:
+            if field not in data:
+                errors.append(f"missing field: {field}")
+
+        # Type checks for numeric fields
+        numeric_fields = ['gdp', 'debt', 'deficit', 'interest_rate']
+        for field in numeric_fields:
+            if field in data and not isinstance(data[field], (int, float)):
+                errors.append(f"{field} must be numeric")
+
+        # Dict checks for revenues/spending
+        for field in ['revenues', 'spending']:
+            if field in data:
+                if not isinstance(data[field], dict):
+                    errors.append(f"{field} must be an object of category→value pairs")
+                else:
+                    bad_keys = [k for k, v in data[field].items() if not isinstance(v, (int, float))]
+                    if bad_keys:
+                        errors.append(f"{field} has non-numeric values: {', '.join(map(str, bad_keys))}")
+
+        # last_updated should be ISO 8601-ish
+        ts = data.get('last_updated')
+        if ts:
+            try:
+                datetime.fromisoformat(ts)
+            except Exception:
+                errors.append("last_updated is not ISO 8601")
+
+        return len(errors) == 0, errors
+
+    def _compute_freshness_hours(self, data: Dict) -> float:
+        """Compute age of data based on last_updated or cache file mtime."""
+        now = datetime.now()
+
+        ts = data.get('last_updated') or data.get('fetched_at')
+        if ts:
+            try:
+                dt = datetime.fromisoformat(ts)
+                return max(0.0, (now - dt).total_seconds() / 3600.0)
+            except ValueError as e:
+                # Invalid ISO format timestamp, log and continue
+                import logging
+                logging.getLogger(__name__).debug(f"Failed to parse timestamp '{ts}': {e}")
+
+        if self.CACHE_FILE.exists():
+            try:
+                mtime = datetime.fromtimestamp(self.CACHE_FILE.stat().st_mtime)
+                return max(0.0, (now - mtime).total_seconds() / 3600.0)
+            except (OSError, ValueError) as e:
+                # Failed to read file mtime, log and continue
+                import logging
+                logging.getLogger(__name__).debug(f"Failed to read cache file mtime: {e}")
+        return 0.0
+
+    def _strip_metadata(self, data: Dict) -> Dict:
+        """Remove metadata keys when computing hashes."""
+        return {k: v for k, v in data.items() if k not in self._metadata_keys}
     
     def _load_history(self) -> List[Dict]:
         """Load historical data from disk (Phase 5.2)."""
@@ -126,8 +206,27 @@ class CBODataScraper:
     
     def _hash_data(self, data: Dict) -> str:
         """Generate hash of data for change detection."""
-        data_str = json.dumps(data, sort_keys=True, default=str)
+        data_str = json.dumps(self._strip_metadata(data), sort_keys=True, default=str)
         return hashlib.sha256(data_str.encode()).hexdigest()[:12]
+
+    def _attach_metadata(self, data: Dict, cache_used: bool, source_tag: Optional[str] = None,
+                         schema_valid: bool = True, validation_errors: Optional[List[str]] = None) -> Dict:
+        """Attach checksum, freshness, schema flag, and provenance metadata to the data payload."""
+        payload = deepcopy(data)
+        freshness = self._compute_freshness_hours(payload) if cache_used else 0.0
+
+        payload['checksum'] = self._hash_data(payload)
+        payload['cache_used'] = cache_used
+        payload['freshness_hours'] = freshness
+        payload['cache_age_hours'] = freshness if cache_used else 0.0
+        payload['fetched_at'] = datetime.now().isoformat()
+        payload['schema_valid'] = schema_valid
+        payload['validation_errors'] = validation_errors or []
+        if cache_used:
+            payload['data_source'] = f"{payload.get('data_source', 'Cache')} (cache)"
+        elif source_tag:
+            payload['data_source'] = source_tag
+        return payload
     
     def _detect_changes(self, new_data: Dict) -> List[str]:
         """Detect significant changes in data (Phase 5.2)."""
@@ -215,33 +314,53 @@ class CBODataScraper:
         # Validate GDP
         gdp = data.get('gdp', 0)
         min_gdp, max_gdp = self.VALIDATION_RANGES['gdp']
-        if not (min_gdp <= gdp <= max_gdp):
+        if not isinstance(gdp, (int, float)):
+            errors.append("GDP must be numeric")
+        elif not (min_gdp <= gdp <= max_gdp):
             errors.append(f"GDP {gdp:.1f}T outside range [{min_gdp}-{max_gdp}]T")
         
         # Validate debt
         debt = data.get('debt', 0)
         min_debt, max_debt = self.VALIDATION_RANGES['debt']
-        if not (min_debt <= debt <= max_debt):
+        if not isinstance(debt, (int, float)):
+            errors.append("National debt must be numeric")
+        elif not (min_debt <= debt <= max_debt):
             errors.append(f"National debt {debt:.1f}T outside range [{min_debt}-{max_debt}]T")
         
         # Validate deficit
         deficit = data.get('deficit', 0)
         min_def, max_def = self.VALIDATION_RANGES['deficit']
-        if not (min_def <= deficit <= max_def):
+        if not isinstance(deficit, (int, float)):
+            errors.append("Deficit must be numeric")
+        elif not (min_def <= deficit <= max_def):
             errors.append(f"Deficit {deficit:.1f}T outside range [{min_def}-{max_def}]T")
         
         # Validate total revenue
         revenues = data.get('revenues', {})
-        total_revenue = sum(revenues.values()) if revenues else 0
+        if revenues:
+            try:
+                total_revenue = sum(revenues.values())
+            except Exception:
+                total_revenue = None
+                errors.append("Total revenue must be numeric")
+        else:
+            total_revenue = 0
         min_rev, max_rev = self.VALIDATION_RANGES['total_revenue']
-        if total_revenue and not (min_rev <= total_revenue <= max_rev):
+        if isinstance(total_revenue, (int, float)) and total_revenue and not (min_rev <= total_revenue <= max_rev):
             errors.append(f"Total revenue {total_revenue:.1f}T outside range [{min_rev}-{max_rev}]T")
         
         # Validate total spending
         spending = data.get('spending', {})
-        total_spending = sum(spending.values()) if spending else 0
+        if spending:
+            try:
+                total_spending = sum(spending.values())
+            except Exception:
+                total_spending = None
+                errors.append("Total spending must be numeric")
+        else:
+            total_spending = 0
         min_spend, max_spend = self.VALIDATION_RANGES['total_spending']
-        if total_spending and not (min_spend <= total_spending <= max_spend):
+        if isinstance(total_spending, (int, float)) and total_spending and not (min_spend <= total_spending <= max_spend):
             errors.append(f"Total spending {total_spending:.1f}T outside range [{min_spend}-{max_spend}]T")
         
         is_valid = len(errors) == 0
@@ -282,13 +401,18 @@ class CBODataScraper:
             total_spending = sum(data['spending'].values())
             data['deficit'] = total_spending - total_revenues
             
-            # Phase 5.2: Validate data
-            is_valid, errors = self._validate_data(data)
-            if not is_valid:
-                logger.error(f"Data validation failed: {errors}")
+            # Validate schema and ranges
+            schema_ok, schema_errors = self._validate_schema(data)
+            range_ok, range_errors = self._validate_data(data)
+            validation_errors = schema_errors + range_errors
+
+            if not (schema_ok and range_ok):
+                logger.error(f"Data validation failed: {validation_errors}")
                 if self.use_cache and self.cached_data:
                     logger.warning("Falling back to cached data due to validation errors")
-                    return self.cached_data
+                    return self._attach_metadata(self.cached_data, cache_used=True, schema_valid=self.cached_data_valid)
+                # Return payload flagged invalid so callers can surface integrity failures
+                return self._attach_metadata(data, cache_used=False, source_tag="CBO/Treasury/OMB (live)", schema_valid=False, validation_errors=validation_errors)
             
             # Phase 5.2: Detect changes and notify
             changes = self._detect_changes(data)
@@ -299,16 +423,17 @@ class CBODataScraper:
             self._save_history_entry(data)
             
             # Save to cache for offline use
-            self._save_cache(data)
+            payload = self._attach_metadata(data, cache_used=False, source_tag="CBO/Treasury/OMB (live)", schema_valid=True)
+            self._save_cache(payload)
             
             logger.info(f"Successfully fetched budget data. Deficit: ${data['deficit']:.2f}T")
-            return data
+            return payload
             
         except Exception as e:
             logger.error(f"Failed to scrape CBO data: {e}")
             if self.use_cache and self.cached_data:
                 logger.warning("Using cached data instead")
-                return self.cached_data
+                return self._attach_metadata(self.cached_data, cache_used=True, schema_valid=self.cached_data_valid)
             else:
                 logger.error("No cached data available - returning None")
                 return None

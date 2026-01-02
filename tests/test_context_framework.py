@@ -67,7 +67,9 @@ def test_single_payer_extraction():
     for q in quantities['percentages']:
         print(f"  {q['value']}{q['unit']} confidence: {q['confidence']:.2%}")
     
-    return builder
+    assert builder
+    assert builder.get('policy_type')
+    assert builder.get('concepts')
 
 
 def test_multi_payer_extraction():
@@ -110,7 +112,9 @@ def test_multi_payer_extraction():
         if concepts_list:
             print(f"{key}: {len(concepts_list)} occurrence(s)")
     
-    return builder
+    assert builder
+    assert builder.get('policy_type')
+    assert builder.get('concepts')
 
 
 def test_hybrid_extraction():
@@ -160,7 +164,9 @@ def test_hybrid_extraction():
         if composite['derived_value']:
             print(f"  Details: {composite['derived_value']}")
     
-    return builder
+    assert builder
+    assert builder.get('policy_type')
+    assert builder.get('concepts')
 
 
 def test_assessment_accuracy():
@@ -168,11 +174,45 @@ def test_assessment_accuracy():
     print("\n" + "="*60)
     print("TEST 4: Assessment Accuracy Summary")
     print("="*60)
-    
+    # Re-run core extractions without relying on return values from other tests
+    m4a_sample = """
+    SECTION 1. UNIVERSAL HEALTHCARE SYSTEM
+    All residents of the United States shall be covered under a single-payer universal health program.
+    SECTION 3. FUNDING MECHANISMS
+    (A) A payroll tax on employers of 7.5% of payroll
+    (B) A payroll tax on employees of 4% of wages
+    (C) A progressive income tax on individuals with incomes above $200,000
+    (D) Redirection of existing Medicare and Medicaid spending
+    (E) Administrative efficiency savings from eliminating insurance overhead
+    """
+
+    aca_sample = """
+    SECTION 1. INSURANCE MARKET REFORMS
+    Private insurance shall be regulated to expand coverage to individuals with preexisting conditions.
+    SECTION 2. INDIVIDUAL MANDATE
+    All individuals shall be required to maintain health insurance coverage or pay a penalty.
+    SECTION 3. COST CONTROLS
+    Insurance companies shall be subject to price regulation and must maintain minimum coverage standards.
+    Preventive care shall be covered with no cost-sharing.
+    """
+
+    hybrid_sample = """
+    This Act establishes a pathway to universal coverage through:
+    PART A: SINGLE-PAYER FOUNDATION
+    - All residents enrolled in a federal program
+    - Zero copayments, deductibles, or premiums
+    - Funded through a 6% payroll tax on employers and 3.5% on employees
+    PART B: TRANSITION MECHANISMS
+    - Existing Medicare and Medicaid systems consolidated
+    - Private insurance prohibited from duplicating core benefits
+    PART C: SUPPLEMENTAL CHOICE
+    - Allow supplemental plans subject to price regulation and transparency
+    """
+
     test_results = {
-        "Single-Payer (M4A-style)": test_single_payer_extraction(),
-        "Multi-Payer (ACA-style)": test_multi_payer_extraction(),
-        "Hybrid": test_hybrid_extraction(),
+        "Single-Payer (M4A-style)": extract_policy_context(m4a_sample, "M4A Sample"),
+        "Multi-Payer (ACA-style)": extract_policy_context(aca_sample, "ACA Sample"),
+        "Hybrid": extract_policy_context(hybrid_sample, "Hybrid Reform"),
     }
     
     print("\n" + "="*60)
@@ -180,6 +220,7 @@ def test_assessment_accuracy():
     print("="*60)
     
     for policy_name, result in test_results.items():
+        assert result
         assessment = result['assessment']
         print(f"\n{policy_name}:")
         print(f"  Detected Type: {assessment['policy_type']}")

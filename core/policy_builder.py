@@ -10,7 +10,9 @@ Architecture:
 - PolicyLibrary: Manages multiple policies
 """
 
+import io
 import json
+import zipfile
 import pandas as pd
 import numpy as np
 from dataclasses import dataclass, asdict, field
@@ -137,6 +139,8 @@ class CustomPolicy:
             "policy_type": self.policy_type.value,
             "created_date": self.created_date,
             "author": self.author,
+            "category": self.category,
+            "order": self.order,
             "parameters": {
                 name: param.to_dict() for name, param in self.parameters.items()
             },
@@ -156,6 +160,8 @@ class CustomPolicy:
             policy_type=PolicyType(data["policy_type"]),
             created_date=data.get("created_date", datetime.now().isoformat()),
             author=data.get("author", "User"),
+            category=data.get("category", "General"),
+            order=data.get("order", 0),
         )
         
         for param_name, param_data in data.get("parameters", {}).items():
@@ -497,20 +503,22 @@ class PolicyTemplate:
         template = templates[template_name]
         policy = CustomPolicy(
             name=policy_name,
-            description=template["description"],
-            policy_type=template["type"],
+            description=str(template["description"]),
+            policy_type=template["type"],  # type: ignore[arg-type]
         )
         
-        for param_name, param_config in template["parameters"].items():
-            policy.add_parameter(
-                name=param_name,
-                description=param_config["description"],
-                value=param_config["value"],
-                min_val=param_config["min"],
-                max_val=param_config["max"],
-                unit=param_config["unit"],
-                category=param_config["category"],
-            )
+        params = template["parameters"]
+        if isinstance(params, dict):
+            for param_name, param_config in params.items():
+                policy.add_parameter(
+                    name=param_name,
+                    description=param_config["description"],
+                    value=param_config["value"],
+                    min_val=param_config["min"],
+                    max_val=param_config["max"],
+                    unit=param_config["unit"],
+                    category=param_config["category"],
+                )
         
         return policy
 
@@ -524,7 +532,8 @@ class PolicyLibrary:
         self.library_path.mkdir(parents=True, exist_ok=True)
         self.policies: Dict[str, CustomPolicy] = {}
         self.metadata_file = self.library_path / "_library_metadata.json"
-        self.metadata: Dict[str, Any] = {"categories": ["General", "Uploaded Policies", "Custom"]}
+        # Default categories with "Uploaded Policies" first for visibility
+        self.metadata: Dict[str, Any] = {"categories": ["Uploaded Policies", "General", "Custom"]}
         self._load_metadata()
         self._load_all_policies()
     
@@ -560,7 +569,8 @@ class PolicyLibrary:
     
     def get_categories(self) -> List[str]:
         """Get all available categories."""
-        return self.metadata.get("categories", ["General"])
+        categories = self.metadata.get("categories", ["General"])
+        return list(categories) if categories else ["General"]
     
     def add_category(self, category_name: str) -> bool:
         """Add a new category."""
@@ -723,3 +733,143 @@ class PolicyLibrary:
                 "Parameters": len(policy.parameters),
             })
         return pd.DataFrame(rows)
+
+
+@dataclass
+class ScenarioBundle:
+    """Named grouping of policies for scenario comparisons."""
+    name: str
+    policy_names: List[str]
+    description: str = ""
+    author: str = "User"
+    created_date: str = field(default_factory=lambda: datetime.now().isoformat())
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+    @staticmethod
+    def from_dict(data: Dict[str, Any]) -> "ScenarioBundle":
+        return ScenarioBundle(
+            name=data["name"],
+            policy_names=data.get("policy_names", []),
+            description=data.get("description", ""),
+            author=data.get("author", "User"),
+            created_date=data.get("created_date", datetime.now().isoformat()),
+        )
+
+
+class ScenarioBundleLibrary:
+    """Manage saved scenario bundles on disk."""
+
+    def __init__(self, bundle_path: str = "policies/scenario_bundles.json"):
+        self.bundle_path = Path(bundle_path)
+        self.bundle_path.parent.mkdir(parents=True, exist_ok=True)
+        self.bundles: Dict[str, ScenarioBundle] = {}
+        self._load()
+
+    def _load(self) -> None:
+        if self.bundle_path.exists():
+            try:
+                with open(self.bundle_path, "r") as f:
+                    raw = json.load(f)
+                for item in raw:
+                    bundle = ScenarioBundle.from_dict(item)
+                    self.bundles[bundle.name] = bundle
+            except Exception as exc:
+                print(f"Error loading scenario bundles: {exc}")
+
+    def _persist(self) -> None:
+        try:
+            serialized = [bundle.to_dict() for bundle in self.bundles.values()]
+            with open(self.bundle_path, "w") as f:
+                json.dump(serialized, f, indent=2)
+        except Exception as exc:
+            print(f"Error saving scenario bundles: {exc}")
+
+    def list_bundles(self) -> List[str]:
+        return sorted(self.bundles.keys())
+
+    def get_bundle(self, name: str) -> Optional[ScenarioBundle]:
+        return self.bundles.get(name)
+
+    def save_bundle(self, bundle: ScenarioBundle) -> None:
+        self.bundles[bundle.name] = bundle
+        self._persist()
+
+    def delete_bundle(self, name: str) -> bool:
+        if name not in self.bundles:
+            return False
+        del self.bundles[name]
+        self._persist()
+        return True
+
+
+def build_policy_comparison_table(policies: List[CustomPolicy]) -> pd.DataFrame:
+    """Create a comparison table of parameter values across policies."""
+    if not policies:
+        return pd.DataFrame()
+
+    all_param_names: set[str] = set()
+    for policy in policies:
+        all_param_names.update(policy.parameters.keys())
+
+    baseline_name = policies[0].name
+    rows: List[Dict[str, Any]] = []
+
+    for param_name in sorted(all_param_names):
+        row: Dict[str, Any] = {"Parameter": param_name}
+        baseline_value = None
+
+        for idx, policy in enumerate(policies):
+            param = policy.parameters.get(param_name)
+            value = param.value if param is not None else None
+            row[policy.name] = value
+            if idx == 0:
+                baseline_value = value
+            elif baseline_value is not None and value is not None:
+                row[f"{policy.name} Δ vs {baseline_name}"] = value - baseline_value
+            else:
+                row[f"{policy.name} Δ vs {baseline_name}"] = None
+
+        rows.append(row)
+
+    return pd.DataFrame(rows)
+
+
+def build_scenario_bundle_zip(policies: List[CustomPolicy], comparison_df: pd.DataFrame) -> bytes:
+    """Create an in-memory zip containing policies and comparison artifacts."""
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        # Policies JSON
+        policies_payload = {policy.name: policy.to_dict() for policy in policies}
+        zf.writestr("policies.json", json.dumps(policies_payload, indent=2))
+
+        # Comparison table
+        if not comparison_df.empty:
+            zf.writestr("comparison.csv", comparison_df.to_csv(index=False))
+            zf.writestr("comparison.json", comparison_df.to_json(orient="records", indent=2))
+
+        # Metadata
+        meta = {
+            "generated_at": datetime.now().isoformat(),
+            "policy_count": len(policies),
+            "comparison_rows": int(len(comparison_df)) if comparison_df is not None else 0,
+            "policy_names": [p.name for p in policies],
+        }
+        zf.writestr("metadata.json", json.dumps(meta, indent=2))
+
+    buffer.seek(0)
+    return buffer.read()
+
+
+__all__ = [
+    "PolicyType",
+    "PolicyParameter",
+    "CustomPolicy",
+    "PolicyTemplate",
+    "PolicyLibrary",
+    "ScenarioBundle",
+    "ScenarioBundleLibrary",
+    "build_policy_comparison_table",
+    "build_scenario_bundle_zip",
+]

@@ -43,6 +43,7 @@ dev = [
     "pytest==8.3.5",
     "pytest-timeout==2.4.0",
     "pytest-cov>=4.0",
+    "pytest-xdist>=3.0",
     "black>=23.0",
     "flake8>=6.0",
     "mypy>=1.0",
@@ -66,8 +67,16 @@ packages = ["core", "ui", "utils"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-v --tb=short"
+addopts = "-v --tb=short -n auto"
 python_files = "test_*.py"
+markers = [
+    "slow: marks tests as slow/resource-intensive (deselect with '-m \"not slow\"')",
+    "stress: marks tests as stress tests with high iteration counts",
+    "integration: marks tests as integration tests",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning:plotly.io._kaleido",
+]
 
 [tool.black]
 line-length = 100

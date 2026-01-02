@@ -1,7 +1,7 @@
 # PoliSim Documentation Index
 
-**Last Updated:** December 27, 2025  
-**Status:** In Progress — Phase 5 (Sprint 5.4: Web UI + Data Integration)
+**Last Updated:** January 2, 2026  
+**Status:** Phase 6.2.5 — Security Hardening Complete, Policy Extraction Active
 
 ---
 
@@ -17,12 +17,16 @@
 ## 📚 Core Documentation
 
 ### Project Status & History
-- **[CHANGELOG.md](CHANGELOG.md)** - Complete implementation history and milestones
-  - Latest: Dec 27, 2025 - Sprint 5.4 hardening (launcher/bootstrap and dashboard polish)
+  - Latest: Dec 31, 2025 - Documentation consolidation (roadmap move, theme rollup, link cleanup)
+  - Dec 27, 2025 - Sprint 5.4 hardening (launcher/bootstrap and dashboard polish)
   - Dec 25, 2025 - Comprehensive audit complete (A+ grade, 14/14 issues resolved)
   - All major releases and bug fixes documented
 
-- **[debug.md](debug.md)** - Agent workspace for granular analysis and debugging
+- **[phase 5 slices.md](../docs/phase%205%20slices.md)** - Slice plan to complete Phase 5
+  - Slices 5.4–5.7 with objectives, exit criteria, risks
+  - Completion checklist for Phase 5 exit
+
+**Phase Planning:** ../docs/PHASES.md, ../docs/phase%205%20slices.md, EXHAUSTIVE_INSTRUCTION_MANUAL.md
   - **Purpose:** Working document for AI agents to document analysis findings
   - **Usage:** Agents log step-by-step debugging walkthroughs to avoid losing progress
   - **Lifecycle:** Emptied by user after completion when findings are moved to permanent docs
@@ -34,10 +38,9 @@
   - Module-by-module implementation guides
   - Testing strategies and validation criteria
 
-- **[PHASES.md](PHASES.md)** - Project phases overview
-  - Phase 1-5 status and deliverables
-  - Timeline and milestone tracking
-  - Current: Phase 2B complete, Phase 3 next
+- **[PHASES.md](../docs/PHASES.md)** - Project phases and roadmap (Phases 1-18)
+  - Current: Phase 5.4 in progress; Phase 6 planned
+  - Milestones, exit criteria, risks, and dependencies
 
 ### Technical References
 - **[CONTEXT_FRAMEWORK.md](CONTEXT_FRAMEWORK.md)** - Policy extraction system guide
@@ -62,6 +65,9 @@
   - Integration with mypy
 
 ### UI/UX Documentation
+- **[THEME_SYSTEM.md](THEME_SYSTEM.md)** - Consolidated theme reference (available themes, fixes, usage, testing)
+  - Supersedes legacy theme audit/testing/quick-reference docs
+
 - **[TOOLTIP_SYSTEM.md](TOOLTIP_SYSTEM.md)** - Educational tooltip implementation
   - System architecture and usage
   - Adding tooltips to new pages
@@ -84,7 +90,7 @@
 ### Removing Old Documentation
 **Policy:** Delete outdated files instead of archiving. Keep only current, relevant documentation.
 - Historical information goes in CHANGELOG.md
-- Phase status goes in PHASES.md
+- Phase status goes in docs/PHASES.md
 - Agent analysis findings are moved from debug.md to permanent docs when complete
 
 ### debug.md Special Usage
@@ -110,17 +116,17 @@
 ### By Topic
 - **Getting Started:** 00_START_HERE.md, QUICK_REFERENCE.md
 - **Validation & Quality:** VALIDATION_REPORT_DEC26.md, CHANGELOG.md
-- **Phase Planning:** PHASES.md, EXHAUSTIVE_INSTRUCTION_MANUAL.md
+- **Phase Planning:** ../docs/PHASES.md, EXHAUSTIVE_INSTRUCTION_MANUAL.md
 - **Code Standards:** NAMING_CONVENTIONS.md, TYPE_HINTS_GUIDE.md
 - **Policy Extraction:** CONTEXT_FRAMEWORK.md, CONTEXT_FRAMEWORK_INDEX.md
 - **UI Features:** TOOLTIP_SYSTEM.md, DEMO_SCRIPT_USAGE.md
 - **Agent Workspace:** debug.md (working document, emptied when complete)
 
 ### By Audience
-- **New Developers:** 00_START_HERE.md → QUICK_REFERENCE.md → PHASES.md
+- **New Developers:** 00_START_HERE.md → QUICK_REFERENCE.md → ../docs/PHASES.md
 - **Contributors:** NAMING_CONVENTIONS.md → TYPE_HINTS_GUIDE.md → VALIDATION_REPORT_DEC26.md
 - **Users:** README.md → TOOLTIP_SYSTEM.md → DEMO_SCRIPT_USAGE.md
-- **Researchers:** CONTEXT_FRAMEWORK.md → PHASES.md
+- **Researchers:** CONTEXT_FRAMEWORK.md → ../docs/PHASES.md
 - **AI Agents:** debug.md (workspace for analysis sessions)
 
 ---
