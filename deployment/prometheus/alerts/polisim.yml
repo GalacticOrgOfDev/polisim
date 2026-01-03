@@ -1,0 +1,128 @@
+# PoliSim Alert Rules
+# Phase 6.7.2: Structured Logging + Aggregation Pipeline
+
+groups:
+  - name: polisim-availability
+    rules:
+      # Service down
+      - alert: PoliSimAPIDown
+        expr: up{job="polisim-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: polisim-api
+        annotations:
+          summary: "PoliSim API is down"
+          description: "PoliSim API has been unreachable for more than 1 minute."
+          runbook_url: "https://github.com/GalacticOrgOfDev/polisim/blob/main/docs/INCIDENT_RESPONSE.md#service-down"
+
+      # High error rate
+      - alert: PoliSimHighErrorRate
+        expr: |
+          sum(rate(polisim_http_requests_total{status=~"5.."}[5m])) 
+          / sum(rate(polisim_http_requests_total[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: high
+          service: polisim-api
+        annotations:
+          summary: "High error rate on PoliSim API"
+          description: "Error rate is {{ $value | humanizePercentage }} over the last 5 minutes."
+          runbook_url: "https://github.com/GalacticOrgOfDev/polisim/blob/main/docs/INCIDENT_RESPONSE.md#elevated-errors"
+
+      # High latency
+      - alert: PoliSimHighLatency
+        expr: |
+          histogram_quantile(0.95, rate(polisim_http_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: high
+          service: polisim-api
+        annotations:
+          summary: "High latency on PoliSim API"
+          description: "P95 latency is {{ $value | humanizeDuration }} over the last 5 minutes."
+          runbook_url: "https://github.com/GalacticOrgOfDev/polisim/blob/main/docs/INCIDENT_RESPONSE.md#performance-degradation"
+
+  - name: polisim-security
+    rules:
+      # High auth failure rate
+      - alert: PoliSimHighAuthFailures
+        expr: |
+          sum(rate(polisim_auth_failures_total[5m])) > 10
+        for: 5m
+        labels:
+          severity: high
+          service: polisim-api
+          category: security
+        annotations:
+          summary: "High authentication failure rate"
+          description: "{{ $value }} auth failures per second over the last 5 minutes."
+          runbook_url: "https://github.com/GalacticOrgOfDev/polisim/blob/main/docs/INCIDENT_RESPONSE.md#suspected-breach"
+
+      # Rate limiting triggered
+      - alert: PoliSimRateLimitViolations
+        expr: |
+          sum(rate(polisim_rate_limit_exceeded_total[5m])) > 50
+        for: 2m
+        labels:
+          severity: high
+          service: polisim-api
+          category: security
+        annotations:
+          summary: "High rate limit violations"
+          description: "{{ $value }} rate limit violations per second."
+          runbook_url: "https://github.com/GalacticOrgOfDev/polisim/blob/main/docs/INCIDENT_RESPONSE.md#ddos-attack"
+
+  - name: polisim-resources
+    rules:
+      # High memory usage
+      - alert: PoliSimHighMemory
+        expr: |
+          container_memory_usage_bytes{name=~"polisim.*"} 
+          / container_spec_memory_limit_bytes{name=~"polisim.*"} > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          service: polisim-api
+        annotations:
+          summary: "High memory usage on {{ $labels.name }}"
+          description: "Memory usage is {{ $value | humanizePercentage }}."
+
+      # High CPU usage
+      - alert: PoliSimHighCPU
+        expr: |
+          rate(container_cpu_usage_seconds_total{name=~"polisim.*"}[5m]) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          service: polisim-api
+        annotations:
+          summary: "High CPU usage on {{ $labels.name }}"
+          description: "CPU usage is {{ $value | humanizePercentage }}."
+
+  - name: polisim-simulation
+    rules:
+      # Simulation failure rate
+      - alert: PoliSimSimulationFailures
+        expr: |
+          sum(rate(polisim_simulation_failures_total[5m])) 
+          / sum(rate(polisim_simulation_total[5m])) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          service: polisim-api
+        annotations:
+          summary: "High simulation failure rate"
+          description: "{{ $value | humanizePercentage }} of simulations are failing."
+
+      # Simulation timeout
+      - alert: PoliSimSimulationTimeout
+        expr: |
+          sum(rate(polisim_simulation_timeouts_total[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+          service: polisim-api
+        annotations:
+          summary: "Simulations are timing out"
+          description: "{{ $value }} simulation timeouts per second."

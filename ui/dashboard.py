@@ -13,6 +13,19 @@ Features:
 """
 # mypy: ignore-errors
 
+# Import typing constructs at module level (needed for type hints outside try blocks)
+from typing import Dict, Any, Optional, List, Callable
+
+# Import pandas at module level for type hints
+import pandas as pd
+
+# Ensure project root is in Python path for imports
+import sys
+from pathlib import Path
+_project_root = Path(__file__).resolve().parent.parent
+if str(_project_root) not in sys.path:
+    sys.path.insert(0, str(_project_root))
+
 try:
     # Load core modules FIRST (before streamlit) to avoid circular dependency issues
     from core.social_security import SocialSecurityModel, SocialSecurityReforms, TrustFundAssumptions, BenefitFormula
@@ -51,10 +64,60 @@ try:
     from ui.themes import apply_theme, get_theme_list, preview_theme, customize_theme_colors, apply_plotly_theme
     from ui.animations import apply_animation
     from ui.tooltip_registry import get_tooltip as registry_get_tooltip
+    from ui.teaching_mode import teaching_tooltip
+    from ui.guided_tour_components import (
+        render_teaching_mode_toggle,
+        render_tour_overlay,
+        render_educational_callout,
+        render_welcome_banner,
+        enhanced_metric
+    )
+    
+    # Phase 7.2.2: Live Analysis UI Components
+    from ui.live_analysis_panel import (
+        LiveAnalysisPanel,
+        render_live_analysis,
+        process_stream_event,
+        init_live_analysis_state,
+        get_live_analysis_state,
+    )
+    from ui.confidence_visualization import (
+        render_confidence_chart,
+        render_confidence_summary,
+        update_confidence_from_event,
+        ConfidenceTracker,
+        get_confidence_tracker,
+    )
+    from ui.debate_visualization import (
+        render_debate_view,
+        render_disagreement_map,
+        render_debate_timeline,
+        process_debate_event,
+        create_demo_debate_data,
+        init_debate_state,
+    )
+    HAS_LIVE_ANALYSIS = True
+    
+    # Phase 7.3.3: Chat UI Components
+    from ui.chat_sidebar import (
+        ChatSidebar,
+        render_chat_sidebar,
+        render_chat_right_panel,
+        init_chat_sidebar_state,
+        get_chat_sidebar_state,
+        create_demo_messages,
+        create_demo_channels,
+    )
+    HAS_CHAT_UI = True
     
     HAS_STREAMLIT = True
-except ImportError:
+except ImportError as e:
+    import traceback
+    print(f"ImportError during dashboard initialization: {e}")
+    traceback.print_exc()
     HAS_STREAMLIT = False
+    HAS_LIVE_ANALYSIS = False
+    HAS_CHAT_UI = False
 
 
 # Centralized default settings for Streamlit UI
@@ -85,7 +148,71 @@ DEFAULT_SETTINGS = {
     'debug_mode': False,
     'experimental_features': False,
     'max_monte_carlo_iterations': 100000,
+    # Teaching Mode settings
+    'teaching_mode_enabled': True,
+    'teaching_mode_level': 'beginner',
+    # Chat settings (Phase 7.3.3)
+    'chat_panel_enabled': True,
+    'chat_panel_width': 0.25,  # 25% of screen width
 }
+
+
+# =============================================================================
+# Page Layout Wrapper with Chat Panel (Phase 7.3.3)
+# =============================================================================
+
+def render_page_with_chat(page_render_func, show_chat: bool = True):
+    """Render a page with the PoliSim Chat panel as a fixed right sidebar.
+    
+    The chat panel is fixed in position and does not scroll with page content.
+    Main content has a right margin to avoid overlap.
+    
+    Args:
+        page_render_func: Function that renders the page content
+        show_chat: Whether to show the chat panel (default True)
+    
+    Example:
+        render_page_with_chat(page_overview)
+    """
+    if not show_chat or not HAS_CHAT_UI:
+        # Render page without chat
+        page_render_func()
+        return
+    
+    # Check if chat is enabled in settings
+    chat_enabled = st.session_state.get('settings', {}).get('chat_panel_enabled', True)
+    if not chat_enabled:
+        page_render_func()
+        return
+    
+    # Get user info from auth if available
+    user_id = None
+    user_name = "User"
+    try:
+        from ui.auth import StreamlitAuth
+        if StreamlitAuth.is_authenticated():
+            user_data = StreamlitAuth.get_current_user()
+            if user_data:
+                user_id = user_data.get('user_id') or user_data.get('id')
+                user_name = user_data.get('username') or user_data.get('name', 'User')
+    except Exception:
+        pass
+    
+    # Use columns layout: main content on left, chat on right
+    # This keeps chat in normal document flow, avoiding overlap issues
+    content_col, chat_col = st.columns([3, 1], gap="small")
+
+    with content_col:
+        page_render_func()
+
+    with chat_col:
+        # Render chat panel in the right column
+        render_chat_right_panel(
+            user_id=user_id,
+            user_name=user_name,
+            demo_mode=True,
+            use_column_mode=True,  # Signal to use column-friendly styling
+        )
 
 
 def initialize_settings():
@@ -446,6 +573,32 @@ def page_settings():
             help="Show helpful explanations when hovering over technical terms",
         )
         st.session_state.settings['tooltips_enabled'] = tooltips_enabled
+
+        # Phase 7.3.3: Chat Panel Settings
+        st.divider()
+        st.markdown("#### 💬 Chat Panel")
+        chat_enabled = st.toggle(
+            "Show PoliSim Chat Panel",
+            value=st.session_state.settings.get('chat_panel_enabled', True),
+            help="Display the AI chat panel on the right side of every page",
+        )
+        st.session_state.settings['chat_panel_enabled'] = chat_enabled
+        
+        if chat_enabled:
+            chat_width = st.slider(
+                "Chat Panel Width",
+                min_value=0.15,
+                max_value=0.35,
+                value=st.session_state.settings.get('chat_panel_width', 0.25),
+                step=0.05,
+                format="%.0f%%",
+                help="Adjust the width of the chat panel (15-35% of screen)",
+            )
+            # Convert to percentage for display
+            st.caption(f"Chat panel takes {int(chat_width * 100)}% of screen width")
+            st.session_state.settings['chat_panel_width'] = chat_width
+        
+        st.divider()
 
         decimal_places = st.slider(
             "Decimal Places for Numbers",
@@ -4907,6 +5060,242 @@ def page_report_generation():
                 st.code("pip install reportlab openpyxl")
 
 
+def page_live_analysis():
+    """Live Analysis page - Phase 7.2.2 Multi-Agent Swarm Analysis UI.
+    
+    This page provides real-time visibility into the multi-agent swarm
+    analysis process, including:
+    - Live event streaming from agents
+    - Confidence visualization over time
+    - Debate view with conversation threading
+    - Disagreement map showing agent positions
+    """
+    st.title("🔴 Live Analysis")
+    st.markdown("""
+    Watch AI agents collaborate in real-time to analyze policy documents.
+    See their reasoning, debates, and how they reach consensus.
+    """)
+    
+    if not HAS_LIVE_ANALYSIS:
+        st.error("Live Analysis components not available. Please check installation.")
+        return
+    
+    # Initialize states
+    init_live_analysis_state()
+    init_debate_state()
+    
+    # Create tabs for different views
+    tab_live, tab_confidence, tab_debates, tab_map = st.tabs([
+        "📡 Live Stream",
+        "📊 Confidence Bands",
+        "💬 Debates",
+        "🗺️ Disagreement Map",
+    ])
+    
+    with tab_live:
+        st.markdown("### Real-Time Analysis Stream")
+        
+        # Check if there's an active analysis
+        state = get_live_analysis_state()
+        
+        if not state.get("active"):
+            st.info("""
+            **No active analysis running.**
+            
+            To start a live analysis:
+            1. Go to **Policy Upload** and upload a policy document
+            2. Select "Analyze with AI Swarm" 
+            3. Return here to watch the analysis in real-time
+            
+            Or click the button below to see a demo of the live analysis interface.
+            """)
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("🎮 Run Demo Analysis", type="primary"):
+                    _run_demo_analysis()
+                    st.rerun()
+            with col2:
+                if st.button("🔄 Refresh", key="refresh_live"):
+                    st.rerun()
+        else:
+            # Render the live analysis panel
+            render_live_analysis()
+    
+    with tab_confidence:
+        st.markdown("### Agent Confidence Over Time")
+        st.markdown("""
+        This chart shows how each agent's confidence evolves during analysis.
+        Watch for convergence moments when agents reach agreement.
+        """)
+        
+        tracker = get_confidence_tracker()
+        
+        if not tracker.get_dataframe().empty:
+            render_confidence_chart(tracker, show_controls=True)
+            
+            st.divider()
+            render_confidence_summary(tracker)
+        else:
+            st.info("Confidence data will appear here once analysis begins.")
+            
+            # Show demo button
+            if st.button("📊 Load Demo Data", key="demo_confidence"):
+                _load_demo_confidence_data()
+                st.rerun()
+    
+    with tab_debates:
+        st.markdown("### Agent Debate History")
+        st.markdown("""
+        When agents disagree, they engage in structured debates to resolve
+        their differences. View the conversation threads and see how
+        positions evolve through critique and rebuttal.
+        """)
+        
+        from ui.debate_visualization import get_debate_state
+        debate_state = get_debate_state()
+        
+        if debate_state.get("rounds"):
+            render_debate_view(show_controls=True)
+            
+            st.divider()
+            render_debate_timeline()
+        else:
+            st.info("No debates have occurred yet. Debates happen when agents disagree on findings.")
+            
+            if st.button("💬 Load Demo Debate", key="demo_debate"):
+                _load_demo_debate_data()
+                st.rerun()
+    
+    with tab_map:
+        st.markdown("### Agent Disagreement Network")
+        st.markdown("""
+        This network graph visualizes disagreements between agents.
+        - **Nodes** represent agents
+        - **Edges** represent disagreements
+        - **Edge thickness** shows disagreement magnitude
+        - **Colors** indicate topic category
+        """)
+        
+        from ui.debate_visualization import get_debate_state
+        debate_state = get_debate_state()
+        
+        if debate_state.get("disagreements"):
+            render_disagreement_map(show_legend=True)
+        else:
+            st.info("No disagreements to visualize yet.")
+            
+            if st.button("🗺️ Load Demo Map", key="demo_map"):
+                _load_demo_debate_data()
+                st.rerun()
+
+
+def _run_demo_analysis():
+    """Run a demo analysis with simulated events."""
+    from datetime import datetime
+    import time
+    
+    state = get_live_analysis_state()
+    state["active"] = True
+    state["events"] = []
+    state["agents"] = {}
+    
+    # Set up progress
+    from ui.live_analysis_panel import AnalysisProgressState
+    state["progress"] = AnalysisProgressState(
+        analysis_id="demo-001",
+        bill_id="HR-Demo-001",
+        stage="analyzing",
+        agents_total=4,
+        start_time=datetime.now(),
+    )
+    
+    # Add some demo events
+    demo_events = [
+        {"event_type": "pipeline_started", "data": {"bill_id": "HR-Demo-001"}, "timestamp": datetime.now().isoformat(), "event_id": "e1"},
+        {"event_type": "stage_changed", "data": {"stage": "analyzing"}, "timestamp": datetime.now().isoformat(), "event_id": "e2"},
+        {"event_type": "agent_started", "data": {"agent_id": "fiscal-1", "agent_type": "fiscal", "agent_label": "Fiscal Analyst", "agent_icon": "💰"}, "timestamp": datetime.now().isoformat(), "event_id": "e3"},
+        {"event_type": "agent_started", "data": {"agent_id": "healthcare-1", "agent_type": "healthcare", "agent_label": "Healthcare Expert", "agent_icon": "🏥"}, "timestamp": datetime.now().isoformat(), "event_id": "e4"},
+        {"event_type": "agent_started", "data": {"agent_id": "economic-1", "agent_type": "economic", "agent_label": "Economist", "agent_icon": "📈"}, "timestamp": datetime.now().isoformat(), "event_id": "e5"},
+        {"event_type": "agent_started", "data": {"agent_id": "social_security-1", "agent_type": "social_security", "agent_label": "SS Analyst", "agent_icon": "👴"}, "timestamp": datetime.now().isoformat(), "event_id": "e6"},
+        {"event_type": "agent_thinking", "data": {"agent_id": "fiscal-1", "agent_label": "Fiscal Analyst", "agent_icon": "💰", "thought_label": "Calculating", "content": "Analyzing revenue impact from proposed tax changes using CBO scoring methodology..."}, "timestamp": datetime.now().isoformat(), "event_id": "e7"},
+        {"event_type": "agent_thinking", "data": {"agent_id": "healthcare-1", "agent_label": "Healthcare Expert", "agent_icon": "🏥", "thought_label": "Observing", "content": "Reviewing healthcare coverage expansion provisions in Section 3..."}, "timestamp": datetime.now().isoformat(), "event_id": "e8"},
+        {"event_type": "agent_finding", "data": {"agent_id": "fiscal-1", "agent_label": "Fiscal Analyst", "agent_icon": "💰", "category": "revenue", "description": "Proposed tax adjustments expected to generate $150B over 10 years", "confidence": 0.85}, "timestamp": datetime.now().isoformat(), "event_id": "e9"},
+        {"event_type": "agent_finding", "data": {"agent_id": "healthcare-1", "agent_label": "Healthcare Expert", "agent_icon": "🏥", "category": "coverage", "description": "Medicare expansion would cover an additional 2.3M beneficiaries", "confidence": 0.78}, "timestamp": datetime.now().isoformat(), "event_id": "e10"},
+        {"event_type": "agent_thinking", "data": {"agent_id": "economic-1", "agent_label": "Economist", "agent_icon": "📈", "thought_label": "Hypothesizing", "content": "Evaluating behavioral response to tax changes using elasticity estimates..."}, "timestamp": datetime.now().isoformat(), "event_id": "e11"},
+        {"event_type": "agent_finding", "data": {"agent_id": "economic-1", "agent_label": "Economist", "agent_icon": "📈", "category": "gdp", "description": "GDP impact estimated at -0.1% to +0.2% depending on implementation timeline", "confidence": 0.72}, "timestamp": datetime.now().isoformat(), "event_id": "e12"},
+    ]
+    
+    for event_data in demo_events:
+        event = process_stream_event(event_data)
+        state["events"].append(event)
+        from ui.live_analysis_panel import update_agent_state
+        update_agent_state(state, event)
+
+
+def _load_demo_confidence_data():
+    """Load demo confidence data for visualization."""
+    from datetime import datetime, timedelta
+    
+    tracker = get_confidence_tracker()
+    tracker.clear()
+    
+    # Add confidence points over time
+    base_time = datetime.now() - timedelta(minutes=5)
+    
+    # Fiscal agent confidence evolution
+    for i, conf in enumerate([0.6, 0.7, 0.75, 0.8, 0.85, 0.82, 0.85]):
+        tracker.add_point(
+            agent_id="fiscal-1",
+            confidence=conf,
+            agent_type="fiscal",
+            agent_label="Fiscal Analyst",
+            stage="analyzing" if i < 4 else "debating",
+            timestamp=base_time + timedelta(seconds=i*30),
+        )
+    
+    # Healthcare agent
+    for i, conf in enumerate([0.5, 0.6, 0.65, 0.72, 0.75, 0.78, 0.78]):
+        tracker.add_point(
+            agent_id="healthcare-1",
+            confidence=conf,
+            agent_type="healthcare",
+            agent_label="Healthcare Expert",
+            stage="analyzing" if i < 4 else "debating",
+            timestamp=base_time + timedelta(seconds=i*30),
+        )
+    
+    # Economic agent
+    for i, conf in enumerate([0.55, 0.58, 0.65, 0.68, 0.72, 0.75, 0.76]):
+        tracker.add_point(
+            agent_id="economic-1",
+            confidence=conf,
+            agent_type="economic",
+            agent_label="Economist",
+            stage="analyzing" if i < 4 else "debating",
+            timestamp=base_time + timedelta(seconds=i*30),
+        )
+    
+    # Add convergence moment
+    tracker.add_convergence_moment(
+        convergence_score=0.82,
+        previous_score=0.65,
+        description="Agents converged on revenue estimate",
+        stage="debating",
+        timestamp=base_time + timedelta(seconds=180),
+    )
+
+
+def _load_demo_debate_data():
+    """Load demo debate data for visualization."""
+    rounds, disagreements = create_demo_debate_data()
+    
+    from ui.debate_visualization import get_debate_state
+    state = get_debate_state()
+    state["rounds"] = rounds
+    state["disagreements"] = disagreements
+
+
 def main():
     # Main Streamlit app entry point
     if not HAS_STREAMLIT:
@@ -4931,6 +5320,23 @@ def main():
     # M6 Fix: Initialize settings globally for all pages
     initialize_settings()
     
+    # Phase 6.6: Initialize teaching mode from settings (session state)
+    # Note: Teaching mode state is now managed via session_state in guided_tour_components
+    # We just sync the initial settings if teaching_mode_state doesn't exist yet
+    if 'teaching_mode_state' not in st.session_state:
+        teaching_enabled = st.session_state.settings.get('teaching_mode_enabled', True)
+        teaching_level = st.session_state.settings.get('teaching_mode_level', 'beginner')
+        st.session_state.teaching_mode_state = {
+            'enabled': teaching_enabled,
+            'level': teaching_level,
+            'guided_tour_active': False,
+            'current_tour_id': None,
+            'current_step_index': 0,
+            'completed_tours': [],
+            'show_explanations': True,
+            'show_why_it_matters': True,
+        }
+    
     # Sprint 5.4: Apply theme
     current_theme = st.session_state.settings.get('theme', 'light')
     
@@ -4950,6 +5356,9 @@ def main():
     # Sprint 5.4: Show user widget in sidebar
     StreamlitAuth.show_user_widget()
     
+    # Phase 6.6: Teaching mode toggle in sidebar
+    render_teaching_mode_toggle()
+    
     # Sidebar navigation (button-based to avoid radio icons)
     st.sidebar.markdown('<div class="nav-header">Navigation</div>', unsafe_allow_html=True)
     nav_items = [
@@ -4962,6 +5371,7 @@ def main():
         "Combined Outlook",
         "Policy Comparison",
         "---",
+        "🔴 Live Analysis",
         "Recommendations",
         "Scenario Explorer",
         "Impact Calculator",
@@ -4996,40 +5406,56 @@ def main():
 
     page = st.session_state.get("nav_page", nav_items[0])
     
+    # Phase 6.6: Render teaching mode components
+    render_tour_overlay()
     if page == "Overview":
-        page_overview()
+        render_welcome_banner()
+    
+    # Phase 7.3.3: Initialize chat sidebar state
+    if HAS_CHAT_UI:
+        init_chat_sidebar_state()
+    
+    # Render pages with chat panel on right side (Phase 7.3.3)
+    # Some pages (Settings, User Profile) don't need chat
+    pages_without_chat = {"👤 User Profile", "⚙️ Settings"}
+    show_chat = page not in pages_without_chat
+    
+    if page == "Overview":
+        render_page_with_chat(page_overview, show_chat)
     elif page == "Healthcare":
-        page_healthcare()
+        render_page_with_chat(page_healthcare, show_chat)
     elif page == "Social Security":
-        page_social_security()
+        render_page_with_chat(page_social_security, show_chat)
     elif page == "Federal Revenues":
-        page_federal_revenues()
+        render_page_with_chat(page_federal_revenues, show_chat)
     elif page == "Medicare/Medicaid":
-        page_medicare_medicaid()
+        render_page_with_chat(page_medicare_medicaid, show_chat)
     elif page == "Discretionary Spending":
-        page_discretionary_spending()
+        render_page_with_chat(page_discretionary_spending, show_chat)
     elif page == "Combined Outlook":
-        page_combined_outlook()
+        render_page_with_chat(page_combined_outlook, show_chat)
     elif page == "Policy Comparison":
-        page_policy_comparison()
+        render_page_with_chat(page_policy_comparison, show_chat)
+    elif page == "🔴 Live Analysis":
+        render_page_with_chat(page_live_analysis, show_chat)
     elif page == "Recommendations":
-        page_policy_recommendations()
+        render_page_with_chat(page_policy_recommendations, show_chat)
     elif page == "Scenario Explorer":
-        page_scenario_explorer()
+        render_page_with_chat(page_scenario_explorer, show_chat)
     elif page == "Impact Calculator":
-        page_impact_calculator()
+        render_page_with_chat(page_impact_calculator, show_chat)
     elif page == "Advanced Scenarios":
-        page_monte_carlo_scenarios()
+        render_page_with_chat(page_monte_carlo_scenarios, show_chat)
     elif page == "Report Generation":
-        page_report_generation()
+        render_page_with_chat(page_report_generation, show_chat)
     elif page == "Custom Policy Builder":
-        page_custom_policy_builder()
+        render_page_with_chat(page_custom_policy_builder, show_chat)
     elif page == "Policy Library Manager":
-        page_library_manager()
+        render_page_with_chat(page_library_manager, show_chat)
     elif page == "Real Data Dashboard":
-        page_real_data_dashboard()
+        render_page_with_chat(page_real_data_dashboard, show_chat)
     elif page == "Policy Upload":
-        page_policy_upload()
+        render_page_with_chat(page_policy_upload, show_chat)
     elif page == "👤 User Profile":
         show_user_profile_page()
     elif page == "⚙️ Settings":

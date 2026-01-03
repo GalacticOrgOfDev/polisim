@@ -63,6 +63,10 @@ def test_check_data_ingestion_ok(monkeypatch):
         def __init__(self, use_cache=True):
             pass
 
+        def get_cached_data_fast(self):
+            # Return None to simulate no fast cache, forcing network fetch
+            return None
+
         def get_current_us_budget_data(self):
             return {
                 'cache_used': False,
@@ -81,6 +85,9 @@ def test_check_data_ingestion_fails_on_stale_cache(monkeypatch):
     class FakeScraper:
         def __init__(self, use_cache=True):
             pass
+
+        def get_cached_data_fast(self):
+            return None
 
         def get_current_us_budget_data(self):
             return {
@@ -101,6 +108,9 @@ def test_check_data_ingestion_fails_on_missing_checksum(monkeypatch):
         def __init__(self, use_cache=True):
             pass
 
+        def get_cached_data_fast(self):
+            return None
+
         def get_current_us_budget_data(self):
             return {
                 'cache_used': False,
@@ -119,6 +129,9 @@ def test_check_data_ingestion_fails_on_schema(monkeypatch):
     class FakeScraper:
         def __init__(self, use_cache=True):
             pass
+
+        def get_cached_data_fast(self):
+            return None
 
         def get_current_us_budget_data(self):
             return {

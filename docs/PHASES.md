@@ -103,6 +103,7 @@ Each future phase keeps the gold-standard bar: context-aware extraction parity, 
 - **Scope:** Multi-agent MCP workflows for parallel stress tests, automated ingestion/critique of bills, live analysis mode, and AI-generated summaries with confidence bands.
 - **Exit Criteria:** Swarm agents can ingest a bill, debate assumptions, produce consensus metrics, and surface disagreements with probability weights.
 - **Risks:** Model drift → periodic evaluation suite; privacy → clear redaction rules for inputs.
+- **Right sidebar Polisim Chatroom** -> an integrated mcp enabled chatroom for users to interact with the model swarm and each other with new chat buttons, private chats, public chats, group chats, and chat history for AI chats and conversations.
 
 ### Phase 8 — Multi-Country & International Modeling (Planned)
 - **Scope:** National models for major economies, trade/currency/migration linkages, international healthcare benchmarks, and cross-country comparison dashboards.

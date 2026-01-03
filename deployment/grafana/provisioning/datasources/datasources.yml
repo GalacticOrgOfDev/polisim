@@ -1,0 +1,64 @@
+# Grafana Datasource Provisioning
+# Phase 6.7.2: Structured Logging + Aggregation Pipeline
+
+apiVersion: 1
+
+datasources:
+  # Prometheus for metrics
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
+    jsonData:
+      timeInterval: "15s"
+      httpMethod: POST
+      manageAlerts: true
+      alertmanagerUid: alertmanager
+
+  # Elasticsearch for logs (if using ELK stack)
+  - name: Elasticsearch
+    type: elasticsearch
+    access: proxy
+    url: http://elasticsearch:9200
+    database: "polisim-logs-*"
+    isDefault: false
+    editable: false
+    jsonData:
+      esVersion: "8.0.0"
+      timeField: "@timestamp"
+      logLevelField: "log_level"
+      logMessageField: "message"
+      interval: Daily
+      maxConcurrentShardRequests: 5
+
+  # Elasticsearch for errors
+  - name: Elasticsearch-Errors
+    type: elasticsearch
+    access: proxy
+    url: http://elasticsearch:9200
+    database: "polisim-errors-*"
+    isDefault: false
+    editable: false
+    jsonData:
+      esVersion: "8.0.0"
+      timeField: "@timestamp"
+      logLevelField: "log_level"
+      logMessageField: "message"
+      interval: Daily
+
+  # Elasticsearch for security events
+  - name: Elasticsearch-Security
+    type: elasticsearch
+    access: proxy
+    url: http://elasticsearch:9200
+    database: "polisim-security-*"
+    isDefault: false
+    editable: false
+    jsonData:
+      esVersion: "8.0.0"
+      timeField: "@timestamp"
+      logLevelField: "log_level"
+      logMessageField: "message"
+      interval: Daily

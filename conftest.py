@@ -16,6 +16,9 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "integration: marks tests as integration tests"
     )
+    config.addinivalue_line(
+        "markers", "asyncio: marks tests as async tests"
+    )
 
 
 @pytest.fixture(scope="session", autouse=True)

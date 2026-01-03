@@ -1,11 +1,11 @@
 """
-Integration tests for Phase 5 Slice 5.6 - Scenario Builder and Report Generation
+Scenario Builder and Report Generation Tests
 
-Tests end-to-end workflows:
-1. Create custom policy scenario
-2. Compare multiple scenarios
-3. Generate reports in multiple formats
-4. Export scenario bundles
+Tests end-to-end workflows for:
+1. Creating custom policy scenarios
+2. Comparing multiple scenarios
+3. Generating reports in PDF/Excel formats
+4. Exporting and importing scenario bundles
 """
 
 import pytest

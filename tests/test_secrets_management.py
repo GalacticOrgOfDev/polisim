@@ -1,8 +1,8 @@
 """
-Tests for Phase 6.2.3: Secrets Management & Configuration
+Secrets Management Tests
 
-Test coverage:
-- Secrets Manager functionality
+Tests for secrets management and configuration including:
+- Secrets Manager functionality (environment, AWS, file backends)
 - Configuration loading and validation
 - Secret rotation framework
 - Integration with API components

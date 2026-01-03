@@ -43,9 +43,9 @@ class CBODataScraper:
     HISTORY_FILE = Path(__file__).parent / "cbo_data_history.json"
     
     # Request configuration (Phase 5.2: Retry logic)
-    REQUEST_TIMEOUT = 15
-    MAX_RETRIES = 3
-    RETRY_DELAY = 2  # Initial delay in seconds
+    REQUEST_TIMEOUT = 10  # Reduced from 15 for faster startup
+    MAX_RETRIES = 2  # Reduced from 3 for faster startup
+    RETRY_DELAY = 1  # Reduced from 2 for faster startup
     RETRY_BACKOFF = 2  # Exponential backoff multiplier
     
     # Data validation ranges (Phase 5.2: Sanity checks)
@@ -82,6 +82,29 @@ class CBODataScraper:
                 reasons = schema_errors
                 logger.warning(f"Cached CBO data failed validation: {'; '.join(reasons) or 'unknown error'}; discarding cache")
                 self.cached_data = {}
+    
+    def get_cached_data_fast(self) -> Optional[Dict]:
+        """
+        Fast cache-only check for startup validation.
+        Returns cached data if valid and not stale (< 72h), without any network requests.
+        
+        Returns:
+            Cached data dict with metadata, or None if cache invalid/stale
+        """
+        if not self.cached_data or not self.cached_data_valid:
+            return None
+        
+        # Check freshness
+        freshness = self._compute_freshness_hours(self.cached_data)
+        if freshness > 72:
+            logger.info(f"Cache is stale ({freshness:.1f}h > 72h)")
+            return None
+        
+        return self._attach_metadata(
+            self.cached_data, 
+            cache_used=True, 
+            schema_valid=self.cached_data_valid
+        )
     
     def _load_cache(self) -> Dict:
         """Load cached CBO data if available."""

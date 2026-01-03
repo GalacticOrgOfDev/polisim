@@ -1,6 +1,8 @@
 """
-Additional Integration Tests for Phase 2B
-Tests edge cases, error handling, and boundary conditions.
+Edge Cases Tests - Fiscal Models
+
+Tests edge cases, error handling, and boundary conditions for
+Social Security and Revenue modeling components.
 """
 
 import pytest
@@ -10,8 +12,8 @@ from core.social_security import SocialSecurityModel
 from core.revenue_modeling import FederalRevenueModel
 
 
-class TestEdgeCases:
-    """Test edge cases and boundary conditions."""
+class TestFiscalModelEdgeCases:
+    """Test edge cases and boundary conditions for fiscal models."""
 
     def test_single_iteration(self):
         """Test with single Monte Carlo iteration."""

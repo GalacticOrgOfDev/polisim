@@ -640,14 +640,14 @@ def apply_theme(theme_id: str, custom_colors: Optional[Dict[str, str]] = None):
         raw_sidebar = _clamp_opacity(sidebar_opacity)
         raw_header = _clamp_opacity(header_opacity)
 
-        safe_bg_opacity = _clamp_opacity(raw_bg, minimum=0.55)
-        safe_sidebar_opacity = _clamp_opacity(raw_sidebar, minimum=0.55)
-        safe_header_opacity = _clamp_opacity(raw_header, minimum=0.75)
+        safe_bg_opacity = _clamp_opacity(raw_bg, minimum=0.3)
+        safe_sidebar_opacity = _clamp_opacity(raw_sidebar, minimum=0.4)
+        safe_header_opacity = _clamp_opacity(raw_header, minimum=0.5)
 
-        visual_bg_opacity = _clamp_opacity(raw_bg, minimum=0.35)
-        visual_content_opacity = _clamp_opacity(raw_content, minimum=0.45)
-        visual_sidebar_opacity = _clamp_opacity(raw_sidebar, minimum=0.35)
-        visual_header_opacity = _clamp_opacity(raw_header, minimum=0.45)
+        visual_bg_opacity = _clamp_opacity(raw_bg, minimum=0.15)
+        visual_content_opacity = _clamp_opacity(raw_content, minimum=0.1)  # Allow more transparency
+        visual_sidebar_opacity = _clamp_opacity(raw_sidebar, minimum=0.2)
+        visual_header_opacity = _clamp_opacity(raw_header, minimum=0.3)
 
         bg_color = theme.background_color.lstrip('#')
         r, g, b = int(bg_color[0:2], 16), int(bg_color[2:4], 16), int(bg_color[4:6], 16)
@@ -686,18 +686,6 @@ def apply_theme(theme_id: str, custom_colors: Optional[Dict[str, str]] = None):
     # Build CSS with unique ID for theme tracking and removal
     css = f"""
     <style id="polisim-theme-{theme_id}">
-    /* Remove old theme styles */
-    <![CDATA[
-    (function() {{
-        const oldStyles = document.querySelectorAll('style[id^="polisim-theme-"]');
-        oldStyles.forEach(function(style) {{
-            if (style.id !== 'polisim-theme-{theme_id}') {{
-                style.remove();
-            }}
-        }});
-    }})();
-    ]]>
-    
     /* Import web fonts for themes */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@400;500;600;700&family=Source+Code+Pro:wght@400;500;600&display=swap');
     
@@ -709,26 +697,32 @@ def apply_theme(theme_id: str, custom_colors: Optional[Dict[str, str]] = None):
         --polisim-header-bg: {header_bg};
     }}
     
-    /* Core theme: Light Mode - Windows 2000 Classic */
+    /* Core theme: {theme.name} */
     { 'body {{ background-color: transparent !important; }}' if theme.needs_transparency else '' }
     .stApp {{
-        background-color: {main_bg_safe} !important;
-        background-color: var(--polisim-main-bg) !important;
+        { 'background-color: transparent !important;' if theme.needs_transparency else f'background-color: {main_bg_safe} !important;' }
+        { '' if theme.needs_transparency else f'background-color: var(--polisim-main-bg) !important;' }
         color: {theme.text_color} !important;
         font-family: {theme.font_family};
     }}
-    
+
     [data-testid="stAppViewContainer"] {{
-        background-color: {main_bg_safe} !important;
-        background-color: var(--polisim-main-bg) !important;
+        { 'background-color: transparent !important;' if theme.needs_transparency else f'background-color: {main_bg_safe} !important;' }
     }}
 
-    /* Main content wrapper respects content transparency */
+    /* Main content wrapper - transparent for animated themes */
     [data-testid="stAppViewContainer"] .main .block-container {{
-        background-color: {content_bg} !important;
-        background-color: var(--polisim-content-bg) !important;
+        { 'background-color: transparent !important;' if theme.needs_transparency else f'background-color: {content_bg} !important;' }
     }}
-    
+
+    /* Column containers should also be transparent for animated themes */
+    { '[data-testid="stColumn"], [data-testid="column"] { background-color: transparent !important; }' if theme.needs_transparency else '' }
+
+    /* Enable sticky positioning within column layouts */
+    [data-testid="stHorizontalBlock"] {{
+        align-items: flex-start !important;
+    }}
+
     [data-testid="stHeader"] {{
         position: relative;
         background-color: {header_bg_safe} !important;
@@ -1295,6 +1289,95 @@ def apply_theme(theme_id: str, custom_colors: Optional[Dict[str, str]] = None):
     [data-baseweb="popover"] [class*="emotion-cache"] {{
         background-color: {theme.menu.background or theme.secondary_background_color} !important;
         color: {theme.menu.color or theme.text_color} !important;
+    }}
+    
+    /* ==================== Chat Components ==================== */
+    /* Streamlit's built-in chat input and floating AI assistant */
+    [data-testid="stChatInput"],
+    .stChatInput,
+    [data-testid="stChatInputContainer"],
+    .stChatInputContainer {{
+        background-color: {theme.secondary_background_color} !important;
+        color: {theme.text_color} !important;
+        border-color: {theme.primary_color} !important;
+    }}
+    
+    [data-testid="stChatInput"] textarea,
+    .stChatInput textarea {{
+        background-color: {theme.secondary_background_color} !important;
+        color: {theme.text_color} !important;
+    }}
+    
+    [data-testid="stChatInput"] textarea::placeholder {{
+        color: {theme.text_color}88 !important;
+    }}
+    
+    /* Chat messages */
+    [data-testid="stChatMessage"],
+    .stChatMessage {{
+        background-color: {theme.secondary_background_color} !important;
+        color: {theme.text_color} !important;
+        border: 1px solid {theme.text_color}22 !important;
+    }}
+    
+    /* Floating containers and fixed position elements */
+    [class*="stFloating"],
+    [class*="floating"],
+    div[style*="position: fixed"],
+    div[style*="position:fixed"] {{
+        background-color: {theme.secondary_background_color} !important;
+        color: {theme.text_color} !important;
+        border: 1px solid {theme.text_color}33 !important;
+    }}
+    
+    /* Floating containers text and icons */
+    [class*="stFloating"] *,
+    [class*="floating"] *,
+    div[style*="position: fixed"] *,
+    div[style*="position:fixed"] * {{
+        color: {theme.text_color} !important;
+    }}
+    
+    /* Bottom-right floating assistant/help widget */
+    div[style*="bottom"][style*="right"][style*="fixed"],
+    div[style*="bottom: 1rem"][style*="right: 1rem"],
+    [data-testid="stAppDeployButton"] {{
+        background-color: {theme.secondary_background_color} !important;
+        color: {theme.text_color} !important;
+    }}
+    
+    /* Streamlit Cloud AI assistant popup (if present) */
+    [class*="assistant"],
+    [class*="Assistant"],
+    [data-testid*="assistant"],
+    [data-testid*="chat"] {{
+        background-color: {theme.secondary_background_color} !important;
+        color: {theme.text_color} !important;
+    }}
+    
+    /* Generic white background fix - override any hardcoded white */
+    [style*="background: white"],
+    [style*="background-color: white"],
+    [style*="background: rgb(255, 255, 255)"],
+    [style*="background-color: rgb(255, 255, 255)"],
+    [style*="background:#fff"],
+    [style*="background-color:#fff"],
+    [style*="background: #fff"],
+    [style*="background-color: #fff"],
+    [style*="background:#ffffff"],
+    [style*="background-color:#ffffff"],
+    [style*="background: #ffffff"],
+    [style*="background-color: #ffffff"] {{
+        background-color: {theme.secondary_background_color} !important;
+        color: {theme.text_color} !important;
+    }}
+    
+    /* Tooltip and help popups */
+    [role="tooltip"],
+    .stTooltipContent {{
+        background-color: {theme.tooltip.background or theme.secondary_background_color} !important;
+        color: {theme.tooltip.color or theme.text_color} !important;
+        border: {theme.tooltip.border or f'1px solid {theme.text_color}33'} !important;
     }}
     </style>
     """

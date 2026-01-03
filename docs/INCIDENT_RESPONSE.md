@@ -162,10 +162,59 @@ Executive Leadership + Legal + Communications
 
 ### Monitoring & Alerts
 
+#### Grafana Dashboards (Check First)
+
+| Dashboard | URL | Use When |
+|-----------|-----|----------|
+| **Executive Health** | `/grafana/d/executive-health` | First check - overall system status |
+| **Operations** | `/grafana/d/operations` | API issues, latency, endpoint problems |
+| **Security Signals** | `/grafana/d/security-signals` | Auth failures, rate limits, suspicious activity |
+
+#### Key Log Queries (Kibana)
+
+```
+# OUTAGE - Check for error spikes
+level:ERROR AND @timestamp:[now-1h TO now]
+
+# ELEVATED ERRORS - Find 5xx errors
+status_code:[500 TO 599] AND @timestamp:[now-30m TO now]
+
+# SUSPECTED BREACH - Auth failures by IP
+event_type:AUTH_FAILURE | top 10 client_ip
+
+# BAD DEPLOY - Recent deployment errors
+deployment_id:* AND level:ERROR AND @timestamp:[now-2h TO now]
+
+# DATA INTEGRITY - Database errors
+component:database AND (corruption OR integrity OR constraint)
+
+# LATENCY REGRESSION - Slow requests
+response_time_ms:>5000 AND @timestamp:[now-1h TO now]
+
+# RATE LIMITING - Excessive blocks
+event_type:RATE_LIMITED | stats count by client_ip
+```
+
+#### Prometheus Alert Queries
+
+```promql
+# Availability drop below SLO (99.5%)
+(1 - (sum(rate(http_requests_total{status=~"5.."}[5m])) / sum(rate(http_requests_total[5m])))) < 0.995
+
+# P95 latency above threshold
+histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2
+
+# Auth failure spike
+rate(auth_failures_total[5m]) > 10
+
+# Simulation failure rate
+rate(simulation_errors_total[5m]) / rate(simulation_total[5m]) > 0.1
+```
+
 #### Automated Monitoring
 
 ```
-Datadog / New Relic / CloudWatch
+Prometheus / Grafana / ELK Stack
 ├── Infrastructure Metrics
 │   ├── CPU > 90% (warning), > 95% (critical)
 │   ├── Memory > 85% (warning), > 95% (critical)
@@ -318,17 +367,21 @@ Next Update: [Time in 15 min]
 ```
 Investigation Path:
 ├── Security Incident?
-│   ├── Unauthorized access? → Check auth logs
-│   ├── Data exfiltration? → Check DLP logs
-│   └── System compromise? → Check endpoint logs
+│   ├── Unauthorized access? → Security Signals Dashboard + auth_audit.log
+│   ├── Data exfiltration? → Kibana: event_type:DATA_ACCESS | stats by user_id
+│   └── System compromise? → Check Sentry errors + endpoint logs
 ├── Infrastructure Failure?
-│   ├── Database down? → Check DB logs
-│   ├── Disk full? → Check storage
-│   └── Memory leak? → Check process metrics
+│   ├── Database down? → Operations Dashboard → DB panel + database.log
+│   ├── Disk full? → Executive Health → Infrastructure metrics
+│   └── Memory leak? → Operations Dashboard → Memory usage over time
+├── Application Failure?
+│   ├── API errors? → Operations Dashboard → Error rate by endpoint
+│   ├── Simulation failures? → Kibana: component:simulation AND level:ERROR
+│   └── Latency spike? → Operations Dashboard → P95 Latency panel
 └── Deployment Issue?
-    ├── Recent push? → Check git log
-    ├── Configuration change? → Check config version
-    └── Third-party service? → Check external API status
+    ├── Recent push? → Kibana: deployment_id:* AND @timestamp:[now-2h TO now]
+    ├── Configuration change? → Check git log + config version
+    └── Third-party service? → Health endpoints → /health/dependencies
 ```
 
 ### Phase 3: Contain (30-120 minutes)
@@ -839,6 +892,11 @@ monitoring-focus --duration=3600
 ---
 
 ## Training & Drills
+
+### Tabletop Exercises
+
+For structured incident response practice, see:
+- **[TABLETOP_EXERCISE_SCENARIO.md](TABLETOP_EXERCISE_SCENARIO.md)** - Elevated 5xx + Latency Regression scenario
 
 ### Annual Training Requirements
 

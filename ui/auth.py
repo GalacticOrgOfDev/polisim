@@ -384,9 +384,59 @@ class StreamlitAuth:
 
 def show_user_profile_page():
     """Display user profile management page."""
-    StreamlitAuth.require_auth()
     
     st.title("👤 User Profile")
+    
+    # Teaching Mode / Learning Progress - Show regardless of auth state
+    st.subheader("🎓 Learning Progress")
+    
+    if 'teaching_mode_state' in st.session_state:
+        tm_state = st.session_state.teaching_mode_state
+        completed = len(tm_state.get('completed_tours', []))
+        is_enabled = tm_state.get('enabled', True)
+        level = tm_state.get('level', 'beginner')
+        
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Tours Completed", f"{completed}/2")
+        with col2:
+            st.metric("Learning Level", level.title())
+        with col3:
+            st.metric("Teaching Mode", "On" if is_enabled else "Off")
+        
+        if st.button("🔄 Reset All Learning Progress", key="profile_reset_learning", use_container_width=True, type="primary"):
+            st.session_state.teaching_mode_state = {
+                'enabled': True,
+                'level': 'beginner',
+                'guided_tour_active': False,
+                'current_tour_id': None,
+                'current_step_index': 0,
+                'completed_tours': [],
+                'show_explanations': True,
+                'show_why_it_matters': True,
+            }
+            st.success("✅ Learning progress has been reset!")
+            st.rerun()
+    else:
+        st.info("Teaching mode will be initialized when you visit the dashboard.")
+        if st.button("Initialize Teaching Mode", key="init_teaching_mode"):
+            st.session_state.teaching_mode_state = {
+                'enabled': True,
+                'level': 'beginner',
+                'guided_tour_active': False,
+                'current_tour_id': None,
+                'current_step_index': 0,
+                'completed_tours': [],
+                'show_explanations': True,
+                'show_why_it_matters': True,
+            }
+            st.success("Teaching mode initialized!")
+            st.rerun()
+    
+    st.divider()
+    
+    # User account section - requires auth
+    StreamlitAuth.require_auth()
     
     user = StreamlitAuth.get_current_user()
     
@@ -485,11 +535,11 @@ def show_user_profile_page():
         col1, col2 = st.columns(2)
         
         with col1:
-            if st.button("🗑️ Delete All Data", type="secondary"):
+            if st.button("🗑️ Delete All Data", type="secondary", key="danger_delete_data"):
                 st.error("This will delete all your policies, simulations, and reports.")
                 st.info("🔧 Data deletion coming soon!")
         
         with col2:
-            if st.button("❌ Delete Account", type="secondary"):
+            if st.button("❌ Delete Account", type="secondary", key="danger_delete_account"):
                 st.error("This will permanently delete your account.")
                 st.info("🔧 Account deletion coming soon!")

@@ -36,6 +36,11 @@ DEPENDENCIES = [
     ("alembic", "alembic", "Alembic (migrations)", "1.13.0", False),
     ("redis", "redis", "Redis (cache client)", "5.0.0", False),
 
+    # Jupyter Notebooks (Phase 6.6 - Educational content)
+    ("jupyter", "jupyter", "Jupyter (notebooks)", "1.0.0", True),
+    ("notebook", "notebook", "Notebook (Jupyter server)", "7.0.0", True),
+    ("ipykernel", "ipykernel", "IPykernel (Jupyter kernel)", "6.25.0", True),
+
     # Optional extras
     ("pdfplumber", "pdfplumber", "pdfplumber (Enhanced PDF extraction)", "0.8", True),
     ("reportlab", "reportlab", "ReportLab (PDF generation)", "3.6", True),
@@ -82,18 +87,25 @@ def is_version_ok(installed: str, minimum: str) -> bool:
 
 
 def _get_installed_version(import_name: str, pip_name: str):
-    try:
-        mod = importlib.import_module(import_name)
-        inst_ver = getattr(mod, '__version__', None)
-        if inst_ver:
-            return str(inst_ver)
-    except Exception:
-        mod = None
-
+    # Prefer importlib.metadata for version detection (avoids deprecation warnings)
     try:
         return metadata.version(pip_name)
     except Exception:
-        return None
+        pass
+    
+    # Fallback: try module __version__ attribute
+    try:
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            mod = importlib.import_module(import_name)
+            inst_ver = getattr(mod, '__version__', None)
+            if inst_ver:
+                return str(inst_ver)
+    except Exception:
+        pass
+    
+    return None
 
 
 def ensure_dependencies(auto_install=False, headless=False, deps=None):
@@ -131,6 +143,12 @@ def ensure_dependencies(auto_install=False, headless=False, deps=None):
         print("Dependency check detected issues:\n" + message)
         proceed = auto_install
         if not auto_install:
+            # Check if we're running in a non-interactive context (subprocess)
+            # In that case, don't wait for input - just report and fail
+            if not sys.stdin.isatty():
+                print("Non-interactive mode detected, cannot prompt for install.")
+                print("Run with --auto-install-deps to auto-install, or install manually.")
+                return False
             resp = input("Install/upgrade these packages now? [y/N]: ").strip().lower()
             proceed = resp == 'y'
         if not proceed:
@@ -166,11 +184,34 @@ def ensure_dependencies(auto_install=False, headless=False, deps=None):
 
 
 def check_data_ingestion(headless: bool = True) -> bool:
-    """Run a lightweight data ingestion check (CBO scraper with cache fallback)."""
+    """Run a lightweight data ingestion check (CBO scraper with cache fallback).
+    
+    Uses fast cache-only check first to avoid network delays during startup.
+    """
     try:
         from core.cbo_scraper import CBODataScraper
 
         scraper = CBODataScraper(use_cache=True)
+        
+        # Fast path: try cache-only first (no network)
+        data = scraper.get_cached_data_fast()
+        if data:
+            # Valid cache exists - use it for fast startup
+            freshness = float(data.get('freshness_hours', 0.0))
+            source = data.get('data_source', 'unknown')
+            checksum = data.get('checksum')
+            
+            line = f"Data ingestion OK (fast cache): source={source}; freshness={freshness:.1f}h; checksum={checksum}"
+            if headless:
+                print(line)
+            else:
+                root = tk.Tk(); root.withdraw(); messagebox.showinfo("Startup Check", line); root.destroy()
+            return True
+        
+        # Slow path: need to fetch from network
+        if headless:
+            print("Cache unavailable or stale, fetching from network...")
+        
         data = scraper.get_current_us_budget_data()
         if not data:
             msg = "Data ingestion failed: no live or cached CBO data available."

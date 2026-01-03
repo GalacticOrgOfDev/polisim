@@ -12,9 +12,9 @@ Polisim enables researchers, policymakers, and citizens to independently model a
 
 ## 🛰️ Project Status
 
-- **Current:** Phase 6.3 (Public Documentation Complete) — Community-facing documentation ready
-- **Complete:** Phases 1-6.3 (see [docs/PHASES.md](docs/PHASES.md) for full roadmap)
-- **Next:** Phase 6.4 (Community Infrastructure) — GitHub templates, discussion boards, contributor onboarding
+- **Current:** Phase 7.3 (PoliSim Chatroom) — Action Buttons complete, UI next
+- **Complete:** Phases 1-6.3, Slice 7.1.1-7.1.4, Slice 7.2.1-7.2.2, Slice 7.3.1-7.3.2 ✅ (see [docs/PHASES.md](docs/PHASES.md) for full roadmap)
+- **Next:** Slice 7.3.3 (Chat UI) — Streamlit sidebar component
 
 ## 🎯 Core Purpose
 
@@ -61,6 +61,7 @@ Monte Carlo simulations reveal how economic shocks, demographic changes, and par
 ### Advanced Capabilities
 - **Monte Carlo Simulations** - 100K+ iterations for robust uncertainty quantification
 - **Stochastic Modeling** - Economic shocks, parameter uncertainty, policy interactions
+- **Multi-Agent Swarm Analysis** - 🆕 AI agents collaborate, debate, and reach consensus on policy impacts
 - **Multi-Scenario Comparison** - Side-by-side policy analysis with confidence intervals
 - **Sensitivity Analysis** - Identify key drivers of fiscal outcomes
 - **Edge Case Handling** - Recession scenarios, extreme debt, missing data fallbacks
@@ -371,6 +372,7 @@ polisim/
 - [Implementation Summary](docs/PHASE_6_2_IMPLEMENTATION_SUMMARY.md) - Phase 6.2 delivery summary
 - [Incident Response](docs/INCIDENT_RESPONSE.md) - 5-phase incident response procedures
 - [Monitoring & Compliance](docs/MONITORING_COMPLIANCE.md) - Metrics, alerting, compliance
+- [Tabletop Exercise](docs/TABLETOP_EXERCISE_SCENARIO.md) - Incident response dry-run scenario
 
 **Phase 6.3 (Public Documentation):**
 - [Contributing Guide](CONTRIBUTING.md) - Code style, workflow, community guidelines

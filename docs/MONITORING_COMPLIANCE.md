@@ -1,19 +1,226 @@
 # Security Monitoring & Alerting - PoliSim
 
-**Last Updated:** January 1, 2026  
-**Version:** 1.0  
+**Last Updated:** January 2, 2026  
+**Version:** 1.1 (Phase 6.7)  
 **Status:** Active
 
 ---
 
 ## Table of Contents
 
-1. [Monitoring Infrastructure](#monitoring-infrastructure)
-2. [Key Metrics](#key-metrics)
-3. [Alerting Rules](#alerting-rules)
-4. [Dashboard Setup](#dashboard-setup)
-5. [Log Aggregation](#log-aggregation)
-6. [Compliance Monitoring](#compliance-monitoring)
+1. [Telemetry Contract](#telemetry-contract)
+2. [Event Taxonomy](#event-taxonomy)
+3. [Monitoring Infrastructure](#monitoring-infrastructure)
+4. [Key Metrics](#key-metrics)
+5. [Alerting Rules](#alerting-rules)
+6. [Dashboard Setup](#dashboard-setup)
+7. [Log Aggregation](#log-aggregation)
+8. [Compliance Monitoring](#compliance-monitoring)
+
+---
+
+## Telemetry Contract
+
+Phase 6.7.1 defines the required telemetry fields for all logged events and metrics.
+
+### Required Fields (All Events)
+
+| Field | Type | Required | Description | Example |
+|-------|------|----------|-------------|---------|
+| `timestamp` | ISO8601 | ✅ | Event timestamp in UTC | `2026-01-02T12:00:00Z` |
+| `env` | string | ✅ | Environment identifier | `prod`, `staging`, `dev`, `local` |
+| `service` | string | ✅ | Service name | `polisim-api` |
+| `version` | string | ✅ | Service version | `1.0.0` |
+| `event` | string | ✅ | Event type from taxonomy | `auth.login_success` |
+| `level` | string | ✅ | Log level | `INFO`, `WARN`, `ERROR` |
+
+### Request Context Fields
+
+| Field | Type | Required | Description | Example |
+|-------|------|----------|-------------|---------|
+| `request_id` | UUID | ✅ | Unique request correlation ID | `550e8400-e29b-41d4-a716-446655440000` |
+| `trace_id` | string | Optional | Distributed trace ID | `abc123def456` |
+| `span_id` | string | Optional | Span ID for tracing | `span_789` |
+| `route` | string | ✅ | API endpoint path | `/api/v1/simulate` |
+| `method` | string | ✅ | HTTP method | `POST` |
+| `status_code` | int | ✅ | Response status code | `200` |
+| `latency_ms` | int | ✅ | Request duration in milliseconds | `150` |
+| `input_size_bytes` | int | Optional | Request payload size | `1024` |
+| `output_size_bytes` | int | Optional | Response payload size | `4096` |
+
+### Actor Context Fields
+
+> ⚠️ **SECURITY**: NEVER log secrets, tokens, passwords, or full API keys
+
+| Field | Type | Required | Description | Example |
+|-------|------|----------|-------------|---------|
+| `user_id` | string | Conditional | Authenticated user ID | `user_123` |
+| `api_key_id` | string | Conditional | API key prefix (8 chars max) | `abc12345...` |
+| `session_id` | string | Optional | Session identifier | `sess_xyz789` |
+
+### Domain Context Fields
+
+| Field | Type | Required | Description | Example |
+|-------|------|----------|-------------|---------|
+| `policy_id` | string | When applicable | Policy identifier | `policy_2024_budget` |
+| `scenario_id` | string | When applicable | Scenario identifier | `scenario_base` |
+| `simulation_id` | string | When applicable | Simulation run ID | `sim_550e8400` |
+| `extraction_id` | string | When applicable | Extraction job ID | `ext_550e8400` |
+
+### Request ID Propagation
+
+The `request_id` field enables request correlation across services:
+
+1. **Inbound**: Check for `X-Request-ID` header from upstream
+2. **Generate**: If not present, generate a new UUID
+3. **Propagate**: Include `X-Request-ID` in all outbound calls
+4. **Log**: Include `request_id` in all log entries for the request
+
+```python
+from api.telemetry import extract_request_id, generate_request_id
+
+# Extract from inbound request
+request_id = extract_request_id(request.headers)
+
+# Set in response headers
+response.headers['X-Request-ID'] = request_id
+```
+
+---
+
+## Event Taxonomy
+
+Phase 6.7.1 defines a comprehensive event taxonomy for categorizing all telemetry events.
+
+### Authentication Events (`auth.*`)
+
+| Event | Description | Severity |
+|-------|-------------|----------|
+| `auth.login_success` | User successfully authenticated | INFO |
+| `auth.login_failure` | Authentication attempt failed | WARN |
+| `auth.logout` | User logged out | INFO |
+| `auth.token_issued` | New JWT token issued | INFO |
+| `auth.token_refreshed` | Token refreshed | INFO |
+| `auth.token_revoked` | Token explicitly revoked | INFO |
+| `auth.token_expired` | Token expired on use | WARN |
+| `auth.token_invalid` | Invalid token presented | WARN |
+| `auth.api_key_created` | New API key created | INFO |
+| `auth.api_key_revoked` | API key revoked | INFO |
+| `auth.api_key_used` | API key used for auth | INFO |
+| `auth.api_key_invalid` | Invalid API key presented | WARN |
+| `auth.permission_denied` | Authorization denied | WARN |
+
+### Rate Limiting Events (`rate_limit.*`)
+
+| Event | Description | Severity |
+|-------|-------------|----------|
+| `rate_limit.checked` | Rate limit checked | DEBUG |
+| `rate_limit.exceeded` | Rate limit exceeded | WARN |
+| `rate_limit.warning` | Approaching rate limit | INFO |
+| `rate_limit.ip_blocked` | IP address blocked | WARN |
+| `rate_limit.ip_unblocked` | IP address unblocked | INFO |
+
+### Circuit Breaker Events (`circuit_breaker.*`)
+
+| Event | Description | Severity |
+|-------|-------------|----------|
+| `circuit_breaker.opened` | Circuit opened (failures exceeded) | WARN |
+| `circuit_breaker.closed` | Circuit closed (recovered) | INFO |
+| `circuit_breaker.half_open` | Circuit in half-open state | INFO |
+| `circuit_breaker.call_blocked` | Call blocked by open circuit | WARN |
+| `circuit_breaker.failure_recorded` | Failure recorded | INFO |
+
+### Simulation Events (`simulation.*`)
+
+| Event | Description | Severity |
+|-------|-------------|----------|
+| `simulation.queued` | Simulation queued for processing | INFO |
+| `simulation.started` | Simulation started | INFO |
+| `simulation.progress` | Simulation progress update | DEBUG |
+| `simulation.completed` | Simulation completed successfully | INFO |
+| `simulation.failed` | Simulation failed | ERROR |
+| `simulation.cancelled` | Simulation cancelled | INFO |
+| `simulation.timeout` | Simulation timed out | ERROR |
+| `simulation.validation_error` | Input validation failed | WARN |
+
+### Extraction Events (`extraction.*`)
+
+| Event | Description | Severity |
+|-------|-------------|----------|
+| `extraction.ingested` | Document ingested for extraction | INFO |
+| `extraction.parsing_started` | Parsing started | INFO |
+| `extraction.parsing_completed` | Parsing completed | INFO |
+| `extraction.parsing_failed` | Parsing failed | ERROR |
+| `extraction.validation_started` | Output validation started | INFO |
+| `extraction.validation_completed` | Output validation completed | INFO |
+| `extraction.validation_failed` | Output validation failed | ERROR |
+| `extraction.output_generated` | Final output generated | INFO |
+
+### API Events (`api.*`)
+
+| Event | Description | Severity |
+|-------|-------------|----------|
+| `api.request_received` | Request received | INFO |
+| `api.request_completed` | Request completed | INFO |
+| `api.request_failed` | Request failed | ERROR |
+| `api.validation_error` | Request validation failed | WARN |
+| `api.payload_too_large` | Payload exceeds limit | WARN |
+| `api.timeout` | Request timed out | WARN |
+
+### Security Events (`security.*`)
+
+| Event | Description | Severity |
+|-------|-------------|----------|
+| `security.suspicious_activity` | Suspicious activity detected | WARN |
+| `security.brute_force_detected` | Brute force attack detected | WARN |
+| `security.injection_attempt` | Injection attempt detected | WARN |
+| `security.invalid_input` | Potentially malicious input | INFO |
+| `security.cors_violation` | CORS policy violation | WARN |
+| `security.cert_expiring` | Certificate expiring soon | WARN |
+| `security.secret_accessed` | Secret accessed | INFO |
+| `security.config_changed` | Configuration changed | INFO |
+
+### System Events (`system.*`)
+
+| Event | Description | Severity |
+|-------|-------------|----------|
+| `system.startup` | Service started | INFO |
+| `system.shutdown` | Service shutting down | INFO |
+| `system.health_check` | Health check performed | DEBUG |
+| `system.health_degraded` | Health degraded | WARN |
+| `system.health_restored` | Health restored | INFO |
+| `system.error` | System error | ERROR |
+| `system.warning` | System warning | WARN |
+| `system.db_connection_error` | Database connection error | WARN |
+| `system.cache_miss` | Cache miss | DEBUG |
+| `system.cache_hit` | Cache hit | DEBUG |
+
+### Using the Telemetry Module
+
+```python
+from api.telemetry import (
+    get_telemetry, TelemetryContext,
+    AuthEvent, SimulationEvent, APIEvent
+)
+
+telemetry = get_telemetry()
+
+# Emit auth event
+telemetry.auth_event(
+    AuthEvent.LOGIN_SUCCESS,
+    success=True,
+    user_id="user_123"
+)
+
+# Emit simulation event with context
+ctx = TelemetryContext(
+    request_id="req-123",
+    simulation_id="sim-456",
+    user_id="user_789"
+)
+with telemetry.context(ctx):
+    telemetry.simulation_event(SimulationEvent.STARTED)
+```
 
 ---
 

@@ -1,6 +1,8 @@
 """
-Phase 3.2 Integration Tests - Discretionary, Interest, and Combined Outlook
-Tests for Phase 3.2 modules and their integration with Phase 1-3.1 models.
+Fiscal Integration Tests - Discretionary Spending, Interest, and Combined Outlook
+
+Tests for discretionary spending, interest on debt, and combined fiscal outlook
+modules including their integration with Social Security and Revenue models.
 """
 
 import pytest

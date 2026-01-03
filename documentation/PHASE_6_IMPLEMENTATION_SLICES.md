@@ -1005,7 +1005,7 @@ def validate_request():
 
 **DO NOT** create a public GitHub issue for security vulnerabilities.
 
-Instead, email: security@polisim.org
+Instead, email: galacticorgofdev@gmail.com
 
 **Please provide:**
 - Description of vulnerability
@@ -1130,9 +1130,9 @@ Create community-facing documentation needed for public launch.
 
 ---
 
-### 6.3.1: CONTRIBUTING.md (4 hours)
+### 6.3.1: CONTRIBUTING.md 
 
-**File:** `CONTRIBUTING.md` (2-3 KB)
+**File:** `CONTRIBUTING.md` 
 
 ```markdown
 # Contributing to PoliSim
@@ -1740,17 +1740,187 @@ Example: "Progressive Scenario" = higher top tax rate + lower Medicare age + etc
 - Total: ~85 new validation tests
 
 ### 6.6: Educational Materials (Weeks 3-5)
-- 5-10 Jupyter notebooks
-- 3-5 video scripts
-- Teaching mode guide
-- Conference presentation ready
+**📄 Detailed Plan:** [PHASE_6_6_EDUCATIONAL_MATERIALS_PLAN.md](PHASE_6_6_EDUCATIONAL_MATERIALS_PLAN.md)
+
+**6.6.1: Jupyter Notebooks (20-25 hours)**
+- **Jupyter Notebooks (10):** Progressive curriculum from basics to advanced
+  - 01: Welcome to PoliSim (15 min)
+  - 02: Federal Budget Basics (30 min)
+  - 03: Healthcare Policy Analysis (45 min)
+  - 04: Social Security Deep Dive (45 min)
+  - 05: Monte Carlo & Uncertainty (60 min)
+  - 06: Tax Policy Modeling (45 min)
+  - 07: Policy Extraction from Documents (30 min)
+  - 08: API Integration Guide (30 min)
+  - 09: Custom Policy Design (60 min)
+  - 10: Capstone Full Analysis (2-3 hr)
+  
+  **6.6.2: Video Tutorials (15-20 hours)**
+- **Video Content (7):** Scripts + slides for recorded tutorials
+  - Introduction to PoliSim (5 min)
+  - Installation & Setup (3 min)
+  - First Simulation (5 min)
+  - Monte Carlo Results (7 min)
+  - Policy Comparison (6 min)
+  - API for Developers (5 min)
+  - Contributing to PoliSim (4 min)
+
+**6.6.3: Teaching Mode & Guides (8-12 hours)**
+- **Teaching Materials:**
+  - Teaching mode UI implementation
+  - Instructor guide with course integration
+  - Student workbook with exercises
+  - Workshop kits (1-hour, half-day, full-day)
+
+**6.6.4: Conference Presentations (5-8 hours)**
+- **Conference Presentations:**
+  - 30-slide main deck
+  - Academic poster design
+  - Live demo script
+  - One-pager fact sheet
+
+**Estimated Effort:** 60-65 hours | **Timeline:** 3-4 weeks
 
 ### 6.7: Monitoring & Observability (Weeks 3-4)
-- ELK/Datadog setup
-- Sentry error tracking
-- Uptime monitoring
-- SLO dashboards
-- Incident response runbooks
+
+**Owner:** Lead Developer  
+**Duration:** 1-2 weeks  
+**Effort:** 15-20 hours
+
+#### Objective
+Make PoliSim production-grade observable: fast detection, clear diagnosis, and reliable incident response. This slice operationalizes the existing monitoring artifacts and code so that failures (security, availability, correctness, performance) are detected quickly and can be triaged with minimal ambiguity.
+
+**Builds on existing work:**
+- Logging + basic SLO reporting: [api/observability.py](../api/observability.py)
+- Monitoring metrics/alerts reference: [docs/MONITORING_COMPLIANCE.md](../docs/MONITORING_COMPLIANCE.md)
+- Incident response process: [docs/INCIDENT_RESPONSE.md](../docs/INCIDENT_RESPONSE.md)
+
+#### Scope (What “done” means)
+- A consistent telemetry contract (logs/metrics/traces) for API requests and simulation runs
+- Centralized log aggregation and error tracking are wired for the deployment path
+- Core SLOs are measurable and dashboarded
+- Alerts are actionable and map cleanly to incident runbooks
+
+#### Non-Goals (to prevent scope creep)
+- Building new UI dashboards inside the web app (use vendor tools / Grafana / Kibana)
+- Full APM re-platforming across every module (instrument the critical paths first)
+
+---
+
+### 6.7.1: Observability Contract & Telemetry Taxonomy (2-3 hours)
+
+1. **Define required telemetry fields** (logs + metrics tags)
+  - [ ] Environment: `env` (local/dev/staging/prod)
+  - [ ] Request correlation: `request_id` (and propagate from inbound header when present)
+  - [ ] Actor context: `user_id` / `api_key_id` (never log secrets)
+  - [ ] Request/response context: route, method, status, latency
+  - [ ] Domain context: policy_id/scenario_id where applicable
+
+2. **Define event taxonomy** (what gets logged/metric’d)
+  - [ ] Auth events (success/failure)
+  - [ ] Rate limiting / circuit breaker events
+  - [ ] Simulation lifecycle (queued → running → complete/fail)
+  - [ ] Extraction lifecycle (ingest → parse → validate → output)
+
+3. **Update monitoring documentation**
+  - [ ] Add the above contract/taxonomy to [docs/MONITORING_COMPLIANCE.md](../docs/MONITORING_COMPLIANCE.md) (or reference it clearly if already covered)
+
+**Acceptance Criteria**
+- [ ] Telemetry contract fields are explicitly documented
+- [ ] A short “event taxonomy” list exists and is referenced by runbooks/alerts
+
+---
+
+### 6.7.2: Structured Logging + Aggregation Pipeline (4-6 hours)
+
+1. **Confirm structured JSON logs are emitted for all requests**
+  - [ ] Ensure the request logger is invoked for success + error paths
+  - [ ] Ensure request correlation is present consistently (no “unknown” in normal paths)
+  - [ ] Ensure no secrets are logged (tokens, passwords, API keys)
+
+2. **Choose and wire one log aggregation target**
+  - Option A: **ELK** (local/self-host) via Docker compose + Filebeat/Logstash
+  - Option B: **Datadog** (hosted) via agent + log shipping
+
+3. **Add deployment notes**
+  - [ ] Document required env vars, ports, and retention expectations
+  - [ ] Define minimum retention (e.g., 7-14 days for app logs; longer for audit trails)
+
+**Acceptance Criteria**
+- [ ] A single “happy path” deployment can collect and search logs centrally
+- [ ] Logs are searchable by `request_id` and endpoint
+
+---
+
+### 6.7.3: Error Tracking (Sentry) (2-3 hours)
+
+1. **Integrate Sentry for unhandled exceptions**
+  - [ ] Capture stack traces + request context (no sensitive payloads)
+  - [ ] Tag events with `env`, route, method, status_code
+  - [ ] Define sampling rules (avoid noisy events overwhelming signal)
+
+2. **Define “release” metadata**
+  - [ ] Document how releases are named (git SHA or version)
+  - [ ] Ensure Sentry events include release/version where possible
+
+**Acceptance Criteria**
+- [ ] Unhandled exceptions reliably appear in Sentry with request correlation fields
+- [ ] Noise controls are in place (sampling / ignore lists as needed)
+
+---
+
+### 6.7.4: SLOs + Dashboards (4-6 hours)
+
+1. **Operationalize SLOs already implied by the system**
+  - [ ] Availability SLO (API uptime)
+  - [ ] Latency SLOs by endpoint category (p95/p99)
+  - [ ] Error rate SLO (< 1% overall; tighter for “read-only” endpoints when feasible)
+  - [ ] Simulation success rate SLO (define acceptable failure bands)
+
+2. **Make SLO reporting runnable**
+  - [ ] Confirm the SLO report generator exists and can be executed on a schedule (see [api/observability.py](../api/observability.py))
+  - [ ] Decide where reports are stored (logs/, artifacts, or monitoring backend)
+
+3. **Build dashboards (vendor/Grafana/Kibana)**
+  - [ ] “Executive health” dashboard (availability, latency, error rate)
+  - [ ] “Operations” dashboard (DB connections, queue depth, saturation)
+  - [ ] “Security signals” dashboard (auth failures, rate limits, blocked IPs)
+
+**Acceptance Criteria**
+- [ ] Dashboards exist for the 3 views above
+- [ ] SLOs are measurable with current telemetry (no “hand-wavy” SLOs)
+
+---
+
+### 6.7.5: Uptime Monitoring + Alert Routing (2-3 hours)
+
+1. **Uptime checks**
+  - [ ] Add at least one external HTTP uptime check per environment (staging/prod)
+  - [ ] Validate health endpoint semantics (healthy only when dependencies are healthy)
+
+2. **Alert routing to incident process**
+  - [ ] Map critical alerts to an escalation route (PagerDuty/Slack/email)
+  - [ ] Ensure alerts link to the correct runbook section in [docs/INCIDENT_RESPONSE.md](../docs/INCIDENT_RESPONSE.md)
+
+**Acceptance Criteria**
+- [ ] “Service down” pages the correct channel/on-call
+- [ ] Alerts include runbook links + minimal repro context
+
+---
+
+### 6.7.6: Runbook Alignment + Dry-Run (1-2 hours)
+
+1. **Runbook validation**
+  - [ ] Confirm runbooks cover: outage, elevated errors, suspected breach, bad deploy, data integrity incident
+  - [ ] Ensure each runbook lists the dashboards/log queries to check first
+
+2. **Dry-run incident (tabletop)**
+  - [ ] Pick one scenario (e.g., elevated 5xx + latency regression)
+  - [ ] Walk through detection → triage → containment → rollback → postmortem checklist
+
+**Acceptance Criteria**
+- [ ] One tabletop exercise completed with notes
+- [ ] Gaps found are logged as actionable follow-ups
 
 ---
 
@@ -1763,7 +1933,7 @@ Example: "Progressive Scenario" = higher top tax rate + lower Medicare age + etc
 | 6.3: Documentation | 20-24 | 20-24 | — | 1-2 weeks |
 | 6.4: Community | 8-12 | 8-12 | — | 1-2 weeks |
 | 6.5: Tests | 35-50 | 35-50 | 5-10 | 2-3 weeks |
-| 6.6: Education | 15-25 | 15-25 | — | 2-3 weeks |
+| 6.6: Education | 60-65 | 60-65 | — | 3-4 weeks |
 | 6.7: Monitoring | 15-20 | 15-20 | — | 1-2 weeks |
 | **TOTAL** | **163-221** | **163-221** | **125-160** | **4-6 weeks (parallel)** |
 

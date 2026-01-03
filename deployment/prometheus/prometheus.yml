@@ -1,0 +1,77 @@
+# Prometheus Configuration for PoliSim
+# Phase 6.7.2: Structured Logging + Aggregation Pipeline
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'polisim-prometheus'
+
+# Alerting configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          # - alertmanager:9093
+
+# Rule files
+rule_files:
+  - /etc/prometheus/alerts/*.yml
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # PoliSim API metrics
+  - job_name: 'polisim-api'
+    metrics_path: /api/metrics
+    static_configs:
+      - targets: ['api:5000']
+        labels:
+          service: 'polisim-api'
+          environment: 'development'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        regex: '([^:]+):\d+'
+        replacement: '${1}'
+
+  # PoliSim health endpoint
+  - job_name: 'polisim-health'
+    metrics_path: /api/health
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['api:5000']
+        labels:
+          service: 'polisim-api'
+
+  # PostgreSQL metrics (if postgres_exporter deployed)
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+        labels:
+          service: 'postgres'
+
+  # Redis metrics (if redis_exporter deployed)
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+        labels:
+          service: 'redis'
+
+  # Node metrics (system-level)
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+        labels:
+          service: 'host'
+
+  # Docker container metrics
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+        labels:
+          service: 'docker'

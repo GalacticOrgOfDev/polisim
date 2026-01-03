@@ -1,11 +1,11 @@
 """
-Integration and contract tests for Slice 5.7 v1 API endpoints.
+API v1 Endpoint Tests
 
-Tests:
-- Happy path (valid requests, correct responses)
-- Validation (invalid inputs, error handling)
+Integration and contract tests for REST API v1 endpoints including:
+- Happy path scenarios (valid requests, correct responses)
+- Input validation (invalid inputs, error handling)
 - Rate limiting (threshold enforcement, headers)
-- Auth (optional/required enforcement)
+- Authentication (optional/required enforcement)
 """
 
 import json

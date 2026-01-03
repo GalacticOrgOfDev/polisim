@@ -1,0 +1,98 @@
+# Filebeat Configuration for PoliSim
+# Phase 6.7.2: Structured Logging + Aggregation Pipeline
+
+filebeat.inputs:
+  # API logs (JSON formatted)
+  - type: log
+    enabled: true
+    paths:
+      - /var/log/polisim/api.log
+      - /var/log/polisim/telemetry.log
+    json.keys_under_root: true
+    json.add_error_key: true
+    json.message_key: message
+    fields:
+      log_type: api
+      service: polisim-api
+    fields_under_root: true
+
+  # Audit logs
+  - type: log
+    enabled: true
+    paths:
+      - /var/log/polisim/audit.log
+    json.keys_under_root: true
+    json.add_error_key: true
+    fields:
+      log_type: audit
+      service: polisim-api
+    fields_under_root: true
+
+  # Error logs
+  - type: log
+    enabled: true
+    paths:
+      - /var/log/polisim/error.log
+    multiline.pattern: '^\{'
+    multiline.negate: true
+    multiline.match: after
+    fields:
+      log_type: error
+      service: polisim-api
+    fields_under_root: true
+
+  # Docker container logs
+  - type: container
+    enabled: true
+    paths:
+      - '/var/lib/docker/containers/*/*.log'
+    processors:
+      - add_docker_metadata:
+          host: "unix:///var/run/docker.sock"
+      - decode_json_fields:
+          fields: ["message"]
+          target: "json"
+          overwrite_keys: true
+          add_error_key: true
+
+# Processors
+processors:
+  - add_host_metadata:
+      when.not.contains.tags: forwarded
+  - add_cloud_metadata: ~
+  - add_docker_metadata: ~
+  
+  # Drop debug level logs in production
+  - drop_event:
+      when:
+        and:
+          - equals:
+              log_level: "DEBUG"
+          - equals:
+              fields.environment: "prod"
+
+# Output to Logstash
+output.logstash:
+  hosts: ["logstash:5044"]
+  loadbalance: true
+  bulk_max_size: 2048
+
+# Fallback: Direct output to Elasticsearch (if Logstash unavailable)
+# output.elasticsearch:
+#   hosts: ["elasticsearch:9200"]
+#   index: "polisim-logs-%{[fields.environment]:unknown}-%{+yyyy.MM.dd}"
+
+# Logging
+logging.level: info
+logging.to_files: true
+logging.files:
+  path: /var/log/filebeat
+  name: filebeat
+  keepfiles: 7
+  permissions: 0640
+
+# Monitoring
+monitoring:
+  enabled: true
+  elasticsearch:
+    hosts: ["elasticsearch:9200"]

@@ -1,0 +1,222 @@
+# Docker Compose for Log Aggregation & Monitoring
+# Phase 6.7.2: Structured Logging + Aggregation Pipeline
+#
+# Two options provided:
+#   - Option A: ELK Stack (self-hosted)
+#   - Option B: Datadog Agent (cloud-based)
+#
+# Usage:
+#   Option A: docker compose -f docker-compose.monitoring.yml --profile elk up -d
+#   Option B: docker compose -f docker-compose.monitoring.yml --profile datadog up -d
+
+version: '3.8'
+
+services:
+  # ============================================================================
+  # OPTION A: ELK STACK (Self-Hosted)
+  # ============================================================================
+  
+  # Elasticsearch - Log storage and search
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.3
+    container_name: polisim-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false  # Enable in production with proper certs
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - cluster.name=polisim-logs
+      - bootstrap.memory_lock=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\":\"green\"\\|\"status\":\"yellow\"'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - polisim-monitoring
+    profiles:
+      - elk
+
+  # Logstash - Log processing pipeline
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.11.3
+    container_name: polisim-logstash
+    volumes:
+      - ./deployment/logstash/pipeline:/usr/share/logstash/pipeline:ro
+      - ./deployment/logstash/config:/usr/share/logstash/config:ro
+      - ./logs:/var/log/polisim:ro
+    ports:
+      - "5044:5044"   # Beats input
+      - "9600:9600"   # Monitoring API
+    environment:
+      - "LS_JAVA_OPTS=-Xmx256m -Xms256m"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - polisim-monitoring
+    profiles:
+      - elk
+
+  # Kibana - Log visualization
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.3
+    container_name: polisim-kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - SERVER_NAME=polisim-kibana
+    ports:
+      - "5601:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:5601/api/status | grep -q '\"overall\":{\"level\":\"available\"'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - polisim-monitoring
+    profiles:
+      - elk
+
+  # Filebeat - Log shipper (reads from log files)
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.11.3
+    container_name: polisim-filebeat
+    user: root
+    command: filebeat -e -strict.perms=false
+    volumes:
+      - ./deployment/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - ./logs:/var/log/polisim:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      logstash:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - polisim-monitoring
+    profiles:
+      - elk
+
+  # ============================================================================
+  # OPTION B: DATADOG AGENT (Cloud-Based)
+  # ============================================================================
+  
+  datadog-agent:
+    image: gcr.io/datadoghq/agent:7
+    container_name: polisim-datadog-agent
+    environment:
+      - DD_API_KEY=${DD_API_KEY}
+      - DD_SITE=${DD_SITE:-datadoghq.com}
+      - DD_HOSTNAME=polisim-host
+      - DD_LOGS_ENABLED=true
+      - DD_LOGS_CONFIG_CONTAINER_COLLECT_ALL=true
+      - DD_APM_ENABLED=true
+      - DD_APM_NON_LOCAL_TRAFFIC=true
+      - DD_PROCESS_AGENT_ENABLED=true
+      - DD_DOGSTATSD_NON_LOCAL_TRAFFIC=true
+      - DD_ENV=${POLISIM_ENV:-development}
+      - DD_SERVICE=polisim-api
+      - DD_VERSION=${POLISIM_VERSION:-1.0.0}
+      - DD_TAGS=project:polisim
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /proc/:/host/proc/:ro
+      - /opt/datadog-agent/run:/opt/datadog-agent/run:rw
+      - /sys/fs/cgroup/:/host/sys/fs/cgroup:ro
+      - ./logs:/var/log/polisim:ro
+      - ./deployment/datadog/conf.d:/etc/datadog-agent/conf.d:ro
+    ports:
+      - "8125:8125/udp"   # DogStatsD
+      - "8126:8126"       # APM
+    restart: unless-stopped
+    networks:
+      - polisim-monitoring
+    profiles:
+      - datadog
+
+  # ============================================================================
+  # PROMETHEUS + GRAFANA (Metrics - Works with both options)
+  # ============================================================================
+  
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: polisim-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./deployment/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./deployment/prometheus/alerts:/etc/prometheus/alerts:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - polisim-monitoring
+    profiles:
+      - metrics
+
+  grafana:
+    image: grafana/grafana:10.2.3
+    container_name: polisim-grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-polisim_grafana}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL:-http://localhost:3000}
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+    volumes:
+      - ./deployment/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./deployment/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - polisim-monitoring
+    profiles:
+      - metrics
+
+volumes:
+  elasticsearch_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+networks:
+  polisim-monitoring:
+    driver: bridge
+    name: polisim-monitoring

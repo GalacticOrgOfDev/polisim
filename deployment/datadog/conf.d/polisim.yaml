@@ -1,0 +1,46 @@
+# Datadog Log Collection Configuration for PoliSim
+# Phase 6.7.2: Structured Logging + Aggregation Pipeline
+
+init_config:
+
+instances:
+
+logs:
+  # API logs
+  - type: file
+    path: /var/log/polisim/api.log
+    service: polisim-api
+    source: python
+    sourcecategory: api
+    log_processing_rules:
+      - type: multi_line
+        name: log_start_with_json
+        pattern: '^\{'
+
+  # Telemetry logs
+  - type: file
+    path: /var/log/polisim/telemetry.log
+    service: polisim-api
+    source: python
+    sourcecategory: telemetry
+
+  # Audit logs
+  - type: file
+    path: /var/log/polisim/audit.log
+    service: polisim-api
+    source: python
+    sourcecategory: audit
+    tags:
+      - security
+      - compliance
+
+  # Error logs
+  - type: file
+    path: /var/log/polisim/error.log
+    service: polisim-api
+    source: python
+    sourcecategory: error
+    log_processing_rules:
+      - type: multi_line
+        name: python_traceback
+        pattern: '^Traceback|^\s+'

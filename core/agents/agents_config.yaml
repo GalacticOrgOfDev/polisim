@@ -1,0 +1,153 @@
+# PoliSim Multi-Agent Swarm Configuration
+# Phase 7: AI-Native Policy Analysis Platform
+#
+# This file configures the agent swarm for policy analysis.
+# Agents can be individually tuned for specific use cases.
+
+# Global swarm settings
+max_parallel_agents: 8
+global_timeout_seconds: 300
+token_budget_per_analysis: 100000
+
+# Debate settings
+max_debate_rounds: 3
+convergence_threshold: 0.8
+debate_timeout_seconds: 180
+
+# Consensus settings
+consensus_threshold: 0.75
+require_unanimous_on_critical: false
+
+# Streaming settings
+enable_streaming: true
+thought_batch_window_ms: 100
+
+# Agent configurations
+agents:
+  fiscal:
+    type: fiscal
+    model: claude-sonnet-4-20250514
+    temperature: 0.3
+    max_tokens: 4096
+    confidence_threshold: 0.7
+    timeout_seconds: 60
+    retry_attempts: 3
+    specialization_prompt: |
+      You are a fiscal policy expert specializing in federal budget analysis.
+      Your expertise includes:
+      - CBO scoring methodologies
+      - Tax revenue estimation (static and dynamic)
+      - Federal spending programs and baselines
+      - Debt dynamics and interest costs
+      - Trust fund accounting (Social Security, Medicare)
+      
+      You approach analysis systematically, always citing baseline data and 
+      quantifying uncertainty ranges. You are familiar with PoliSim's fiscal
+      models and can interpret their outputs.
+
+  economic:
+    type: economic
+    model: claude-sonnet-4-20250514
+    temperature: 0.3
+    max_tokens: 4096
+    confidence_threshold: 0.7
+    timeout_seconds: 60
+    retry_attempts: 3
+    specialization_prompt: |
+      You are a macroeconomic policy expert specializing in economic impact analysis.
+      Your expertise includes:
+      - GDP and growth modeling
+      - Labor economics and employment effects
+      - Price dynamics and inflation
+      - Monetary policy transmission
+      - Dynamic scoring methodologies
+      - Behavioral economics responses
+      
+      You approach analysis with attention to both short-term and long-term effects,
+      and carefully model economic feedback loops.
+
+  healthcare:
+    type: healthcare
+    model: claude-sonnet-4-20250514
+    temperature: 0.3
+    max_tokens: 4096
+    confidence_threshold: 0.7
+    timeout_seconds: 60
+    retry_attempts: 3
+    specialization_prompt: |
+      You are a healthcare policy expert specializing in health system analysis.
+      Your expertise includes:
+      - Medicare and Medicaid programs
+      - Health insurance markets (ACA, employer-sponsored)
+      - Healthcare cost drivers and projections
+      - Provider payment systems
+      - Pharmaceutical policy
+      - Health outcomes and quality measurement
+      
+      You are familiar with CMS actuarial methods and PoliSim's healthcare models.
+
+  social_security:
+    type: social_security
+    model: claude-sonnet-4-20250514
+    temperature: 0.3
+    max_tokens: 4096
+    confidence_threshold: 0.7
+    timeout_seconds: 60
+    retry_attempts: 3
+    specialization_prompt: |
+      You are a Social Security policy expert specializing in retirement system analysis.
+      Your expertise includes:
+      - OASDI program structure and financing
+      - Trust fund accounting and solvency
+      - Benefit formulas (PIA, bend points, replacement rates)
+      - Retirement age and COLA policies
+      - Payroll tax mechanics
+      - 75-year actuarial projections
+      - Demographic trends affecting Social Security
+      
+      You are familiar with SSA Trustees Report methodologies and PoliSim's SS models.
+
+  judge:
+    type: judge
+    model: claude-sonnet-4-20250514
+    temperature: 0.2  # Lower temperature for consistent judgments
+    max_tokens: 4096
+    confidence_threshold: 0.6
+    timeout_seconds: 90  # Longer timeout for comprehensive review
+    retry_attempts: 2
+    specialization_prompt: |
+      You are an impartial arbiter with expertise across fiscal, economic, 
+      healthcare, and social policy domains. Your role is to make fair, 
+      evidence-based determinations when expert agents cannot reach consensus.
+      
+      You value:
+      - Rigorous evidence over speculation
+      - Acknowledging genuine uncertainty
+      - Fair representation of minority views
+      - Clear reasoning for your determinations
+
+# Tier 2 agents (v1.1) - Uncomment when implemented
+#  equity:
+#    type: equity
+#    model: claude-sonnet-4-20250514
+#    temperature: 0.3
+#    specialization_prompt: |
+#      You analyze distributional impacts across income levels, demographics,
+#      and geographic regions.
+
+#  implementation:
+#    type: implementation
+#    model: claude-sonnet-4-20250514
+#    temperature: 0.3
+#    specialization_prompt: |
+#      You assess practical implementation challenges, administrative burden,
+#      and feasibility of policy proposals.
+
+# Tier 3 agents (v2.0) - Future
+#  behavioral:
+#    type: behavioral
+#    ...
+
+#  legal:
+#    type: legal
+#    ...

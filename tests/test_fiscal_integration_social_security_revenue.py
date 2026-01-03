@@ -1,9 +1,8 @@
 """
-Phase 2 Integration Tests - Social Security + Revenue + Combined Analysis
-Tests cross-module integration and combined fiscal projections.
+Fiscal Integration Tests - Social Security + Revenue + Combined Analysis
 
-Test Coverage:
-- Social Security module with different scenarios
+Tests cross-module integration and combined fiscal projections for:
+- Social Security module with different reform scenarios
 - Revenue module with different economic scenarios  
 - Combined fiscal outlook (SS + Revenue)
 - Policy reform impact analysis
@@ -32,8 +31,8 @@ from core.revenue_modeling import (
 )
 
 
-class TestPhase2ConfigurationLoading:
-    """Test that Phase 2 policy configuration files load correctly."""
+class TestFiscalPolicyConfigLoading:
+    """Test that fiscal policy configuration files load correctly."""
 
     def test_social_security_scenarios_load(self):
         """Load Social Security scenarios from JSON."""
@@ -357,8 +356,8 @@ class TestCombinedFiscalOutlook:
         assert unique_years == 10, f"Expected 10 years, got {unique_years}"
 
 
-class TestPhase2Validation:
-    """Validation against official baselines."""
+class TestFiscalBaselineValidation:
+    """Validation against official SSA/CBO baselines."""
 
     def test_ss_baseline_validation(self):
         """Validate SS projections against SSA Trustees baseline."""

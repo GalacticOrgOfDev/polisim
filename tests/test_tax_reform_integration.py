@@ -1,8 +1,9 @@
 """
-Tests for Phase 2 Integration Module.
+Tax Reform Integration Tests
 
-Tests the comprehensive integration of tax reforms and Social Security
-enhancements into the simulation engine.
+Tests the comprehensive integration of tax reforms (wealth tax, carbon tax,
+financial transaction tax, etc.) and Social Security enhancements into 
+the simulation engine.
 """
 
 import pytest
@@ -23,8 +24,8 @@ from core.tax_reform import (
 )
 
 
-class TestPhase2PolicyPackage:
-    """Test Phase 2 policy package configuration."""
+class TestTaxReformPolicyPackage:
+    """Test tax reform policy package configuration."""
     
     def test_empty_package(self):
         """Empty package has no reforms enabled."""
@@ -73,8 +74,8 @@ class TestPhase2PolicyPackage:
         assert package.ss_longevity_indexing_enabled is True
 
 
-class TestPhase2SimulationEngine:
-    """Test Phase 2 simulation engine."""
+class TestTaxReformSimulationEngine:
+    """Test tax reform simulation engine."""
     
     def test_engine_initialization(self):
         """Engine initializes with correct parameters."""
@@ -223,8 +224,8 @@ class TestPhase2SimulationEngine:
         assert 'SS Reforms Only_revenue' in comparison.columns
 
 
-class TestPhase2ReformPackages:
-    """Test pre-defined reform packages."""
+class TestReformPackagePresets:
+    """Test pre-defined reform package presets."""
     
     def test_comprehensive_progressive_reform(self):
         """Comprehensive progressive reform has all features."""

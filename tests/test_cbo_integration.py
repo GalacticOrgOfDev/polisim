@@ -90,9 +90,10 @@ class TestRetryLogic:
     def test_success_after_failures(self):
         """Test successful fetch after initial failures."""
         scraper = CBODataScraper()
+        scraper.MAX_RETRIES = 3  # Need 3 retries for timeout, connection error, then success
         scraper.RETRY_DELAY = 0.1
         
-        with patch('requests.get') as mock_get:
+        with patch('requests.get') as mock_get, patch('time.sleep'):
             # First two calls fail, third succeeds
             mock_response = Mock()
             mock_response.status_code = 200

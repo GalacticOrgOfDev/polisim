@@ -73,7 +73,9 @@ markers = [
     "slow: marks tests as slow/resource-intensive (deselect with '-m \"not slow\"')",
     "stress: marks tests as stress tests with high iteration counts",
     "integration: marks tests as integration tests",
+    "asyncio: marks tests as async tests",
 ]
+asyncio_mode = "auto"
 filterwarnings = [
     "ignore::DeprecationWarning:plotly.io._kaleido",
 ]

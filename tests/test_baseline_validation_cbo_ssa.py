@@ -1,7 +1,8 @@
 """
-Tests for Phase 2 Validation Framework.
+Baseline Validation Tests - CBO and SSA Data Validation
 
-Tests baseline data, validation metrics, and accuracy assessments.
+Tests baseline data structures, validation metrics, and accuracy assessments
+against official CBO Budget Outlook and SSA Trustees Report projections.
 """
 
 import pytest
@@ -146,8 +147,8 @@ class TestValidationMetrics:
         assert "✗" in str(metric)
 
 
-class TestPhase2Validator:
-    """Test Phase 2 validation framework."""
+class TestBaselineValidator:
+    """Test baseline validation framework against CBO/SSA data."""
     
     def test_validator_initialization(self):
         """Validator initializes with baseline data."""

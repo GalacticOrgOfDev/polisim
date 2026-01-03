@@ -1,0 +1,19 @@
+# Logstash Settings
+# Phase 6.7.2: Structured Logging + Aggregation Pipeline
+
+# Pipeline settings
+pipeline.workers: 2
+pipeline.batch.size: 125
+pipeline.batch.delay: 50
+
+# HTTP API settings
+http.host: "0.0.0.0"
+http.port: 9600
+
+# Log settings
+log.level: info
+path.logs: /usr/share/logstash/logs
+
+# Dead letter queue (for failed events)
+dead_letter_queue.enable: true
+dead_letter_queue.max_bytes: 1024mb

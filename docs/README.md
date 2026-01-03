@@ -47,6 +47,7 @@ PoliSim documentation has been consolidated from 26+ files into 12 core document
 **→ [SECURITY.md](SECURITY.md)** - Security architecture, data protection, encryption, compliance details
 **→ [INCIDENT_RESPONSE.md](INCIDENT_RESPONSE.md)** - 5-phase incident response plan with team structure and procedures
 **→ [MONITORING_COMPLIANCE.md](MONITORING_COMPLIANCE.md)** - Monitoring infrastructure, 25+ metrics, compliance tracking
+**→ [TABLETOP_EXERCISE_SCENARIO.md](TABLETOP_EXERCISE_SCENARIO.md)** - Incident response dry-run exercise (5xx + latency scenario)
 
 **SECURITY_AND_AUDIT.md contains:**
 - Phase 6.2 comprehensive audit (6.2.2 - 6.2.6)
