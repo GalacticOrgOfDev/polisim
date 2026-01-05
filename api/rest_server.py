@@ -10,12 +10,20 @@ Features:
 - Scenario comparison
 """
 
+
 import json
 import os
 import uuid
 from datetime import datetime, timezone
 from typing import Dict, List, Any, Optional
 from pathlib import Path
+
+# --- BEGIN: Fine Tooth Comb Import Path Fix ---
+import sys
+_project_root = Path(__file__).resolve().parent.parent
+if str(_project_root) not in sys.path:
+    sys.path.insert(0, str(_project_root))
+# --- END: Fine Tooth Comb Import Path Fix ---
 
 try:
     from flask import Flask, request, jsonify, send_file
@@ -91,6 +99,47 @@ def _get_cors_origins() -> list:
 
 
 def create_api_app() -> "Flask":
+    # Only create the app after HAS_FLASK check
+    if not HAS_FLASK:
+        raise ImportError("Flask and flask-cors required. Install with: pip install flask flask-cors")
+    app = Flask(__name__)
+
+    # Landing page for root URL
+    @app.route("/", methods=["GET"])
+    def landing_page():
+        return (
+            """
+            <html>
+            <head>
+                <title>PoliSim REST API</title>
+                <style>
+                    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f8faff; color: #222; margin: 0; padding: 0; }
+                    .container { max-width: 600px; margin: 60px auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 12px #0001; padding: 32px; }
+                    h1 { color: #3a3a8a; }
+                    ul { padding-left: 1.2em; }
+                    a { color: #3a3a8a; text-decoration: none; }
+                    a:hover { text-decoration: underline; }
+                    .footer { margin-top: 32px; color: #888; font-size: 0.95em; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h1>Welcome to the PoliSim REST API 🚀</h1>
+                    <p>This is the PoliSim API server. Use the endpoints below or see the <a href='https://github.com/GalacticOrgOfDev/polisim' target='_blank'>project README</a> for full documentation.</p>
+                    <ul>
+                        <li><a href='/api/health'>API Health Check</a></li>
+                        <li><a href='/api/v1/scenarios'>List Scenarios</a></li>
+                    </ul>
+                    <div class="footer">
+                        &copy; 2026 GalacticOrgOfDev &mdash; <a href='https://github.com/GalacticOrgOfDev/polisim' target='_blank'>GitHub</a>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """,
+            200,
+            {"Content-Type": "text/html"}
+        )
     """Create and configure Flask application."""
     if not HAS_FLASK:
         raise ImportError("Flask and flask-cors required. Install with: pip install flask flask-cors")
@@ -1379,7 +1428,7 @@ def run_api_server(host: str = '127.0.0.1', port: int = 5000, debug: bool = Fals
         app = create_api_app()
         print(f"Starting PoliSim REST API on {host}:{port}")
         print(f"API Documentation: http://{host}:{port}/api/health")
-        app.run(host=host, port=port, debug=debug)
+        app.run(host=host, port=port, debug=debug, use_reloader=False)
     except ImportError as e:
         print(f"Error: {e}")
         print("Install Flask with: pip install flask flask-cors")

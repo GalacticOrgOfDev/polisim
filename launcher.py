@@ -360,31 +360,39 @@ class LauncherApp:
                 env = dict(os.environ)
                 env.setdefault("PYTHONIOENCODING", "utf-8")
                 
+                log_path = ROOT_DIR / "rest_api_server.log"
+                log_file = open(log_path, "w", encoding="utf-8")
                 proc = subprocess.Popen(
-                    [sys.executable, "api/rest_server.py"],
+                    [sys.executable, "-m", "api.rest_server"],
                     cwd=str(ROOT_DIR),
-                    stdout=subprocess.PIPE,
+                    stdout=log_file,
                     stderr=subprocess.STDOUT,
                     text=True,
                     env=env,
+                    close_fds=True,
                 )
-                
-                # Give the server a moment to start
-                time.sleep(2)
-                
+
+                # Wait up to 8 seconds for the server to start
+                for _ in range(8):
+                    if proc.poll() is not None:
+                        break
+                    time.sleep(1)
+
                 if proc.poll() is None:
-                    self.log("✓ REST API running at http://localhost:5000")
+                    self.log(f"✓ REST API running at http://localhost:5000 (log: {log_path})")
                     self.button_states['rest_api'] = self.STATE_SUCCESS
                     self.update_status("REST API running at http://localhost:5000", CYBER_SUCCESS)
                     self.update_button_colors()
                     webbrowser.open("http://localhost:5000")
                 else:
-                    output = proc.stdout.read() if proc.stdout else ""
-                    self.log(f"✗ REST API exited immediately")
+                    log_file.close()
+                    with open(log_path, "r", encoding="utf-8") as f:
+                        output = f.read()
+                    self.log(f"✗ REST API exited immediately. Output in log file:\n{output}")
                     self.button_states['rest_api'] = self.STATE_FAILED
                     self.update_status("REST API launch failed", CYBER_ERROR)
                     self.update_button_colors()
-                    self.root.after(0, lambda: messagebox.showerror("Launch Failed", output[:500] if output else "REST API exited"))
+                    self.root.after(0, lambda: messagebox.showerror("Launch Failed", output[-2000:] if output else "REST API exited"))
             except Exception as e:
                 self.log(f"✗ Failed to launch REST API: {str(e)}")
                 self.button_states['rest_api'] = self.STATE_FAILED
